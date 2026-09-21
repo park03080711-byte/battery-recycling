@@ -46,7 +46,7 @@ export default function Fullpage({ items, children }: { items: Item[]; children:
       <div className="fp" ref={ref} id="main" tabIndex={-1}>
         {children}
       </div>
-      <nav className={`fp-dots${dark ? " on-dark" : ""}`} aria-label="섹션 이동">
+      <nav className={`fp-dots${dark ? " on-dark" : ""}${active === "s-intro" ? " is-hidden" : ""}`} aria-label="섹션 이동">
         {items.map((it) => (
           <a
             key={it.id}

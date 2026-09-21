@@ -21,11 +21,14 @@ export default function Header() {
   const [atTop, setAtTop] = useState(true);
   const [megaOpen, setMegaOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  // 메인 첫 화면은 자체 헤더가 있으므로 공통 헤더를 숨긴다
+  const [onHero, setOnHero] = useState(isHome);
 
   // 메인에서는 풀페이지 컨테이너의 스크롤 위치(첫 섹션 여부)로 헤더 스타일을 바꾼다
   useEffect(() => {
     const onSection = (e: Event) => {
       const { dark, id } = (e as CustomEvent<{ dark: boolean; id: string }>).detail;
+      setOnHero(id === "s-intro");
       // 좁은 화면에서는 패널 글이 헤더 아래로 지나가므로 첫 화면에서만 투명 처리
       setAtTop(dark && (id === "s-intro" || window.innerWidth > 900));
     };
@@ -49,6 +52,7 @@ export default function Header() {
     setMobileOpen(false);
     setMegaOpen(false);
     setAtTop(true);
+    setOnHero(pathname === "/");
   }, [pathname]);
 
   // 서브페이지: 상단 비주얼 위에 있을 때만 투명
@@ -61,7 +65,8 @@ export default function Header() {
   }, [isHome]);
 
   const overlay = atTop && !megaOpen && !mobileOpen;
-  const cls = ["header", overlay ? "is-overlay" : "", megaOpen || mobileOpen ? "is-open" : ""].join(" ");
+  const hidden = isHome && onHero && !mobileOpen;
+  const cls = ["header", overlay ? "is-overlay" : "", megaOpen || mobileOpen ? "is-open" : "", hidden ? "is-hidden" : ""].join(" ");
 
   const currentTopic = pathname.startsWith("/topics/") ? topicBySlug(pathname.split("/")[2]) : undefined;
   const isActive = (m: (typeof menu)[number]) => {
