@@ -3,6 +3,8 @@ import { layers } from "@/data/layers";
 import { topicsByLayer } from "@/data/topics";
 import Fullpage from "@/components/home/Fullpage";
 import Hero from "@/components/home/Hero";
+import { AnatomyPreview } from "@/components/anatomy/Anatomy";
+import { parts } from "@/data/anatomy";
 import TopicGrid from "@/components/home/TopicGrid";
 import Footer from "@/components/Footer";
 import { PanelArt, ReportBg, WhyArt } from "@/components/Art";
@@ -10,6 +12,7 @@ import { ReportIcon } from "@/components/Icons";
 
 const sections = [
   { id: "s-intro", label: "INTRO" },
+  { id: "s-anatomy", label: "ANATOMY" },
   { id: "s-layers", label: "LAYERS" },
   { id: "s-topics", label: "TOPICS" },
   { id: "s-why", label: "WHY NOW" },
@@ -20,6 +23,35 @@ export default function Home() {
   return (
     <Fullpage items={sections}>
       <Hero />
+
+      {/* 배터리팩 해부도 미리보기 — 누르면 전용 페이지의 해당 부위로 */}
+      <section className="fp-section sec-anat anat-dark" id="s-anatomy" data-dark="true" aria-labelledby="anat-sec-title">
+        <div className="sec-anat-inner">
+          <div className="sec-anat-copy">
+            <span className="eyebrow">ANATOMY</span>
+            <h2 id="anat-sec-title">
+              배터리팩을
+              <br />
+              열어 보면
+            </h2>
+            <p>셀 → 모듈 → 팩. 어느 층에서 무엇을 떼어 내느냐가 재제조·재사용·재활용의 갈림길이 됩니다. 번호를 누르면 그 부위로 들어갑니다.</p>
+            <ol>
+              {parts.map((p) => (
+                <li key={p.id}>
+                  <Link href={`/anatomy?part=${p.id}`}>
+                    <em>{p.no}</em>
+                    {p.label}
+                  </Link>
+                </li>
+              ))}
+            </ol>
+            <Link className="sec-anat-cta" href="/anatomy">
+              해부도 자세히 보기 <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+          <AnatomyPreview />
+        </div>
+      </section>
 
       {/* 네 층위 — 호버 시 확장되는 패널 */}
       <section className="fp-section" id="s-layers" data-dark="true" aria-label="네 가지 층위">

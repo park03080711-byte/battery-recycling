@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Header from "@/components/Header";
 import "./globals.css";
 import "./hero.css";
+import "./anatomy.css";
 
 export const metadata: Metadata = {
   title: {

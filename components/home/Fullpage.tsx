@@ -9,7 +9,7 @@ interface Item {
 
 /** CSS scroll-snap 기반 풀페이지 스크롤 + 우측 섹션 인디케이터 */
 export default function Fullpage({ items, children }: { items: Item[]; children: ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLElement>(null);
   const [active, setActive] = useState(items[0]?.id);
   const [dark, setDark] = useState(true);
 
@@ -43,9 +43,9 @@ export default function Fullpage({ items, children }: { items: Item[]; children:
 
   return (
     <>
-      <div className="fp" ref={ref} id="main" tabIndex={-1}>
+      <main className="fp" ref={ref} id="main" tabIndex={-1}>
         {children}
-      </div>
+      </main>
       <nav className={`fp-dots${dark ? " on-dark" : ""}${active === "s-intro" ? " is-hidden" : ""}`} aria-label="섹션 이동">
         {items.map((it) => (
           <a

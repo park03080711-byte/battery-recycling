@@ -9,6 +9,7 @@ import { Logo } from "./Icons";
 
 const menu = [
   { href: "/about", label: "소개" },
+  { href: "/anatomy", label: "해부도" },
   { href: "/topics#paths", label: "처리 경로", layer: "paths" },
   { href: "/topics#support", label: "지원 기술", layer: "support" },
   { href: "/topics#evaluation", label: "평가 · 설계", layer: "evaluation" },
@@ -155,6 +156,7 @@ export default function Header() {
       {mobileOpen && (
         <nav className="mobile-nav" aria-label="전체 메뉴">
           <Link href="/about"><em>—</em>소개</Link>
+          <Link href="/anatomy"><em>—</em>배터리팩 해부도</Link>
           <Link href="/topics"><em>—</em>14개 주제 한눈에</Link>
           {layers.map((l) => (
             <div key={l.id}>

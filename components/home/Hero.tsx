@@ -181,7 +181,7 @@ export default function Hero() {
               <span className="hx-sx">다시 자원으로</span>
             </h1>
             <div className="hx-tagrow">
-              <a className="hx-play hx-l hx-c" style={at(66, 42)} href="#s-layers" aria-label="아래로 이동: 네 가지 층위">
+              <a className="hx-play hx-l hx-c" style={at(66, 42)} href="#s-anatomy" aria-label="아래로 이동: 배터리팩 해부도">
                 <svg viewBox="0 0 14 14" fill="none" aria-hidden="true">
                   <path d="M7 1.5v10.4M2.6 7.6 7 12l4.4-4.4" stroke="#0b1526" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>

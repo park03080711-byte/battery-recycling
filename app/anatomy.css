@@ -1,0 +1,468 @@
+/* ─────────────────────────────────────────────
+   배터리팩 해부도 — 스테이지 · 투시 · 확대 전환
+   ───────────────────────────────────────────── */
+.anat-dark {
+  --anat-bg: #070b12;
+  --anat-ink: #eef2f7;
+  --anat-muted: #9aa6b6;
+  --anat-line: rgba(255, 255, 255, 0.12);
+  --anat-hi: #f5c400;
+  color: var(--anat-ink);
+  background:
+    radial-gradient(120% 90% at 60% 42%, #1a2536 0%, #0d1420 46%, #070b12 100%);
+}
+
+.anat-stage {
+  position: relative;
+  width: 100%;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 4px;
+}
+.anat-ov-wrap,
+.anat-ov,
+.anat-detail { position: absolute; inset: 0; }
+.anat-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* 확대 전환: 전체 보기가 핫스팟 쪽으로 빨려 들어가고 상세가 떠오른다 */
+.anat-ov-wrap {
+  transform-origin: var(--origin, 50% 50%);
+  transition:
+    transform 0.82s cubic-bezier(0.7, 0, 0.2, 1),
+    opacity 0.5s ease 0.26s,
+    filter 0.6s ease;
+}
+.anat-stage.is-zoomed .anat-ov-wrap {
+  transform: scale(2.6);
+  opacity: 0;
+  filter: blur(6px);
+}
+.anat.is-returning .anat-ov-wrap { transition-delay: 0s, 0.05s, 0s; }
+
+.anat-detail {
+  opacity: 0;
+  transform: scale(1.12);
+  transform-origin: var(--origin, 50% 50%);
+  transition:
+    opacity 0.5s ease,
+    transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.anat-detail.is-in {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.32s, 0.2s;
+}
+.anat.is-detail .anat-detail.is-in { transition-delay: 0s; }
+.anat-detail img {
+  animation: anatFade 0.5s ease both;
+  /* 렌더 가장자리를 배경으로 부드럽게 녹인다 */
+  mask-image: radial-gradient(ellipse 72% 70% at 50% 48%, #000 62%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 72% 70% at 50% 48%, #000 62%, transparent 100%);
+}
+@keyframes anatFade { from { opacity: 0; } }
+
+/* 투시 레이어 */
+.anat-base,
+.anat-open { transition: filter 0.45s ease, opacity 0.6s ease; }
+.anat-open { opacity: 0; }
+.anat-open.is-on { opacity: 1; }
+.anat-ov.is-hover .anat-base,
+.anat-ov.is-hover .anat-open { filter: brightness(0.5) saturate(0.6); }
+.anat-xray {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  filter: drop-shadow(0 0 1px rgba(255, 216, 77, 0.95)) drop-shadow(0 0 12px rgba(245, 196, 0, 0.45));
+  pointer-events: none;
+}
+.anat-xray.is-on { opacity: 1; }
+.anat-xray-mask {
+  position: absolute;
+  inset: 0;
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+}
+
+/* 핫스팟 */
+.anat-hots { position: absolute; inset: 0; }
+.anat-hot {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: #0b0f16;
+  cursor: pointer;
+  z-index: 2;
+  text-decoration: none;
+}
+.anat-hot-dot {
+  position: relative;
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700; font-size: 12px; line-height: 1;
+  letter-spacing: 0.02em;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  transition: background 0.25s, transform 0.25s;
+}
+.anat-hot-ring {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  animation: anatPulse 2.4s ease-out infinite;
+}
+.anat-hot:nth-child(2) .anat-hot-ring { animation-delay: 0.6s; }
+.anat-hot:nth-child(3) .anat-hot-ring { animation-delay: 1.2s; }
+.anat-hot:nth-child(4) .anat-hot-ring { animation-delay: 1.8s; }
+@keyframes anatPulse {
+  0% { transform: scale(0.8); opacity: 0.9; }
+  80%, 100% { transform: scale(1.9); opacity: 0; }
+}
+.anat-hot-tag {
+  position: absolute;
+  left: 40px;
+  top: 50%;
+  transform: translate(-6px, -50%);
+  white-space: nowrap;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(10, 14, 22, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+}
+.anat-hot.tag-left .anat-hot-tag { left: auto; right: 40px; transform: translate(6px, -50%); }
+.anat-hot.is-active .anat-hot-dot,
+.anat-hot:focus-visible .anat-hot-dot { background: var(--anat-hi, #f5c400); transform: scale(1.08); }
+.anat-hot.is-active .anat-hot-tag,
+.anat-hot:focus-visible .anat-hot-tag { opacity: 1; transform: translate(0, -50%); }
+.anat-hot:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 50%; }
+.anat-ov.is-hover .anat-hot:not(.is-active) { opacity: 0.55; }
+.only-touch { display: none; }
+@media (hover: none) {
+  .only-hover { display: none; }
+  .only-touch { display: inline; }
+  .anat-hot .anat-hot-tag { opacity: 1; transform: translate(0, -50%); }
+}
+
+/* 상세 주석 표시 */
+.anat-marks { position: absolute; inset: 0; pointer-events: none; }
+.anat-mark {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transform: translate(-13px, -13px);
+  opacity: 0;
+}
+.anat-detail.is-in .anat-mark { animation: anatMark 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(0.75s + var(--i) * 0.14s); }
+.anat.is-detail .anat-detail.is-in .anat-mark { animation-delay: calc(0.15s + var(--i) * 0.12s); }
+@keyframes anatMark { from { opacity: 0; transform: translate(-13px, -5px); } to { opacity: 1; transform: translate(-13px, -13px); } }
+.anat-mark i {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700; font-size: 12px; line-height: 1;
+  font-style: normal;
+  color: #0b0f16;
+  background: #fff;
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.22), 0 3px 12px rgba(0, 0, 0, 0.4);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.anat-mark b {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: rgba(10, 14, 22, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+.anat-mark.tag-left { flex-direction: row-reverse; transform: translate(calc(-100% + 13px), -13px); }
+.anat-detail.is-in .anat-mark.tag-left { animation-name: anatMarkL; }
+@keyframes anatMarkL { from { opacity: 0; transform: translate(calc(-100% + 13px), -5px); } to { opacity: 1; transform: translate(calc(-100% + 13px), -13px); } }
+.anat-mark.is-on i { background: var(--anat-hi, #f5c400); box-shadow: 0 0 0 7px rgba(245, 196, 0, 0.3), 0 3px 12px rgba(0, 0, 0, 0.4); }
+
+/* 덮개 토글 */
+.anat-lid {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 3;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(10, 14, 22, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+.anat-lid:hover { background: rgba(10, 14, 22, 0.85); }
+.anat-lid-ic {
+  width: 16px;
+  height: 10px;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  position: relative;
+  transition: transform 0.3s;
+}
+.anat-lid-ic::before {
+  content: "";
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  top: -5px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+  transform-origin: left center;
+  transition: transform 0.3s;
+}
+.anat-lid[aria-pressed="true"] .anat-lid-ic::before { transform: rotate(-28deg); }
+.anat-lid:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* ───────── 전용 페이지 레이아웃 ───────── */
+.anat-page { min-height: 100vh; }
+.anat-top {
+  padding: 120px 0 0;
+}
+.anat-wrap { width: min(1480px, 100% - 64px); margin: 0 auto; }
+.anat-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; margin-bottom: 28px; }
+.anat-head .eyebrow { color: var(--anat-hi); }
+.anat-head h1 { margin-top: 8px; font-size: var(--fs-3xl); font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+.anat-head p { max-width: 460px; color: var(--anat-muted); font-size: var(--fs-md); line-height: 1.7; }
+.anat {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 32px;
+  align-items: start;
+  padding-bottom: 20px;
+}
+.anat-panel {
+  min-height: 100%;
+  border-left: 1px solid var(--anat-line);
+  padding-left: 32px;
+}
+.anat-hint { font-size: var(--fs-sm); color: var(--anat-muted); line-height: 1.7; }
+.anat-list ol { list-style: none; margin: 20px 0 0; padding: 0; border-top: 1px solid var(--anat-line); }
+.anat-list li { border-bottom: 1px solid var(--anat-line); }
+.anat-list button {
+  width: 100%;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 18px 4px;
+  text-align: left;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.2s, padding 0.25s;
+}
+.anat-list button em { font-style: normal; font-size: 13px; font-weight: 700; color: var(--anat-muted); width: 26px; }
+.anat-list button b { display: block; font-size: var(--fs-lg); font-weight: 700; letter-spacing: -0.01em; }
+.anat-list button small { display: block; margin-top: 4px; font-size: var(--fs-sm); color: var(--anat-muted); }
+.anat-list button.is-active,
+.anat-list button:focus-visible { background: rgba(255, 255, 255, 0.05); padding-left: 12px; }
+.anat-list button.is-active em { color: var(--anat-hi); }
+.anat-list button:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+
+.anat-info { opacity: 0; transform: translateY(12px); transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.anat-info.is-in { opacity: 1; transform: none; transition-delay: 0.1s; }
+.anat-back {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--anat-line);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.anat-back:hover { background: rgba(255, 255, 255, 0.1); }
+.anat-back kbd { font-weight: 600; font-size: 11px; line-height: 1; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--anat-line); color: var(--anat-muted); }
+.anat-back:focus-visible, .anat-pager button:focus-visible, .anat-topics a:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.anat-en { display: block; margin-top: 24px; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; color: var(--anat-hi); }
+.anat-info h2 { margin-top: 8px; font-size: var(--fs-xl); font-weight: 700; letter-spacing: -0.02em; line-height: 1.35; outline: none; }
+.anat-lead { margin-top: 14px; font-size: var(--fs-md); line-height: 1.75; color: #c9d2de; }
+.anat-notes { list-style: none; margin: 22px 0 0; padding: 0; }
+.anat-notes li {
+  display: flex;
+  gap: 14px;
+  padding: 14px 10px;
+  border-top: 1px solid var(--anat-line);
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+.anat-notes li.is-on { background: rgba(255, 255, 255, 0.05); }
+.anat-notes i {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700; font-size: 12px; line-height: 1;
+  font-style: normal;
+  color: #0b0f16;
+  background: #fff;
+}
+.anat-notes li.is-on i { background: var(--anat-hi); }
+.anat-notes b { font-size: var(--fs-md); font-weight: 700; }
+.anat-notes p { margin-top: 4px; font-size: var(--fs-sm); line-height: 1.65; color: var(--anat-muted); }
+.anat-topics { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.anat-topics span { width: 100%; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--anat-muted); }
+.anat-topics a {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0b0f16;
+  background: #fff;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.anat-topics a:hover { background: var(--anat-hi); }
+.anat-pager { margin-top: 28px; display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--anat-line); padding-top: 16px; }
+.anat-pager button { min-height: 44px; background: none; border: 0; color: var(--anat-muted); font-size: 14px; font-weight: 600; cursor: pointer; padding: 0 4px; }
+.anat-pager button:hover { color: #fff; }
+
+.anat-note-foot { max-width: 880px; padding-bottom: 64px; margin-top: 4px; font-size: var(--fs-xs); color: var(--anat-muted); line-height: 1.6; }
+
+.anat-more { background: #fff; color: var(--text); padding: 88px 0; }
+.anat-more h2 { font-size: var(--fs-2xl); font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
+.anat-more p { margin-top: 12px; max-width: 720px; line-height: 1.8; }
+.anat-more .grid { margin-top: 32px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.anat-more .grid a {
+  display: block;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.anat-more .grid a:hover { border-color: var(--ink); transform: translateY(-2px); }
+.anat-more .grid b { display: block; font-size: var(--fs-lg); color: var(--ink); }
+.anat-more .grid span { display: block; margin-top: 8px; font-size: var(--fs-sm); color: var(--muted); line-height: 1.6; }
+
+/* ───────── 메인 미리보기 섹션 ───────── */
+.sec-anat { display: flex; align-items: center; }
+.sec-anat-inner {
+  width: min(1480px, 100% - 64px);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 40px;
+  align-items: center;
+  padding: 96px 0 48px;
+}
+.sec-anat .eyebrow { color: var(--anat-hi); }
+.sec-anat h2 { margin-top: 8px; font-size: var(--fs-3xl); font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+.sec-anat-copy p { margin-top: 16px; color: var(--anat-muted); line-height: 1.75; }
+.sec-anat-copy ol { list-style: none; margin: 24px 0 0; padding: 0; border-top: 1px solid var(--anat-line); }
+.sec-anat-copy li a {
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+  padding: 12px 2px;
+  border-bottom: 1px solid var(--anat-line);
+  color: inherit;
+  text-decoration: none;
+  font-weight: 600;
+  transition: padding 0.2s, color 0.2s;
+}
+.sec-anat-copy li a em { font-style: normal; font-size: 12px; color: var(--anat-muted); }
+.sec-anat-copy li a:hover { padding-left: 8px; color: var(--anat-hi); }
+.sec-anat-copy li a:focus-visible, .sec-anat-cta:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.sec-anat-cta {
+  margin-top: 24px;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 22px;
+  border-radius: 999px;
+  background: #fff;
+  color: #0b0f16;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.sec-anat-cta:hover { background: var(--anat-hi); }
+
+@media (max-width: 1100px) {
+  .anat { grid-template-columns: 1fr; gap: 20px; }
+  .anat-panel { border-left: 0; padding-left: 0; }
+  .sec-anat-inner { grid-template-columns: 1fr; gap: 20px; padding: 88px 0 32px; }
+  .sec-anat-copy ol { display: none; }
+  .anat-head { flex-direction: column; align-items: flex-start; gap: 12px; }
+}
+@media (max-width: 700px) {
+  .anat-wrap, .sec-anat-inner { width: calc(100% - 32px); }
+  .anat-top { padding-top: 88px; }
+  .anat-hot-tag, .anat-mark b { display: none; }
+  .anat-hot { width: 44px; height: 44px; }
+  .anat-hot-dot { width: 26px; height: 26px; font-size: 11px; }
+  .anat-lid { left: auto; right: 8px; top: 8px; bottom: auto; min-height: 40px; padding: 0 12px; font-size: 13px; }
+  .anat-more .grid { grid-template-columns: 1fr; }
+  .sec-anat h2 { font-size: var(--fs-2xl); }
+  .sec-anat-copy p { font-size: var(--fs-sm); }
+}
+@media (max-height: 760px) and (min-width: 1101px) {
+  .sec-anat-inner { padding: 80px 0 24px; }
+  .sec-anat-copy ol { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anat-ov-wrap, .anat-detail, .anat-info { transition: opacity 0.2s linear !important; transform: none !important; filter: none !important; }
+  .anat-hot-ring { animation: none; opacity: 0.6; }
+  .anat-detail.is-in .anat-mark, .anat-detail img { animation: none; opacity: 1; }
+}
