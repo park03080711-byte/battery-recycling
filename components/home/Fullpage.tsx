@@ -25,11 +25,12 @@ export default function Fullpage({ items, children }: { items: Item[]; children:
             const isDark = el.dataset.dark === "true";
             if (el.id) setActive(el.id);
             setDark(isDark);
-            window.dispatchEvent(new CustomEvent("fp:section", { detail: { dark: isDark } }));
+            window.dispatchEvent(new CustomEvent("fp:section", { detail: { dark: isDark, id: el.id } }));
           }
         });
       },
-      { root, threshold: 0.55 }
+      // 화면 가운데 선을 지나는 섹션을 현재 섹션으로 본다 (화면보다 긴 섹션도 감지)
+      { root, rootMargin: "-50% 0px -50% 0px", threshold: 0 }
     );
     sections.forEach((s) => io.observe(s));
     return () => io.disconnect();

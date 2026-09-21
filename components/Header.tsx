@@ -25,11 +25,24 @@ export default function Header() {
   // 메인에서는 풀페이지 컨테이너의 스크롤 위치(첫 섹션 여부)로 헤더 스타일을 바꾼다
   useEffect(() => {
     const onSection = (e: Event) => {
-      const detail = (e as CustomEvent<{ dark: boolean }>).detail;
-      setAtTop(detail.dark);
+      const { dark, id } = (e as CustomEvent<{ dark: boolean; id: string }>).detail;
+      // 좁은 화면에서는 패널 글이 헤더 아래로 지나가므로 첫 화면에서만 투명 처리
+      setAtTop(dark && (id === "s-intro" || window.innerWidth > 900));
     };
     window.addEventListener("fp:section", onSection);
     return () => window.removeEventListener("fp:section", onSection);
+  }, []);
+
+  // Esc로 메가메뉴 · 모바일 메뉴 닫기
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMegaOpen(false);
+        setMobileOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   useEffect(() => {
@@ -64,7 +77,14 @@ export default function Header() {
       <a href="#main" className="skip-link">
         본문 바로가기
       </a>
-      <header className={cls} onMouseLeave={() => setMegaOpen(false)}>
+      <header
+        className={cls}
+        onMouseLeave={() => setMegaOpen(false)}
+        onBlur={(e) => {
+          // 키보드 포커스가 헤더 밖으로 나가면 메가메뉴를 닫는다
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setMegaOpen(false);
+        }}
+      >
         <div className="header-inner">
           <Link href="/" className="logo" aria-label="RE:CELL 14 홈">
             <Logo />

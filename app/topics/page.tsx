@@ -11,6 +11,7 @@ export const metadata: Metadata = { title: "14개 주제 한눈에" };
 export default function TopicsPage() {
   return (
     <>
+      <main id="main">
       <SubVisual
         layer="neutral"
         seed={40}
@@ -28,7 +29,7 @@ export default function TopicsPage() {
           { label: "층위 선택", options: layers.map((l) => ({ href: `/topics#${l.id}`, label: `${l.no}. ${l.title} (${l.range})` })) },
         ]}
       />
-      <main id="main" className="container">
+      <div className="container">
         <header className="page-title">
           <h1>네 개의 질문, 열네 개의 주제</h1>
           <p className="tagline">폐배터리 활용방안은 리사이클링 공정만으로 이루어지지 않습니다.</p>
@@ -79,7 +80,7 @@ export default function TopicsPage() {
               표시했습니다.
             </p>
           </div>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="표">
             <table>
               <thead>
                 <tr>
@@ -110,6 +111,7 @@ export default function TopicsPage() {
           </div>
         </section>
         <div style={{ height: 96 }} />
+      </div>
       </main>
       <Footer />
     </>

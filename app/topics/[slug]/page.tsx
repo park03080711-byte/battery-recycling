@@ -58,7 +58,7 @@ function RenderBlock({ b, slug }: { b: Block; slug: string }) {
       );
     case "table":
       return (
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0} role="region" aria-label={b.caption ?? `표: ${b.head.join(", ")}`}>
           <table>
             {b.caption && <caption>{b.caption}</caption>}
             <thead>
@@ -103,6 +103,7 @@ export default async function TopicPage({ params }: { params: Promise<Params> })
 
   return (
     <div style={style}>
+      <main id="main">
       <SubVisual
         layer={t.layer}
         seed={idx + 1}
@@ -124,7 +125,6 @@ export default async function TopicPage({ params }: { params: Promise<Params> })
         ]}
       />
 
-      <main id="main">
         <div className="container">
           <header className="page-title">
             <span className="no">{t.no}</span>
@@ -169,9 +169,7 @@ export default async function TopicPage({ params }: { params: Promise<Params> })
               <div className="side">
                 <div className="label">{s.label}</div>
                 <h2 id={`h-${i + 1}`}>{s.heading}</h2>
-                <span className="idx" aria-hidden="true">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
+                <span className="idx" aria-hidden="true" data-n={String(i + 1).padStart(2, "0")} />
               </div>
               <div className="content-body">
                 {s.blocks.map((b, j) => (

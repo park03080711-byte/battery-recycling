@@ -9,6 +9,7 @@ export const metadata: Metadata = { title: "사이트 소개" };
 export default function AboutPage() {
   return (
     <div style={{ ["--layer" as string]: "#0b3f8c", ["--layer-soft" as string]: "#e6eefa" }}>
+      <main id="main">
       <SubVisual
         layer="neutral"
         seed={12}
@@ -25,7 +26,7 @@ export default function AboutPage() {
           },
         ]}
       />
-      <main id="main" className="container">
+      <div className="container">
         <header className="page-title">
           <h1>왜 14개의 주제인가</h1>
           <p className="tagline">리사이클링 공정 하나만 보면 놓치는 것들</p>
@@ -70,7 +71,7 @@ export default function AboutPage() {
               폐배터리 활용방안은 리사이클링 공정만으로 이루어지지 않습니다. 무엇을 할 것인가(경로), 무엇이 있어야 가능한가(지원 기술), 좋은지 어떻게 판단하는가(평가),
               애초에 어떻게 만들 것인가(설계)라는 네 층위가 있고, 이 틀로 조사 범위를 정리하면 연구 주제 14개가 나옵니다.
             </p>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0} role="region" aria-label="표">
               <table>
                 <thead>
                   <tr>
@@ -139,6 +140,7 @@ export default function AboutPage() {
           </div>
         </section>
         <div style={{ height: 120 }} />
+      </div>
       </main>
       <Footer />
     </div>

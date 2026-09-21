@@ -31,7 +31,7 @@ export default function Home() {
               </div>
               <div className="panel-body">
                 <div className="panel-range">{l.range}</div>
-                <h3>{l.title}</h3>
+                <h2 className="panel-title">{l.title}</h2>
                 <div className="en">{l.en}</div>
                 <div className="panel-more">
                   <div>

@@ -17,6 +17,7 @@ const policy = [
 export default function ReferencesPage() {
   return (
     <>
+      <main id="main">
       <SubVisual
         layer="neutral"
         seed={77}
@@ -34,7 +35,7 @@ export default function ReferencesPage() {
           { label: "분류 선택", options: refGroups.map((g) => ({ href: `/references#${g.id}`, label: g.title })) },
         ]}
       />
-      <main id="main" className="container">
+      <div className="container">
         <header className="page-title">
           <h1>검증된 문헌 35편</h1>
           <p className="tagline">DOI · PMID · PMCID 또는 KCI 등재번호를 개별 조회해 서지사항을 대조했습니다.</p>
@@ -65,7 +66,7 @@ export default function ReferencesPage() {
           <p style={{ margin: "16px 0", fontSize: "var(--fs-sm)", color: "var(--muted)" }}>
             아래 자료는 학술 문헌이 아니라 공공기관 발표와 언론 보도입니다. 제도는 개정될 수 있으므로 인용 시점의 최신 내용을 다시 확인해야 합니다.
           </p>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="표">
             <table>
               <thead>
                 <tr>
@@ -100,6 +101,7 @@ export default function ReferencesPage() {
           </ul>
         </section>
         <div style={{ height: 96 }} />
+      </div>
       </main>
       <Footer />
     </>

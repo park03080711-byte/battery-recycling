@@ -8,7 +8,7 @@ import type { VizName } from "@/data/topics";
 function Soh({ current }: { current: string }) {
   const segs = [
     { slug: "recycling", label: "재활용", from: 0, to: 60, color: "#5b6572", desc: "파·분쇄 후 유가금속 추출 · 폐기물관리법 · 환경부" },
-    { slug: "reuse", label: "재사용", from: 60, to: 80, color: "#1a8a70", desc: "ESS · UPS 등 다른 제품으로 · 친환경산업법(신설 예정)" },
+    { slug: "reuse", label: "재사용", from: 60, to: 80, color: "#137563", desc: "ESS · UPS 등 다른 제품으로 · 친환경산업법(신설 예정)" },
     { slug: "remanufacturing", label: "재제조", from: 80, to: 100, color: "#0b4f40", desc: "본래 성능으로 복원해 다시 전기차로 · 자동차관리법" },
   ];
   const isPath = segs.some((s) => s.slug === current);
@@ -67,8 +67,8 @@ function Temperature() {
               className="tl"
               style={{
                 ...(t.pos === "up2" ? { bottom: 64 } : {}),
-                ...(t.v <= 45 ? { left: -10, transform: "none", textAlign: "left" } : {}),
-                ...(t.v >= 1400 ? { left: "auto", right: -10, transform: "none", textAlign: "right" } : {}),
+                ...(t.v <= 45 ? { left: 0, transform: "none", textAlign: "left" } : {}),
+                ...(t.v >= 1400 ? { left: "auto", right: 0, transform: "none", textAlign: "right" } : {}),
               }}
             >
               {t.label}
@@ -198,7 +198,7 @@ function Eu() {
             <div className="bar-track">
               <div className="bar" aria-label={`2031년 ${r.a}%`}>
                 <i style={{ width: `${r.a}%`, background: "#7fa4dc" }} />
-                <em className={r.a < 12 ? "out" : ""} style={r.a < 12 ? { left: `calc(${r.a}% + 8px)` } : undefined}>
+                <em className="out" style={r.a < 12 ? { left: `calc(${r.a}% + 8px)` } : undefined}>
                   {r.a}%
                 </em>
               </div>
@@ -276,7 +276,7 @@ function Feasibility() {
         {rows.map((r) => (
           <div className="feas-row" key={r.n}>
             <b>{r.n}</b>
-            <div className="feas-meter" aria-label={`실현 가능성 ${r.gl}`}>
+            <div className="feas-meter" role="img" aria-label={`실현 가능성 ${r.gl}`}>
               {[1, 2, 3, 4].map((i) => (
                 <i key={i} className={i <= r.g ? "on" : ""} />
               ))}
@@ -298,9 +298,9 @@ function HubSpoke() {
       <figcaption className="viz-title">Hub & Spoke 공정 흐름 — 국내 기업 습식제련 모델</figcaption>
       <div className="hs">
         <div className="hs-box">
-          <h4>
+          <h3>
             전처리<small>Spoke · 해외 리사이클링 파크</small>
-          </h4>
+          </h3>
           <ol>
             <li><span><b>안전 방전 · 모듈 해체</b>알루미늄 · 구리 스크랩 1차 회수</span></li>
             <li><span><b>열처리 (탈바인더)</b>전해액 휘발, 바인더 분해</span></li>
@@ -316,9 +316,9 @@ function HubSpoke() {
           이송
         </div>
         <div className="hs-box hub">
-          <h4>
+          <h3>
             후처리<small>Hub · 국내 하이드로 센터</small>
-          </h4>
+          </h3>
           <ol>
             <li><span><b>침출</b>황산 + 과산화수소(환원제)로 용해</span></li>
             <li><span><b>불순물 정제</b>pH 조절로 Fe · Al · Ca 침전 제거</span></li>

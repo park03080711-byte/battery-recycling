@@ -20,7 +20,7 @@ export default function Footer({ snap = false }: { snap?: boolean }) {
         <div className="footer-links">
           {layers.map((l) => (
             <div key={l.id}>
-              <h4>{l.en}</h4>
+              <h2>{l.en}</h2>
               {topicsByLayer(l.id).map((t) => (
                 <Link key={t.slug} href={`/topics/${t.slug}`}>
                   {t.no} {t.title}
@@ -29,7 +29,7 @@ export default function Footer({ snap = false }: { snap?: boolean }) {
             </div>
           ))}
           <div>
-            <h4>ARCHIVE</h4>
+            <h2>ARCHIVE</h2>
             <Link href="/about">사이트 소개</Link>
             <Link href="/topics">주제 한눈에</Link>
             <Link href="/references">참고문헌</Link>
