@@ -189,7 +189,7 @@ export default function Home() {
               <p>
                 DOI · PMID · KCI로
                 <br />
-                개별 검증한 41편
+                개별 검증한 44편
               </p>
               <Link className="btn-line" href="/references">
                 자세히보기

@@ -114,6 +114,8 @@
 /* 출처 번호 · 근거 수준 */
 .rc-cite { display: inline-flex; gap: 3px; vertical-align: 0.15em; margin-left: 2px; white-space: nowrap; }
 .rc-cite a { display: inline-grid; place-items: center; min-width: 20px; height: 18px; padding: 0 5px; border: 1px solid #c9d5fe; border-radius: 5px; font-size: 11px; font-weight: 700; line-height: 1; color: var(--rc-link); text-decoration: none; background: #f7f9ff; }
+.rc-cite a { position: relative; }
+.rc-cite a::after { content: ""; position: absolute; inset: -4px -1px; }
 .rc-cite a:hover { background: var(--rc-tint); border-color: var(--rc-link); }
 .rc-level { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--ism-color-foreground); white-space: nowrap; }
 .rc-level i { width: 9px; height: 9px; flex: none; }
@@ -493,4 +495,68 @@ a.rm-tier-row:hover { background: var(--ism-color-background); }
 @media (max-width: 720px) {
   .rm-bal-chart .tick { font-size: 19px; }
   .rm-bal-chart .val { font-size: 21px; }
+}
+
+/* ─────────────────────────────────────────────
+   02 재사용 전용 부품
+   ───────────────────────────────────────────── */
+/* 차 vs ESS */
+.rs-demand { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 16px 20px; align-items: stretch; }
+.rs-demand-card { padding: 18px 20px; border-radius: var(--r-panel); background: var(--ism-color-background); }
+.rs-demand-card.ess { background: var(--rc-tint); box-shadow: inset 0 0 0 1.5px #c9d5fe; }
+.rs-demand-art { width: 150px; height: 100px; display: block; margin: -4px 0 4px -6px; }
+.rs-demand-card h3 { font-size: var(--fs-lg); font-weight: 800; color: var(--ism-color-foreground); }
+.rs-demand-card h3 span { margin-left: 8px; font-size: 12px; font-weight: 700; color: var(--rc-sub); }
+.rs-demand-card ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.rs-demand-card li { position: relative; padding-left: 16px; font-size: var(--fs-sm); line-height: 1.6; }
+.rs-demand-card li::before { content: ""; position: absolute; left: 0; top: 0.62em; width: 7px; height: 7px; border-radius: 2px; background: var(--ism-color-foreground); }
+.rs-demand-card.ess li::before { background: var(--rc-link); }
+.rs-demand-vs { align-self: center; font-size: 12px; font-weight: 800; color: var(--rc-sub); text-align: center; line-height: 1.6; }
+.rs-demand figcaption { grid-column: 1 / -1; }
+.rs-demand-vs .sep { display: none; }
+
+/* 환경 이득의 문턱 */
+.rs-th-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; }
+.rs-th-top .rc-fig-h, .rs-th-top .rc-filter { margin-bottom: 0; }
+.rs-th-body { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 24px; align-items: center; margin-top: 12px; }
+.rs-th-art { width: 100%; height: auto; }
+.rs-th-art polygon { transition: all 320ms var(--ease); }
+.rs-th-read .v { font-size: 64px; font-weight: 800; letter-spacing: -0.045em; line-height: 1; color: var(--ism-color-foreground); }
+.rs-th-read .v small { margin-left: 4px; font-size: var(--fs-lg); color: var(--rc-sub); letter-spacing: 0; }
+.rs-th-read .th-nm { margin-top: 6px; font-size: var(--fs-md); font-weight: 800; color: var(--rc-link); }
+.rs-th-read .th-note { margin-top: 8px; font-size: var(--fs-sm); line-height: 1.75; }
+.rs-th-read .th-how { margin-top: 14px; padding: 12px 14px; border-radius: var(--r-btn); background: var(--ism-color-background); font-size: 13px; line-height: 1.7; color: var(--rc-text); }
+.rs-th-read .th-how b { color: var(--ism-color-foreground); }
+
+/* 시간 순서 */
+.rs-life-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; counter-reset: l; }
+.rs-life-list li { position: relative; padding: 16px 18px 18px; border-radius: var(--r-panel); background: var(--ism-color-background); }
+.rs-life-list li.cur { background: var(--rc-tint); box-shadow: inset 0 0 0 1.5px #c9d5fe; }
+.rs-life-list li + li::before { content: "→"; position: absolute; left: -22px; top: 50%; transform: translateY(-50%); color: var(--ism-color-teal); font-weight: 800; font-size: 18px; }
+.rs-life-ico { width: 120px; height: 90px; display: block; margin: -6px 0 2px -6px; }
+.rs-life-list .lf-step { font-size: var(--fs-sm); color: var(--rc-sub); }
+.rs-life-list .lf-step b { margin-right: 6px; font-size: var(--fs-md); color: var(--ism-color-foreground); }
+.rs-life-list .lf-soh { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: var(--r-badge); background: var(--rc-panel); box-shadow: var(--rc-sh-1); font-size: 12px; font-weight: 800; color: var(--ism-color-foreground); }
+.rs-life-list .lf-txt { margin-top: 8px; font-size: 13px; line-height: 1.7; }
+.rs-life-notes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.rs-life-notes .rc-note { margin: 0; }
+
+/* 경제성 조건 */
+.rs-cond-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.rs-cond-list li { display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; border-radius: var(--r-panel); background: var(--ism-color-background); }
+.rs-cond-list b { font-size: var(--fs-md); color: var(--ism-color-foreground); }
+.rs-cond-list span:not(.rc-cite) { font-size: var(--fs-sm); line-height: 1.7; }
+.rs-cond-list .rc-cite { align-self: flex-start; margin: 2px 0 0; }
+
+@media (max-width: 900px) {
+  .rs-demand { grid-template-columns: minmax(0, 1fr); }
+  .rs-demand-vs br { display: none; }
+  .rs-demand-vs .sep { display: inline; }
+  .rs-th-body { grid-template-columns: minmax(0, 1fr); }
+  .rs-life-list, .rs-life-notes { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+  .rs-life-list li + li::before { content: "↓"; left: 22px; top: -20px; transform: none; }
+  .rs-cond-list { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rs-th-art polygon { transition: none; }
 }

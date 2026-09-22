@@ -8,7 +8,8 @@ import { NextNav, RefsSection, TopicHead, type Kpi } from "../rc/kit";
 import { collectCited } from "../rc/sources";
 import { econ, facts, stepSrc, steps, toc, tiers } from "./data";
 import { GatesArt, IconCells, IconSteps, IconTier } from "./Icons";
-import { BalanceDemo, DepthExplorer, TierStair } from "./Parts";
+import { BalanceDemo, DepthExplorer } from "./Parts";
+import { TierStair } from "../rc/Tiers";
 import shop from "./shop.json";
 
 const icons = [<IconTier key="a" />, <IconCells key="b" />, <IconSteps key="c" />];
@@ -58,7 +59,7 @@ export default function RemanPage() {
                 전기차에서 떼어 낸 배터리는 곧바로 분해되지 않습니다. 남은 성능, 즉 잔존용량에 따라 갈 길이 정해지고, 재제조는 그중 성능이 가장 많이 남은 배터리가 가는
                 길입니다. 세 경로는 결과물뿐 아니라 근거 법령과 소관 부처도 서로 다릅니다. <Cite src={["R"]} />
               </p>
-              <TierStair />
+              <TierStair active={0} />
               <figure className="rc-panel">
                 <div className="rc-table-wrap" tabIndex={0} role="region" aria-label="세 처리 경로 비교표">
                   <table className="rc-table">

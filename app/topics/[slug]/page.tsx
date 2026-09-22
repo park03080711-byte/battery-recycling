@@ -11,6 +11,7 @@ import RefList from "@/components/sub/RefList";
 import Footer from "@/components/Footer";
 import { FactIcon, TopicIcon } from "@/components/Icons";
 import RemanPage from "@/components/rm/RemanPage";
+import ReusePage from "@/components/rs/ReusePage";
 import RecyclingPage from "@/components/rc/RecyclingPage";
 
 type Params = { slug: string };
@@ -96,6 +97,7 @@ export default async function TopicPage({ params }: { params: Promise<Params> })
   // 개편 시범: 03 재활용만 새 체계로 (검토 후 나머지 주제로 확장)
   if (slug === "recycling") return <RecyclingPage />;
   if (slug === "remanufacturing") return <RemanPage />;
+  if (slug === "reuse") return <ReusePage />;
 
   const layer = layerById(t.layer);
   const idx = topics.findIndex((x) => x.slug === t.slug);
