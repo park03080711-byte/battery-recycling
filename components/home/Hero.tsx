@@ -227,11 +227,11 @@ export default function Hero() {
               세로 화면에서는 문구와 수치 사이에 남는 세로 공간에만 놓여 글자를 가리지 않는다 */}
           <div className="hx-cell" aria-hidden="true">
             <picture>
-              <source type="image/avif" srcSet="/hero/cell-480.avif 480w, /hero/cell-820.avif 820w" sizes="(max-aspect-ratio: 87/80) 40vw, 22vw" />
+              <source type="image/avif" srcSet="/hero/cell-480.avif 480w, /hero/cell-820.avif 820w" sizes="(max-aspect-ratio: 87/80) 40vw, 30vw" />
               <img
                 src="/hero/cell-820.webp"
                 srcSet="/hero/cell-480.webp 480w, /hero/cell-820.webp 820w"
-                sizes="(max-aspect-ratio: 87/80) 40vw, 22vw"
+                sizes="(max-aspect-ratio: 87/80) 40vw, 30vw"
                 width={CELL.w}
                 height={CELL.h}
                 alt=""
