@@ -37,7 +37,7 @@ export default function ReferencesPage() {
       />
       <div className="container">
         <header className="page-title">
-          <h1>검증된 문헌 44편</h1>
+          <h1>검증된 문헌 49편</h1>
           <p className="tagline">DOI · PMID · PMCID 또는 KCI 등재번호를 개별 조회해 서지사항을 대조했습니다.</p>
         </header>
 
@@ -93,7 +93,7 @@ export default function ReferencesPage() {
         <section className="ref-group">
           <h2>검증 방법과 한계</h2>
           <ul className="bullets" style={{ marginTop: 16, fontSize: "var(--fs-sm)" }}>
-            <li>44편 전부 실존 확인, 서지 오류 0건. 36~41번은 재제조, 42~44번은 재사용 페이지 보강 때(2026년 9월) 추가했습니다. 다만 재사용 · 재제조 문헌 1편([23])은 동료심사를 거치지 않은 프리프린트입니다.</li>
+            <li>49편 전부 실존 확인, 서지 오류 0건. 36~41번은 재제조, 42~44번은 재사용, 45~49번은 업사이클링 페이지 보강 때(2026년 9월) 추가했습니다. 다만 재사용 · 재제조 문헌 1편([23])은 동료심사를 거치지 않은 프리프린트입니다.</li>
             <li>국제 저널 다수는 전문 접근이 제공되지 않아 요약 내용은 초록 수준에 근거합니다. 상세 실험 조건과 그래프 수치는 원문 확인이 필요합니다.</li>
             <li>신기술 성능 수치는 대부분 단일 조성의 정제된 시료에서 얻은 실험실 값입니다. 실현 가능성 등급은 문헌 서술에 근거한 판단이며 TRL 평가가 아닙니다.</li>
             <li>기업 공정 설명은 기업이 공개한 정보이며, 회수율 95%와 CO₂ 70% 절감은 기업 자체 발표 기준입니다.</li>

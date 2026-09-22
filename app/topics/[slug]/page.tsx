@@ -12,6 +12,7 @@ import Footer from "@/components/Footer";
 import { FactIcon, TopicIcon } from "@/components/Icons";
 import RemanPage from "@/components/rm/RemanPage";
 import ReusePage from "@/components/rs/ReusePage";
+import UpcyclingPage from "@/components/up/UpcyclingPage";
 import RecyclingPage from "@/components/rc/RecyclingPage";
 
 type Params = { slug: string };
@@ -98,6 +99,7 @@ export default async function TopicPage({ params }: { params: Promise<Params> })
   if (slug === "recycling") return <RecyclingPage />;
   if (slug === "remanufacturing") return <RemanPage />;
   if (slug === "reuse") return <ReusePage />;
+  if (slug === "upcycling") return <UpcyclingPage />;
 
   const layer = layerById(t.layer);
   const idx = topics.findIndex((x) => x.slug === t.slug);

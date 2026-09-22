@@ -235,7 +235,7 @@ export const topics: Topic[] = [
         ],
       },
     ],
-    refs: [34, 20],
+    refs: [34, 20, 45, 46, 47, 48, 49],
     related: ["recycling", "techno-economic", "supply-chain"],
   },
 
