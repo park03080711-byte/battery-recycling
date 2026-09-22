@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import "./globals.css";
 import "./hero.css";
 import "./anatomy.css";
+import "./rc.css";
 
 export const metadata: Metadata = {
   title: {
