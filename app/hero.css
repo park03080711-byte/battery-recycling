@@ -36,6 +36,30 @@
   z-index: 0;
 }
 .hx-bg svg { width: 100%; height: 100%; display: block; }
+/* 고리 앞쪽 반 — 셀 위, 글자 아래 */
+.hx-fg { position: absolute; left: -2px; top: -2px; width: calc(100% + 4px); height: calc(100% + 4px); z-index: 1; pointer-events: none; }
+.hx-fg svg { width: 100%; height: 100%; display: block; }
+
+/* 절개 셀 — 넓은 화면: 제목 오른쪽 끝(711u)과 패널 왼쪽 끝(오른쪽에서 354u) 사이 통로,
+   위로는 가운데 메뉴 아래(140u), 아래로는 수치 줄 위(200u)까지만. 그 상자 안에서 비율 유지로 맞춘다 */
+.hx-cell {
+  position: absolute;
+  z-index: 1;
+  left: calc(735 * var(--u));
+  right: calc(378 * var(--u));
+  top: calc(140 * var(--u));
+  bottom: calc(200 * var(--u));
+  pointer-events: none;
+}
+.hx-cell picture, .hx-cell img { display: block; width: 100%; height: 100%; }
+.hx-cell img {
+  object-fit: contain;
+  filter: drop-shadow(0 calc(34 * var(--u)) calc(40 * var(--u)) rgba(36, 64, 110, 0.16));
+}
+@keyframes hxCell { from { transform: translateY(calc(8 * var(--u))) rotate(0.5deg); } to { transform: translateY(calc(-8 * var(--u))) rotate(-0.5deg); } }
+@media (prefers-reduced-motion: no-preference) {
+  .hx-cell img { animation: hxCell 9s ease-in-out infinite alternate; }
+}
 .hx-tint { position: absolute; inset: 0; background: rgba(255, 249, 240, 0.05); z-index: 1; pointer-events: none; }
 
 @keyframes hxPush { from { transform: scale(1); } to { transform: scale(1.035); } }
@@ -276,7 +300,7 @@
 /* 등장 전 상태 — html.pre는 첫 페인트 전에 붙고 타임라인이 끝나면 지워진다 */
 html.pre .hx-brand, html.pre .hx-nav, html.pre .hx-cta, html.pre .hx-burger,
 html.pre .hx-eyebrow, html.pre .hx-play, html.pre .hx-tag,
-html.pre .hx-panel, html.pre .hx-lbl, html.pre .hx-meet { opacity: 0; }
+html.pre .hx-panel, html.pre .hx-lbl, html.pre .hx-meet, html.pre .hx-cell { opacity: 0; }
 html.pre .hx h1 .hx-sx, html.pre .hx-num { clip-path: inset(100% 0 -14% 0); }
 html.pre .hx-slash { scale: 1 0; }
 html.pre .hx-track { scale: 0 1; }
@@ -310,6 +334,9 @@ html.pre .hx-dot { scale: 0; }
   .hx-row:last-child { flex-wrap: wrap; row-gap: calc(24 * var(--u)); }
   .hx-meet { margin-left: auto; }
   .hx-nav { position: relative; left: auto; top: auto; transform: none; flex: none; }
+  /* 세로 화면: 문구와 수치 사이 남는 공간만 차지 — 공간이 적으면 작아질 뿐 글자와 겹치지 않는다 */
+  .hx-cell { position: relative; left: auto; right: auto; top: auto; bottom: auto; flex: 1 1 0; min-height: 0; width: 100%; margin: calc(6 * var(--u)) 0; }
+  .hx-hero-blk { flex: none; }
 
   /* 작은 가로 화면: 문구와 패널을 나란히 */
   @media (min-aspect-ratio: 1/1) {
@@ -329,6 +356,7 @@ html.pre .hx-dot { scale: 0; }
       .hx-thumb { top: calc(6 * var(--u)); }
       .hx-meet b { top: calc(29 * var(--u)); }
       .hx-meet .hx-knob { top: calc(12 * var(--u)); }
+      .hx-cell { display: none; } /* 가로 폰: 셀이 들어갈 세로 여유가 없다 */
     }
     .hx-hero-blk { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: calc(46 * var(--u)); align-items: end; margin: calc(24 * var(--u)) 0; }
     .hx-eyebrow { grid-column: 1; grid-row: 1; }
@@ -373,6 +401,28 @@ html.pre .hx-dot { scale: 0; }
     .hx-meet b { left: calc(84 * var(--t)); top: calc(28 * var(--t)); font-size: calc(17 * var(--t)); }
     .hx-meet .hx-knob { left: auto; right: calc(11 * var(--t)); top: calc(11 * var(--t)); width: calc(50 * var(--t)); height: calc(50 * var(--t)); }
   }
+}
+
+/* ── 세로 태블릿: 패널 왼쪽 빈자리를 셀 자리로 — 문구 · 패널 · 수치를 격자로 배치 ── */
+@media (max-aspect-ratio: 1/1) and (min-width: 641px) {
+  .hx-stack {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
+    column-gap: calc(28 * var(--u));
+  }
+  .hx-stack > .hx-row:first-child { grid-column: 1 / -1; }
+  .hx-hero-blk { display: contents; }
+  .hx-eyebrow { grid-column: 1 / -1; margin-top: calc(40 * var(--u)); }
+  .hx h1 { grid-column: 1 / -1; }
+  .hx-tagrow { grid-column: 1 / -1; }
+  .hx-panel { grid-column: 2; grid-row: 5; align-self: start; margin-top: calc(40 * var(--u)); }
+  .hx-cell { grid-column: 1; grid-row: 5; height: auto; margin: calc(24 * var(--u)) 0 calc(28 * var(--u)); }
+  .hx-stack > .hx-row:last-child { grid-column: 1 / -1; grid-row: 6; }
+}
+/* 세로 화면에서는 배경판 가운데가 글자 뒤로 오므로 떠도는 입자를 숨긴다 */
+@media (max-aspect-ratio: 1/1) {
+  .hx-bg .hx-float { display: none; }
 }
 
 /* ── 메뉴 접기: 화면 모양으로만. 세로는 접고, 가로는 절대 접지 않는다 ── */
