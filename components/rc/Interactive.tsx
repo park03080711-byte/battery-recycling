@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { ProductStackArt } from "./Iso";
 import { Cite } from "./Cite";
-import { processes, products, temps, toc, type Stage } from "./data";
+import { processes, products, temps, type Stage } from "./data";
 
 /* ── 옆 목차: 지금 읽는 부분을 표시 (IntersectionObserver + aria-current) ── */
-export function RcToc() {
+export function RcToc({ items: toc }: { items: { id: string; label: string }[] }) {
   const [cur, setCur] = useState(toc[0].id);
   useEffect(() => {
     const els = toc.map((t) => document.getElementById(t.id)).filter(Boolean) as HTMLElement[];
@@ -16,7 +16,7 @@ export function RcToc() {
     );
     els.forEach((el) => io.observe(el));
     return () => io.disconnect();
-  }, []);
+  }, [toc]);
   return (
     <nav className="rc-toc" aria-label="이 페이지 목차">
       <p className="rc-toc-h">이 페이지</p>

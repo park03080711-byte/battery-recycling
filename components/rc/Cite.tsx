@@ -1,8 +1,8 @@
 import { refById } from "@/data/references";
-import { extraSources, levelLabel, type Level, type Src } from "./data";
+import { extraSources, levelLabel, type Level, type Src } from "./sources";
 
 const srcTitle = (s: Src) => (typeof s === "number" ? refById(s).title : extraSources[s].title);
-const srcLabel = (s: Src) => (typeof s === "number" ? String(s) : s === "P1" ? "정책" : s === "C1" ? "기업" : "보고서");
+const srcLabel = (s: Src) => (typeof s === "number" ? String(s) : extraSources[s].label);
 
 /** 본문 속 출처 번호 — 누르면 아래 근거 문헌 목록의 해당 항목으로 이동 */
 export function Cite({ src }: { src: Src[] }) {

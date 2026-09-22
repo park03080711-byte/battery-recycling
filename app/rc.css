@@ -144,12 +144,12 @@
 
 .rc-map-stage {
   position: relative;
-  aspect-ratio: 2800 / 1078;
+  aspect-ratio: var(--ar, 2800 / 1078);
   overflow: hidden;
   background: radial-gradient(120% 90% at 50% 40%, #fbfcff 0%, #eef3fc 100%);
   touch-action: pan-y;
 }
-.rc-map-canvas { position: absolute; left: 0; top: 0; width: 100%; aspect-ratio: 2800 / 1078; transform-origin: 0 0; transition: transform 720ms var(--ease); will-change: transform; }
+.rc-map-canvas { position: absolute; left: 0; top: 0; width: 100%; transform-origin: 0 0; transition: transform 720ms var(--ease); will-change: transform; }
 .rc-map-img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .rc-map-canvas > .rc-map-img { position: relative; transition: opacity var(--ism-motion), filter var(--ism-motion); }
 .rc-map-stage.is-lit .rc-map-canvas > .rc-map-img { opacity: 0.5; filter: saturate(0.35); }
@@ -173,8 +173,8 @@
 
 .rc-map-dock { border-top: 1px solid var(--rc-line); }
 .rc-rail { display: flex; align-items: stretch; gap: 0; padding: 12px 16px; background: #fafbfe; border-bottom: 1px solid var(--rc-line); overflow-x: auto; scrollbar-width: thin; }
-.rc-rail-g { flex: 3 1 0; min-width: 0; }
-.rc-rail-g + .rc-rail-mid + .rc-rail-g { flex-grow: 4; }
+.rc-rail-wrap { display: flex; flex: 1 1 0; min-width: 0; }
+.rc-rail-g { flex: 1 1 0; min-width: 0; }
 .rc-rail-h { display: flex; align-items: center; gap: 8px; padding: 2px 6px 8px; font-size: 12px; font-weight: 700; color: var(--rc-sub); }
 .rc-rail ol { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px; }
 .rc-rail li { flex: 1 1 0; min-width: 0; }
@@ -186,7 +186,7 @@
 .rc-rail button:hover { background: var(--ism-color-background); }
 .rc-rail button[aria-pressed="true"] { background: var(--rc-panel); color: var(--ism-color-foreground); font-weight: 700; box-shadow: var(--rc-sh-2); }
 .rc-rail button[aria-pressed="true"] b { background: var(--ism-color-foreground); color: #fff; box-shadow: none; }
-.rc-rail ol[start="4"] button[aria-pressed="true"] b { background: var(--rc-link); }
+.rc-rail ol.g1 button[aria-pressed="true"] b { background: var(--rc-link); }
 
 .rc-map-detail { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px 40px; padding: 24px 28px; }
 .rc-map-step { display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: 700; color: var(--rc-sub); }
@@ -339,6 +339,7 @@
   .rc-kpi .v { font-size: 40px; }
   .rc-map-detail { grid-template-columns: minmax(0, 1fr); }
   .rc-rail { flex-direction: column; gap: 4px; }
+  .rc-rail-wrap { flex-direction: column; }
   .rc-rail-mid { margin: 4px 0 4px 18px; padding: 6px 0; }
   .rc-rail-mid span::before { left: -2px; top: -8px; bottom: -8px; width: 0; border-top: 0; border-left: 2px dashed var(--ism-color-teal); }
   .rc-rail-mid span { padding-left: 16px; }
@@ -372,4 +373,124 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .rc-map-canvas, .rc-map-lit, .rc-map-canvas > .rc-map-img, .rc-stack-art polygon, .rc-next li a::before, .rc-next li a > * { transition: none; }
+}
+
+/* ─────────────────────────────────────────────
+   01 재제조 전용 부품 (같은 토큰 · 같은 규칙)
+   ───────────────────────────────────────────── */
+/* 세 갈래 계단 */
+.rm-tier { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 8px 32px; align-items: center; }
+.rm-tier-art { width: 260px; height: auto; }
+.rm-tier-art polygon { transition: all 260ms var(--ease); }
+.rm-tier-n { font-size: 12px; font-weight: 800; fill: var(--ism-color-foreground); pointer-events: none; }
+.rm-tier-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.rm-tier-row { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 2px 14px; align-items: baseline; padding: 12px 14px; border-radius: var(--r-btn); text-decoration: none; transition: background-color 160ms var(--ease); }
+a.rm-tier-row:hover { background: var(--ism-color-background); }
+.rm-tier-row .soh { grid-row: span 2; font-size: var(--fs-sm); font-weight: 800; color: var(--rc-sub); }
+.rm-tier-row b { font-size: var(--fs-md); color: var(--ism-color-foreground); }
+.rm-tier-row b em { margin-left: 6px; padding: 2px 8px; border-radius: var(--r-badge); background: var(--rc-link); color: #fff; font-size: 11px; font-style: normal; vertical-align: 2px; }
+.rm-tier-row b span { color: var(--rc-link); }
+.rm-tier-row .out { font-size: 13px; color: var(--rc-sub); }
+.rm-tier-list li.cur .rm-tier-row { background: var(--rc-tint); box-shadow: inset 3px 0 0 var(--rc-link); }
+.rm-tier-list li.cur .soh { color: var(--rc-link); }
+.rm-tier figcaption { grid-column: 1 / -1; }
+.rc-table tr.rm-cur > * { background: var(--rc-tint); }
+.rc-table td small { display: block; font-size: 12px; color: var(--rc-sub); }
+
+/* 셀밸런싱 예시 */
+.rm-bal-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; }
+.rm-bal-top .rc-fig-h, .rm-bal-top .rc-filter { margin-bottom: 0; }
+.rm-bal-body { display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: 24px; align-items: center; margin-top: 16px; }
+.rm-bal-chart { width: 100%; height: auto; overflow: visible; }
+.rm-bal-chart .grid { stroke: var(--rc-line); stroke-width: 1; }
+.rm-bal-chart .ax { stroke: var(--ism-color-border); stroke-width: 1; }
+.rm-bal-chart .tick { font-size: 11px; fill: var(--rc-sub); }
+.rm-bal-chart .val { font-size: 12px; font-weight: 800; fill: var(--ism-color-foreground); }
+.rm-bal-chart .bar rect { fill: #8fa6fc; transition: y 500ms var(--ease), height 500ms var(--ease), fill 300ms var(--ease); }
+.rm-bal-chart .bar.hi rect { fill: var(--ism-color-accent); }
+.rm-bal-chart .bar.lo rect { fill: var(--ism-color-foreground); }
+.rm-bal-read { margin: 0; display: grid; gap: 10px; }
+.rm-bal-read div { padding: 10px 14px; border-radius: var(--r-btn); background: var(--ism-color-background); }
+.rm-bal-read dt { font-size: 12px; font-weight: 700; color: var(--rc-sub); }
+.rm-bal-read dd { margin: 2px 0 0; display: flex; align-items: center; gap: 8px; font-size: var(--fs-md); font-weight: 800; color: var(--ism-color-foreground); }
+.rm-bal-read i { width: 12px; height: 12px; border-radius: 3px; }
+.rm-bal-read i.hi { background: var(--ism-color-accent); }
+.rm-bal-read i.lo { background: var(--ism-color-foreground); }
+.rm-bal-read .big { background: var(--rc-tint); box-shadow: inset 3px 0 0 var(--rc-link); }
+.rm-bal-read .big dd { font-size: 32px; letter-spacing: -0.03em; }
+
+/* 해체 깊이 */
+.rm-depth-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: center; }
+.rm-depth-art { width: 100%; height: auto; }
+.rm-depth-text h3 { font-size: var(--fs-xl); font-weight: 800; color: var(--ism-color-foreground); }
+.rm-depth-text p { margin-top: 8px; font-size: var(--fs-sm); line-height: 1.8; }
+.rm-depth-text p > span:first-child { display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: var(--r-badge); font-size: 11px; font-weight: 800; }
+.rm-depth-text .now > span:first-child { background: var(--ism-color-background); color: var(--ism-color-foreground); box-shadow: inset 0 0 0 1px var(--rc-ctl); }
+.rm-depth-text .hard > span:first-child { background: var(--ism-color-accent); color: var(--ism-color-foreground); }
+.rm-steps-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.rm-steps-list li { display: grid; grid-template-columns: 180px minmax(0, 1fr) 72px; gap: 16px; align-items: center; }
+.rm-steps-list .nm { font-size: var(--fs-sm); font-weight: 700; color: var(--ism-color-foreground); }
+.rm-steps-list .nm small { display: block; font-size: 12px; font-weight: 500; color: var(--rc-sub); }
+.rm-steps-list .track { height: 14px; border-radius: 3px; background: var(--ism-color-background); box-shadow: inset 0 0 0 1px var(--rc-line); overflow: hidden; }
+.rm-steps-list .track i { display: block; height: 100%; border-radius: 3px; background: var(--ism-color-blue); }
+.rm-steps-list b { font-size: var(--fs-sm); color: var(--ism-color-foreground); text-align: right; }
+
+/* 경제성 — 0 기준 양방향 막대 */
+.rm-econ-grid { display: grid; gap: 8px; }
+.rm-econ-head, .rm-econ-row { display: grid; grid-template-columns: 170px minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: center; }
+.rm-econ-head span { font-size: 12px; font-weight: 800; color: var(--rc-sub); text-align: center; }
+.rm-econ-row { padding: 10px 0; border-top: 1px solid var(--rc-line); }
+.rm-econ-row .nm { font-size: var(--fs-sm); font-weight: 700; color: var(--ism-color-foreground); }
+.rm-econ-bar { position: relative; display: block; height: 28px; }
+.rm-econ-bar .axis { position: absolute; left: 50%; top: 0; bottom: 0; border-left: 1px solid var(--ism-color-border); }
+.rm-econ-bar i { position: absolute; top: 7px; height: 14px; border-radius: 3px; }
+.rm-econ-bar i.neg { background: #8fa6fc; }
+.rm-econ-bar i.pos { background: #8fa6fc; }
+.rm-econ-bar b { position: absolute; top: 4px; font-size: 13px; color: var(--ism-color-foreground); white-space: nowrap; }
+
+/* 점검 관문 */
+.rm-gates { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 8px 32px; align-items: center; }
+.rm-gates-art { width: 100%; height: auto; }
+.rm-gates-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; counter-reset: g; }
+.rm-gates-list li { display: flex; gap: 14px; align-items: flex-start; }
+.rm-gates-list li > b { flex: none; display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: var(--r-btn); background: var(--rc-link); color: #fff; font-size: 13px; }
+.rm-gates-list li:nth-child(2) > b { background: var(--ism-color-accent); color: var(--ism-color-foreground); }
+.rm-gates-list h3 { font-size: var(--fs-md); font-weight: 800; color: var(--ism-color-foreground); }
+.rm-gates-list p { margin-top: 2px; font-size: var(--fs-sm); color: var(--rc-sub); line-height: 1.7; }
+.rm-gates figcaption { grid-column: 1 / -1; }
+
+/* 병목 카드 */
+.rm-necks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.rm-necks a { position: relative; display: flex; flex-direction: column; gap: 8px; height: 100%; padding: 22px; border-radius: var(--r-panel); text-decoration: none; }
+.rm-necks a::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--rc-panel); box-shadow: var(--rc-sh-2); transition: transform var(--ism-motion), box-shadow var(--ism-motion); }
+.rm-necks a > * { position: relative; transition: transform var(--ism-motion); }
+.rm-necks a:hover::before { transform: translateY(-4px); box-shadow: var(--rc-sh-3); }
+.rm-necks a:hover > * { transform: translateY(-4px); }
+.rm-necks .n { align-self: flex-start; padding: 2px 8px; border-radius: var(--r-badge); background: var(--ism-color-background); font-size: 12px; font-weight: 800; color: var(--rc-link); }
+.rm-necks b { font-size: var(--fs-lg); color: var(--ism-color-foreground); }
+.rm-necks a > span:not(.n):not(.go) { font-size: var(--fs-sm); line-height: 1.75; color: var(--rc-text); }
+.rm-necks .go { margin-top: auto; font-size: 13px; font-weight: 800; color: var(--rc-link); }
+.rm-necks-src { margin-top: 12px; font-size: var(--fs-xs); color: var(--rc-sub); }
+
+@media (max-width: 900px) {
+  .rm-tier, .rm-gates, .rm-depth-body, .rm-bal-body { grid-template-columns: minmax(0, 1fr); }
+  .rm-tier-art { width: 220px; justify-self: center; }
+  .rm-gates-art { max-width: 330px; justify-self: center; }
+  .rm-bal-read { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rm-necks { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .rm-bal-read { grid-template-columns: minmax(0, 1fr); }
+  .rm-bal-read .big dd { font-size: 26px; }
+  .rm-steps-list li { grid-template-columns: minmax(0, 1fr) 64px; gap: 6px 12px; }
+  .rm-steps-list .track { grid-column: 1 / -1; grid-row: 2; }
+  .rm-econ-head, .rm-econ-row { grid-template-columns: 96px minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+  .rm-econ-row .nm { font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rm-tier-art polygon, .rm-bal-chart .bar rect, .rm-necks a::before, .rm-necks a > * { transition: none; }
+}
+@media (max-width: 720px) {
+  .rm-bal-chart .tick { font-size: 19px; }
+  .rm-bal-chart .val { font-size: 21px; }
 }

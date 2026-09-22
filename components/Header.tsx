@@ -66,7 +66,7 @@ export default function Header() {
   }, [isHome]);
 
   // 밝은 머리를 쓰는 개편 페이지에서는 투명(흰 글씨) 헤더를 쓰지 않는다
-  const lightTop = pathname === "/topics/recycling";
+  const lightTop = pathname === "/topics/recycling" || pathname === "/topics/remanufacturing";
   const overlay = atTop && !megaOpen && !mobileOpen && !lightTop;
   const hidden = isHome && onHero && !mobileOpen;
   const cls = ["header", overlay ? "is-overlay" : "", megaOpen || mobileOpen ? "is-open" : "", hidden ? "is-hidden" : ""].join(" ");
@@ -172,7 +172,7 @@ export default function Header() {
             </div>
           ))}
           <h3>자료</h3>
-          <Link href="/references"><em>—</em>참고문헌 35편</Link>
+          <Link href="/references"><em>—</em>참고문헌 41편</Link>
         </nav>
       )}
     </>

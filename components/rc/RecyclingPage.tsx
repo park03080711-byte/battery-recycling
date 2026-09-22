@@ -1,151 +1,40 @@
-import Link from "next/link";
-import { refById } from "@/data/references";
-import { topicBySlug, topics } from "@/data/topics";
-import { layerById } from "@/data/layers";
 import Footer from "@/components/Footer";
-import { DepthPillars, IconLithium, IconNine, IconRecovery } from "./Iso";
+import { IconLithium, IconNine, IconRecovery } from "./Iso";
 import { Cite, LevelTag } from "./Cite";
 import { ProcessTable, ProductStack, RcToc, TempBars } from "./Interactive";
-import { SystemMap } from "./SystemMap";
-import { extraSources, facts, feas, processes, temps, type Level, type Src } from "./data";
+import { SystemMap, type MapStep } from "./SystemMap";
+import { NextNav, RefsSection, TopicHead, type Kpi } from "./kit";
+import { collectCited } from "./sources";
+import { facts, feas, hubSteps, processes, temps, toc } from "./data";
+import plant from "./plant.json";
 
-const kpiIcon = [IconRecovery, IconLithium, IconNine];
-const depth: { level: Level; what: string }[] = [
-  { level: "paper", what: "동료심사를 거친 논문" },
-  { level: "policy", what: "법령 · 공공기관 발표" },
-  { level: "company", what: "기업 자체 발표 (외부 검증 전)" },
-  { level: "judgement", what: "이 사이트의 정리 · 판단" },
-];
+const kpiIcon = [<IconRecovery key="a" />, <IconLithium key="b" />, <IconNine key="c" />];
+const kpis: Kpi[] = facts.map((f, i) => ({ ...f, icon: kpiIcon[i] }));
+const steps: MapStep[] = hubSteps.map((s) => ({ ...s, g: s.side === "hub" ? 1 : 0 }));
 
 /* 이 페이지에서 인용한 출처 전부 — 본문 인용과 목록이 어긋나지 않게 데이터에서 모은다 */
-const inline: Src[] = [2, 4, 5, 8, 9, 11, 19, 14, 15, "C1", "P1", "R"];
-const cited = Array.from(
-  new Set<Src>([...inline, ...facts.flatMap((f) => f.src), ...temps.flatMap((t) => t.src), ...processes.flatMap((p) => p.src), ...feas.flatMap((f) => f.src)])
+const { papers: citedPapers, other: citedOther } = collectCited(
+  [2, 4, 5, 8, 9, 11, 19, 14, 15, "C1", "P1", "R"],
+  facts.flatMap((f) => f.src),
+  temps.flatMap((t) => t.src),
+  processes.flatMap((p) => p.src),
+  feas.flatMap((f) => f.src)
 );
-const citedPapers = (cited.filter((s) => typeof s === "number") as number[]).sort((a, b) => a - b);
-const citedOther = cited.filter((s) => typeof s !== "number") as Exclude<Src, number>[];
 
 export default function RecyclingPage() {
-  const t = topicBySlug("recycling")!;
-  const layer = layerById(t.layer);
-  const idx = topics.findIndex((x) => x.slug === t.slug);
-  const prev = topics[(idx - 1 + topics.length) % topics.length];
-  const next = topics[(idx + 1) % topics.length];
-
   return (
     <div className="rc">
       <main id="main">
-        {/* ── 머리 ── */}
-        <header className="rc-head">
-          <div className="rc-wrap">
-            <nav className="rc-crumb" aria-label="현재 위치">
-              <ol>
-                <li>
-                  <Link href="/">홈</Link>
-                </li>
-                <li>
-                  <Link href="/topics">주제 한눈에</Link>
-                </li>
-                <li>
-                  <Link href="/topics#paths">{layer.title}</Link>
-                </li>
-                <li aria-current="page">
-                  {t.no} {t.title}
-                </li>
-              </ol>
-              <div className="rc-crumb-pn">
-                <Link href={`/topics/${prev.slug}`} aria-label={`이전 주제: ${prev.no} ${prev.title}`}>
-                  ← {prev.no}
-                </Link>
-                <Link href={`/topics/${next.slug}`} aria-label={`다음 주제: ${next.no} ${next.title}`}>
-                  {next.no} →
-                </Link>
-              </div>
-            </nav>
-
-            <div className="rc-hero">
-              <div className="rc-title">
-                <p className="rc-meta">
-                  <span className="rc-chip">
-                    <b>{t.no}</b> {layer.title}
-                  </span>
-                  <span className="rc-meta-sub">네 갈래 활용 방안 중 하나</span>
-                </p>
-                <h1>재활용</h1>
-                <p className="rc-tag">배터리를 원소로 되돌리는 일</p>
-              </div>
-              <div className="rc-hero-side">
-                <p className="rc-lead">
-                  잔존용량 60% 미만의 배터리를 부수고 녹여 리튬 · 니켈 · 코발트 · 망간을 원소 단위로 회수합니다. 지금 산업의 표준은 습식제련이고, 연구 중인 대안은
-                  공정 전체보다 특정 단계를 바꾸는 쪽에서 설득력을 얻고 있습니다.
-                </p>
-                <dl className="rc-facts-inline">
-                  <div>
-                    <dt>조사 비중</dt>
-                    <dd>{t.coverage}</dd>
-                  </div>
-                  <div>
-                    <dt>인용 문헌</dt>
-                    <dd>{citedPapers.length}편 + 정책 · 기업 자료</dd>
-                  </div>
-                  <div>
-                    <dt>기준 시점</dt>
-                    <dd>2026년 9월</dd>
-                  </div>
-                </dl>
-              </div>
-            </div>
-
-            {/* ── 요약: 숫자 세 개 (기능 카드) ── */}
-            <section id="rc-summary" className="rc-summary" aria-labelledby="h-sum">
-              <h2 id="h-sum" className="sr-only">
-                요약 — 숫자 세 개와 그 근거
-              </h2>
-              <ul className="rc-kpis">
-                {facts.map((f, i) => {
-                  const Ico = kpiIcon[i];
-                  return (
-                    <li key={f.label} className="rc-kpi">
-                      <div className="rc-kpi-in">
-                        <Ico />
-                        <p className="v">
-                          {f.value}
-                          <small>{f.unit}</small>
-                        </p>
-                        <h3>{f.label}</h3>
-                        <p className="d">
-                          {f.detail} <Cite src={f.src} />
-                        </p>
-                        <LevelTag level={f.level} />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-              <div className="rc-depth">
-                <DepthPillars />
-                <div>
-                  <p className="rc-depth-h">
-                    근거 수준 <span>기둥이 높을수록 외부 검증을 더 거친 자료</span>
-                  </p>
-                  <dl>
-                    {depth.map((d) => (
-                      <div key={d.level}>
-                        <dt>
-                          <LevelTag level={d.level} />
-                        </dt>
-                        <dd>{d.what}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-              </div>
-            </section>
-          </div>
-        </header>
+        <TopicHead
+          slug="recycling"
+          sub="네 갈래 활용 방안 중 하나"
+          papers={citedPapers.length}
+          kpis={kpis}
+          lead="잔존용량 60% 미만의 배터리를 부수고 녹여 리튬 · 니켈 · 코발트 · 망간을 원소 단위로 회수합니다. 지금 산업의 표준은 습식제련이고, 연구 중인 대안은 공정 전체보다 특정 단계를 바꾸는 쪽에서 설득력을 얻고 있습니다."
+        />
 
         <div className="rc-wrap rc-body">
-          <RcToc />
+          <RcToc items={toc} />
 
           <div className="rc-main">
             {/* ── 1 기준 공정 ── */}
@@ -157,7 +46,36 @@ export default function RecyclingPage() {
                 국내 최대 리사이클링 기업의 공정은 지리적으로 떨어진 두 단계로 나뉩니다. 해외 각지의 전처리 거점(Spoke)이 부피와 위험을 줄이고, 국내 거점(Hub)이 화학적
                 정제를 맡습니다. 이 공정은 정부 출연연구기관(KIGAM)과 공동 개발됐습니다. <Cite src={[14]} />
               </p>
-              <SystemMap />
+              <SystemMap
+                steps={steps}
+                groups={[
+                  { label: "전처리 · 해외", tag: "전처리 · 해외 Spoke" },
+                  { label: "후처리 · 국내", tag: "후처리 · 국내 Hub" },
+                ]}
+                mid="블랙매스 이송"
+                overlays={[
+                  { at: "zs", kind: "zone", badge: "Spoke", text: "해외 전처리 거점" },
+                  { at: "zh", kind: "zone", badge: "Hub", text: "국내 후처리 거점", g: 1 },
+                  { at: "tr", kind: "flow", text: "블랙매스로 줄여 이송" },
+                ]}
+                plant={plant}
+                img="/rc/plant"
+                mask="/rc/mask_"
+                title="공정 지도"
+                sub="Hub & Spoke 습식제련 · 7단계"
+                keys={[
+                  { k: "g0", label: "해외 전처리 거점" },
+                  { k: "g1", label: "국내 후처리 거점" },
+                  { k: "flow", label: "물질 흐름" },
+                ]}
+                capId="map-cap"
+                caption={
+                  <>
+                    그림 1. 전처리는 해외 각지, 화학 정제는 국내에서. 무겁고 화재 위험이 큰 팩은 현지에서 분말(블랙매스)로 바꾼 뒤에만 이동합니다. 장면은 이 사이트가 Blender로
+                    직접 모델링 · 렌더한 설명용 도식이며 실제 설비 배치와는 다릅니다. 공정 설명은 기업 공개 자료를 학술 문헌과 교차 확인했습니다. <Cite src={["C1", 14, 15]} />
+                  </>
+                }
+              />
               <p>
                 황산 기반 침출은 습식 경로 가운데 상업적으로 확립된 유일한 방식으로 평가됩니다. <Cite src={[1]} /> 결과물은 금속마다 색이 다른 황산염 결정이고, 이 사이트의
                 금속 색도 이 결정의 실제 색에서 가져왔습니다.
@@ -291,92 +209,12 @@ export default function RecyclingPage() {
               </figure>
             </section>
 
-            {/* ── 근거 문헌 ── */}
-            <section id="rc-refs" className="rc-sec rc-refs" aria-labelledby="h-refs">
-              <h2 id="h-refs" className="rc-h2">
-                <span>※</span>이 페이지의 근거
-              </h2>
-              <p className="rc-refs-note">본문의 번호를 누르면 여기로 옵니다. 학술 문헌은 DOI · PMID로 실존과 서지를 확인했습니다.</p>
-              <h3>학술 문헌 {citedPapers.length}편</h3>
-              <ol className="rc-reflist">
-                {citedPapers.map((id) => {
-                  const r = refById(id);
-                  return (
-                    <li key={id} id={`ref-${id}`}>
-                      <span className="n">{id}</span>
-                      <div>
-                        <b>{r.title}</b>
-                        <span>
-                          {r.authors} · {r.venue}
-                          {r.affiliation ? ` · ${r.affiliation}` : ""}
-                        </span>
-                        {r.doi && (
-                          <a href={`https://doi.org/${r.doi}`} target="_blank" rel="noopener noreferrer">
-                            doi:{r.doi}
-                            <span className="sr-only"> (새 창)</span>
-                          </a>
-                        )}
-                        {r.extra && <em>{r.extra}</em>}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ol>
-              <h3>그 밖의 자료</h3>
-              <ol className="rc-reflist other">
-                {citedOther.map((k) => (
-                  <li key={k} id={`ref-${k}`}>
-                    <span className="n">{k === "P1" ? "정책" : k === "C1" ? "기업" : "보고서"}</span>
-                    <div>
-                      <b>{extraSources[k].title}</b>
-                      <span>{extraSources[k].note}</span>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-              <p className="rc-refs-note">
-                바뀐 점 — 기존 페이지의 &ldquo;세계 상위 양산 업체 5곳 중 4곳이 습식 채택&rdquo;은 출처 문헌을 확인할 수 없어 이 판에서 뺐습니다. 전체 목록은{" "}
-                <Link href="/references">참고문헌</Link> 페이지에 있습니다.
-              </p>
-            </section>
-
-            {/* ── 이어 읽기 ── */}
-            <nav className="rc-next" aria-labelledby="h-next">
-              <h2 id="h-next" className="rc-h2">
-                <span>→</span>이어 읽기
-              </h2>
-              <ul>
-                {t.related.map((s) => {
-                  const r = topicBySlug(s)!;
-                  return (
-                    <li key={s}>
-                      <Link href={`/topics/${s}`}>
-                        <span className="n">{r.no}</span>
-                        <b>{r.title}</b>
-                        <span>{r.tagline}</span>
-                        <span className="go" aria-hidden="true">
-                          →
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-              <div className="rc-pager">
-                <Link href={`/topics/${prev.slug}`}>
-                  <small>이전 주제</small>
-                  <b>
-                    {prev.no} {prev.title}
-                  </b>
-                </Link>
-                <Link href={`/topics/${next.slug}`}>
-                  <small>다음 주제</small>
-                  <b>
-                    {next.no} {next.title}
-                  </b>
-                </Link>
-              </div>
-            </nav>
+            <RefsSection
+              papers={citedPapers}
+              other={citedOther}
+              note={<>바뀐 점 — 기존 페이지의 &ldquo;세계 상위 양산 업체 5곳 중 4곳이 습식 채택&rdquo;은 출처 문헌을 확인할 수 없어 이 판에서 뺐습니다.</>}
+            />
+            <NextNav slug="recycling" />
           </div>
         </div>
       </main>

@@ -6,21 +6,8 @@
  * 출처를 확인할 수 없던 기존 수치("세계 상위 5개 업체 중 4곳")는 이 페이지에서 뺐다.
  */
 
-export type Level = "paper" | "policy" | "company" | "judgement";
-export type Src = number | "P1" | "C1" | "R";
-
-export const levelLabel: Record<Level, string> = {
-  paper: "학술 문헌",
-  policy: "정책 · 규정",
-  company: "기업 발표",
-  judgement: "조사자 판단",
-};
-
-export const extraSources: Record<Exclude<Src, number>, { title: string; note: string }> = {
-  P1: { title: "EU 배터리 규정 (Regulation (EU) 2023/1542) — KOTRA 해설자료 및 언론 보도", note: "정책 자료 · 학술 문헌과 검증 수준이 다름" },
-  C1: { title: "국내 리사이클링 기업 공개 자료 — 공정 설명, 회수율 · CO₂ 절감 수치", note: "기업 자체 발표 기준" },
-  R: { title: "폐배터리 리사이클링 기술 분석 보고서 (2026.9) — 본 사이트의 바탕 보고서", note: "조사자 정리 · 판단" },
-};
+import type { Level, Src } from "./sources";
+export { levelLabel, extraSources, type Level, type Src } from "./sources";
 
 export const facts: { value: string; unit?: string; label: string; detail: string; level: Level; src: Src[] }[] = [
   {
@@ -49,7 +36,7 @@ export const facts: { value: string; unit?: string; label: string; detail: strin
   },
 ];
 
-export const hubSteps: { id: string; side: "spoke" | "hub"; title: string; short: string; detail: string; in: string; out: string }[] = [
+export const hubSteps: { id: string; side: "spoke" | "hub"; g?: number; title: string; short: string; detail: string; in: string; out: string }[] = [
   { id: "s1", side: "spoke", title: "안전 방전 · 모듈 해체", short: "방전 · 해체", detail: "남은 전력에 의한 화재와 열폭주를 막으려고 완전히 방전한 뒤 팩을 모듈 · 셀로 나눕니다. 알루미늄 · 구리 스크랩이 여기서 먼저 빠집니다.", in: "사용후 배터리 팩", out: "모듈 · 셀, Al · Cu 스크랩" },
   { id: "s2", side: "spoke", title: "열처리 (탈바인더)", short: "열처리", detail: "전해액을 안전하게 휘발시키고 전극을 붙들던 바인더를 분해해, 다음 파쇄가 잘 되게 합니다.", in: "모듈 · 셀", out: "전해액 · 바인더가 빠진 전극" },
   { id: "s3", side: "spoke", title: "다단 파쇄 · 물리적 선별", short: "파쇄 · 선별", detail: "잘게 부순 뒤 자력 · 비중 선별로 철 · 구리 · 알루미늄 포일을 걸러 냅니다. 남는 검은 분말이 블랙매스입니다.", in: "열처리한 전극", out: "블랙매스" },
