@@ -7,6 +7,7 @@ import { NextNav, RefsSection, TopicHead, type Kpi } from "./kit";
 import { collectCited } from "./sources";
 import { facts, feas, hubSteps, processes, temps, toc } from "./data";
 import plant from "./plant.json";
+import motion from "./motion.json";
 
 const kpiIcon = [<IconRecovery key="a" />, <IconLithium key="b" />, <IconNine key="c" />];
 const kpis: Kpi[] = facts.map((f, i) => ({ ...f, icon: kpiIcon[i] }));
@@ -61,6 +62,8 @@ export default function RecyclingPage() {
                 plant={plant}
                 img="/rc/plant"
                 mask="/rc/mask_"
+                motion={motion}
+                motionSrc="/rc/plant"
                 title="공정 지도"
                 sub="Hub & Spoke 습식제련 · 7단계"
                 keys={[
@@ -71,7 +74,7 @@ export default function RecyclingPage() {
                 capId="map-cap"
                 caption={
                   <>
-                    그림 1. 전처리는 해외 각지, 화학 정제는 국내에서. 무겁고 화재 위험이 큰 팩은 현지에서 분말(블랙매스)로 바꾼 뒤에만 이동합니다. 장면은 이 사이트가 Blender로
+                    그림 1. 전처리는 해외 각지, 화학 정제는 국내에서. &lsquo;공정 재생&rsquo;을 누르면 해외 거점의 세 단계를 지난 뒤 트럭이 블랙매스를 싣고 국내 거점까지 달리고, 국내에서는 용액이 배관을 따라 침출 → 정제 → 용매추출(망간 → 코발트 → 니켈) → 결정화로 흐릅니다. 무겁고 화재 위험이 큰 팩은 현지에서 분말(블랙매스)로 바꾼 뒤에만 이동합니다. 장면은 이 사이트가 Blender로
                     직접 모델링 · 렌더한 설명용 도식이며 실제 설비 배치와는 다릅니다. 공정 설명은 기업 공개 자료를 학술 문헌과 교차 확인했습니다. <Cite src={["C1", 14, 15]} />
                   </>
                 }

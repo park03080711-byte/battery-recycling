@@ -94,8 +94,9 @@ class Kit:
 
     # ── 경로 ──
     def routes(self, routes, Z0):
-        """routes: [[(id|None, u, v), ...], ...] — 첫 경로는 입구부터, 나머지는 갈림점부터"""
-        self.meta["routes"] = [{"pts": [self.pct(u, v, Z0) for _, u, v in r], "stops": {k: i for i, (k, _, _) in enumerate(r) if k}} for r in routes]
+        """routes: [[(id|None, u, v[, z]), ...], ...] — 첫 경로는 입구부터, 나머지는 갈림점부터. z를 빼면 바닥(Z0)"""
+        pt = lambda e: self.pct(e[1], e[2], e[3] if len(e) > 3 else Z0)
+        self.meta["routes"] = [{"pts": [pt(e) for e in r], "stops": {e[0]: i for i, e in enumerate(r) if e[0]}} for r in routes]
 
     # ── 클린 배경 · 마스크 · 가림 마스크 ──
     def plate(self, name, hide, bb, out, pad=0.02):
@@ -128,13 +129,21 @@ class Kit:
         self.floor.hide_render = False
         self.quick(False)
 
-    def occ(self, out, skip=("plat", "lane"), w=1400):
+    def occ(self, out, skip=("plat", "lane"), w=1400, flat=0.08):
+        """flat: 두께가 이보다 얇은 물체(도로 · 바닥 줄눈 · 점선)는 가리지 않음"""
         sc = self.sc
         sc.render.use_border = False
         sc.render.resolution_x, sc.render.resolution_y = w, round(self.H * w / self.W)
         self.quick(True)
         self.floor.hide_render = True
-        hid = [o for o in sc.objects if o.get("grp") in skip]
+        bpy.context.view_layer.update()
+
+        def thin(o):
+            if o.type != "MESH":
+                return False
+            zs = [(o.matrix_world @ Vector(c)).z for c in o.bound_box]
+            return max(zs) - min(zs) < flat
+        hid = [o for o in sc.objects if o.get("grp") in skip or thin(o)]
         for o in hid:
             o.hide_render = True
         self.shot(f"{out}/occ.png")
@@ -167,6 +176,8 @@ class Kit:
                         o.is_holdout = o not in vis
                 self.shot(f"{out}/{key}/{f:03d}.png")
             self.meta["clips"][key] = {"box": self.box_pct(b), "frames": d["n"], "step": d.get("step", key), "rest": bool(d.get("rest"))}
+            if d.get("carry"):
+                self.meta["clips"][key]["carry"] = d["carry"]  # 이 프레임 구간 동안 빛 점이 다음 꼭짓점까지 함께 이동
         for o in sc.objects:
             o.is_holdout = False
         self.floor.hide_render = False

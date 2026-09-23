@@ -8,7 +8,7 @@ import type { MapMotion, PlantData } from "./SystemMap";
    매 프레임 갱신은 DOM에 직접 쓰고(React 상태는 단계가 바뀔 때만) 부드럽게 유지한다. */
 
 export type PlayState = "idle" | "run" | "pause" | "done";
-type Seg = { kind: "move"; r: number; from: number; to: number; dur: number } | { kind: "work"; r: number; id: string; at: number; dur: number };
+type Seg = { kind: "move"; r: number; from: number; to: number; dur: number } | { kind: "work"; r: number; id: string; at: number; dur: number; to?: number; carry?: number[]; fps?: number };
 
 const SPEED = 1500; // 흐름선 이동 속도 (원본 2800폭 기준 px/초)
 const HOLD = 0.6; // 동작이 끝난 뒤 머무는 시간 (초)
@@ -92,7 +92,16 @@ export function useMapPlayer({
         const cs = clipsOf(id);
         if (cs.length || order.includes(id)) {
           const n = Math.max(0, ...cs.map((k) => motion.clips[k].frames / motion.clips[k].fps));
-          segs.push({ kind: "work", r, id, at: b, dur: rm ? RM_HOLD : cs.length ? n + HOLD : 1.2 });
+          const w: Seg = { kind: "work", r, id, at: b, dur: rm ? RM_HOLD : cs.length ? n + HOLD : 1.2 };
+          // 설비와 함께 이동(트럭 등): 동작하는 동안 빛 점이 다음 꼭짓점까지 따라감
+          const car = cs.map((k) => motion.clips[k]).find((c) => c.carry);
+          if (car && idx + 1 < g.cum.length) {
+            w.to = g.cum[idx + 1];
+            w.carry = car.carry;
+            w.fps = car.fps;
+            prev = w.to;
+          }
+          segs.push(w);
         }
       }
       if (prev < g.total - 1) segs.push({ kind: "move", r, from: prev, to: g.total, dur: rm ? 0.001 : Math.max(0.35, (g.total - prev) / SPEED) });
@@ -171,11 +180,12 @@ export function useMapPlayer({
             for (const k of clipsOf(s.id)) draw(k, (motion?.clips[k]?.frames ?? 1) - 1);
             setDone((d) => (d.includes(s.id) ? d : [...d, s.id]));
           } else paint(s.r, s.to, false);
+          if (s.kind === "work" && s.to !== undefined) paint(s.r, s.to, false);
         }
         segNow.current = i;
         const s = list[i];
         if (s && s.kind === "work") {
-          setRunAct(s.id);
+          setRunAct(order.includes(s.id) ? s.id : null);
           onStep(s.id);
         } else if (s) setRunAct(null);
       }
@@ -191,7 +201,11 @@ export function useMapPlayer({
         const x = s.dur < 0.01 ? 1 : easeInOut(Math.min(1, lt / s.dur));
         paint(s.r, s.from + (s.to - s.from) * x, true);
       } else {
-        paint(s.r, s.at, true);
+        if (s.to !== undefined && s.carry && s.fps) {
+          const [f0, f1] = s.carry;
+          const x = reduce.current ? 1 : easeInOut(Math.min(1, Math.max(0, (lt * s.fps - f0) / (f1 - f0))));
+          paint(s.r, s.at + (s.to - s.at) * x, true);
+        } else paint(s.r, s.at, true);
         for (const k of clipsOf(s.id)) {
           const c = motion!.clips[k];
           draw(k, reduce.current ? c.frames - 1 : Math.floor(lt * c.fps));
@@ -199,7 +213,7 @@ export function useMapPlayer({
       }
       raf.current = requestAnimationFrame((n) => tick(n, now));
     },
-    [draw, paint, motion, onStep, clipsOf]
+    [draw, paint, motion, onStep, clipsOf, order]
   );
 
   const start = useCallback(() => {

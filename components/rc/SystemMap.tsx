@@ -13,7 +13,7 @@ export type MapGroup = { label: string; tag: string };
 export type MapOverlay = { at: string; text: string; kind: "zone" | "flow"; badge?: string; g?: number };
 export type PlantData = { w: number; h: number; pts: Record<string, number[]> };
 /** 공정 재생: 바닥 흐름선(화면 %) · 멈춤점(흐름선 꼭짓점 번호) · 설비 동작 클립(스프라이트) */
-export type MapClip = { box: number[]; fw: number; fh: number; cols: number; frames: number; fps: number; rest?: boolean; step?: string };
+export type MapClip = { box: number[]; fw: number; fh: number; cols: number; frames: number; fps: number; rest?: boolean; step?: string; carry?: number[] };
 export type MapRoute = { pts: number[][]; stops: Record<string, number | undefined> };
 export type MapMotion = { path?: number[][]; stops?: Record<string, number>; routes?: MapRoute[]; clips: Record<string, MapClip>; flowmask?: boolean };
 
@@ -47,7 +47,10 @@ export function SystemMap({ steps, groups, mid, overlays = [], plant, img, mask,
   const fig = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(false);
   const maskId = "flow" + useId().replace(/[^a-zA-Z0-9_-]/g, "");
-  const onStep = useCallback((id: string) => setAct(id), []);
+  const stepIds = useRef(new Set(steps.map((s) => s.id))).current;
+  const onStep = useCallback((id: string) => {
+    if (stepIds.has(id)) setAct(id); // 트럭 이송처럼 단계가 아닌 멈춤점은 설명판을 바꾸지 않음
+  }, [stepIds]);
   const order = useRef(steps.map((s) => s.id)).current;
   const player = useMapPlayer({ motion, motionSrc, plant, order, onStep, visible });
   const idx = steps.findIndex((s) => s.id === act);

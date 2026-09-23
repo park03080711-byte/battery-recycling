@@ -260,6 +260,7 @@ def transfer(M):
     # 트럭 (블랙매스 톤백 두 개)
     tu, tv = corner[0], 6.4
     z = 0.05
+    before = set(bpy.context.scene.objects)
     for du in (-0.36, 0.36):
         for dv in (-0.7, 0.55):
             cyl(0.16, 0.12, tu + du, tv + dv, z + 0.16, M["rubber"], g, axis="u")
@@ -269,6 +270,8 @@ def transfer(M):
     box(0.86, 1.36, 0.08, tu, tv - 0.12, z + 0.3, M["body2"], g, bevel=0.02)
     for dv in (-0.45, 0.2):
         box(0.62, 0.58, 0.55, tu, tv + dv - 0.12, z + 0.38, M["bag"], g, bevel=0.12, seg=4)
+    for o in set(bpy.context.scene.objects) - before:  # 공정 재생 때 도로를 달림
+        o["anim"] = "tr"
     # 후처리 거점 입고장 — 내려놓은 톤백
     box(1.5, 0.9, 0.1, 10.95, 3.55, Z0, M["body2"], g, bevel=0.03)
     for du in (-0.36, 0.36):
@@ -289,7 +292,7 @@ def h1_leach(M, u, v):
         # 교반기
         cyl(0.03, 0.7, cu_, v, Z0 + 1.3, M["steel"], g, seg=12)
         box(0.3, 0.3, 0.3, cu_, v, Z0 + 1.95, M["navy"], g, bevel=0.04)
-        box(1.5, 0.12, 0.08, cu_, v, Z0 + 1.6, M["steel"], g, bevel=0.02)
+        box(1.5, 0.12, 0.08, cu_, v, Z0 + 1.6, M["steel"], g, bevel=0.02)["anim"] = "h1"  # 교반 날개 (공정 재생 때 돎)
     # 약품 탱크 (황산 · 과산화수소)
     for k, (du, m) in enumerate(((-1.2, M["amber"]), (-1.2, M["body2"]))):
         pass

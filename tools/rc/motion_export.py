@@ -73,7 +73,10 @@ if os.path.exists(f"{src}/occ.png"):
 
 # ── 클립 ──
 ODX = ODY = 0
+ALIGN = kw.get("align")  # 정지 모습이 원본과 같은 클립으로 맞춤 (자리를 옮긴 물체는 제외)
 for k, c in meta.get("clips", {}).items():
+    if ALIGN and k != ALIGN:
+        continue
     if c.get("rest") and os.path.exists(f"{src}/{k}/000.png"):
         f0 = Image.open(f"{src}/{k}/000.png").convert("RGBA")
         bx, by = c["box"][:2]
@@ -107,6 +110,8 @@ for k, c in meta.get("clips", {}).items():
                 "fw": tw, "fh": th, "cols": cols, "frames": len(frames), "fps": 20}
     if c.get("step", k) != k:
         clips[k]["step"] = c["step"]
+    if c.get("carry"):
+        clips[k]["carry"] = c["carry"]
     if c.get("rest"):
         frames[0].save(f"{prefix}-rest-{k}.webp", "WEBP", quality=86, method=6)
         clips[k]["rest"] = True

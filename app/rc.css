@@ -130,7 +130,7 @@
 .rc-fig-h { font-size: var(--fs-sm); font-weight: 800; color: var(--ism-color-foreground); margin-bottom: 16px; }
 
 /* ── 공정 지도 ── */
-.rc-map { margin: 32px 0; background: var(--rc-panel); border-radius: var(--r-panel); box-shadow: var(--rc-sh-3); overflow: hidden; }
+.rc-map { margin: 32px 0; background: var(--rc-panel); border-radius: var(--r-panel); box-shadow: var(--rc-sh-3); overflow: hidden; container-type: inline-size; }
 .rc-map-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 20px; padding: 14px 20px; border-bottom: 1px solid var(--rc-line); }
 .rc-map-title { font-size: var(--fs-sm); font-weight: 800; color: var(--ism-color-foreground); }
 .rc-map-title span { margin-left: 8px; font-weight: 500; color: var(--rc-sub); }
@@ -189,6 +189,14 @@
 .rc-rail button[aria-pressed="true"] { background: var(--rc-panel); color: var(--ism-color-foreground); font-weight: 700; box-shadow: var(--rc-sh-2); }
 .rc-rail button[aria-pressed="true"] b { background: var(--ism-color-foreground); color: #fff; box-shadow: none; }
 .rc-rail ol.g1 button[aria-pressed="true"] b { background: var(--rc-link); }
+/* 지도 카드가 좁으면(옆 목차가 있는 1000~1300px 화면 등) 단계 이름이 겹치지 않게 전처리 · 후처리 묶음을 위아래로 쌓음 */
+@container (max-width: 1000px) {
+  .rc-rail { flex-direction: column; gap: 4px; }
+  .rc-rail-wrap { flex-direction: column; }
+  .rc-rail-mid { margin: 4px 0 4px 18px; padding: 6px 0; }
+  .rc-rail-mid span::before { left: -2px; top: -8px; bottom: -8px; width: 0; border-top: 0; border-left: 2px dashed var(--ism-color-teal); }
+  .rc-rail-mid span { padding-left: 16px; }
+}
 
 .rc-map-detail { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px 40px; padding: 24px 28px; }
 .rc-map-step { display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: 700; color: var(--rc-sub); }
