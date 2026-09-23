@@ -140,9 +140,12 @@ def r2_swap(M):
         box(0.16, 0.16, 2.6, u + du, v - 1.3, Z0, M["steel"], g, bevel=0.02)
     box(4.0, 0.16, 0.16, u, v - 1.3, Z0 + 2.6, M["blue"], g, bevel=0.03)
     mu, mv = u - 1.05 + 2 * 0.7, v - 0.42
+    before = set(bpy.context.scene.objects)
     box(0.2, 0.2, 0.16, mu, v - 1.3, Z0 + 2.44, M["navy"], g, bevel=0.03)
     pipe([(mu, v - 1.3, Z0 + 2.44), (mu, mv - 0.2, Z0 + 1.95)], 0.012, M["steel"], g)
     module_(M, mu, mv, Z0 + 1.5, M["mod_old"], g)
+    for o in set(bpy.context.scene.objects) - before:  # 움직이는 부품 (animate.py가 씀)
+        o["anim"] = "r2"
     # 교체용 모듈 선반 (등급이 맞는 모듈)
     su, sv = u - 0.6, v - 2.6
     for k in range(3):

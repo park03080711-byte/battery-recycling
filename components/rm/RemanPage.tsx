@@ -11,6 +11,7 @@ import { GatesArt, IconCells, IconSteps, IconTier } from "./Icons";
 import { BalanceDemo, DepthExplorer } from "./Parts";
 import { TierStair } from "../rc/Tiers";
 import shop from "./shop.json";
+import motion from "./motion.json";
 
 const icons = [<IconTier key="a" />, <IconCells key="b" />, <IconSteps key="c" />];
 const kpis: Kpi[] = facts.map((f, i) => ({ ...f, icon: icons[i] }));
@@ -125,6 +126,8 @@ export default function RemanPage() {
                 plant={shop}
                 img="/rm/shop"
                 mask="/rm/mask_"
+                motion={motion}
+                motionSrc="/rm/shop"
                 title="재제조 작업장"
                 sub="팩 하나가 차로 돌아가기까지 · 4단계"
                 keys={[
@@ -135,7 +138,7 @@ export default function RemanPage() {
                 capId="shop-cap"
                 caption={
                   <>
-                    그림 2. 호박색은 교체 대상으로 판정된 모듈, 연파랑은 등급을 맞춘 교체 모듈입니다. 빼낸 모듈은 상태에 따라 재사용이나 재활용으로 넘어갑니다. 장면은 이 사이트가
+                    그림 2. &lsquo;공정 재생&rsquo;을 누르면 팩이 바닥 흐름선을 따라 이동하며 단계마다 설비가 움직입니다 — ① 진단 막대가 모듈을 훑고 지친 모듈을 찾아냄, ② 호이스트가 지친 모듈을 빼고 새 모듈을 끼움, ③ 케이블로 충방전하며 상태등이 맞춰짐, ④ 검사를 통과하면 초록 불. 호박색은 교체 대상으로 판정된 모듈, 연파랑은 등급을 맞춘 교체 모듈입니다. 빼낸 모듈은 상태에 따라 재사용이나 재활용으로 넘어갑니다. 장면은 이 사이트가
                     Blender로 직접 모델링 · 렌더한 설명용 도식이며 실제 작업장 배치와 다릅니다. <Cite src={[38, 37, "P2"]} />
                   </>
                 }

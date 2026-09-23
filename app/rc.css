@@ -618,3 +618,42 @@ a.rm-tier-row:hover { background: var(--ism-color-background); }
 @media (prefers-reduced-motion: reduce) {
   .up-val-art polygon, .up-ready-art polygon { transition: none; }
 }
+
+/* ───────── 공정 재생 (지도 공통) ───────── */
+.rc-map-play { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px 0 12px; border: 0; border-radius: var(--r-btn); background: var(--rc-link); font: inherit; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer; box-shadow: var(--rc-sh-1); transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background-color 160ms ease; }
+.rc-map-play:hover { background: #2f4fcf; }
+.rc-map-play:active { transform: scale(0.97); }
+.rc-map-play i { position: relative; width: 12px; height: 12px; flex: none; }
+.rc-map-play i::before, .rc-map-play i::after { content: ""; position: absolute; top: 0; height: 12px; background: currentColor; }
+/* 재생 ▶ */
+.rc-map-play:not(.is-run) i::before { left: 1px; width: 11px; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+.rc-map-play:not(.is-run) i::after { display: none; }
+/* 일시정지 ❚❚ */
+.rc-map-play.is-run i::before { left: 1px; width: 4px; border-radius: 1px; }
+.rc-map-play.is-run i::after { right: 1px; width: 4px; border-radius: 1px; }
+/* 다시 재생 ↻ */
+.rc-map-play.is-done i::before { left: 0; width: 12px; background: none; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; clip-path: none; box-sizing: border-box; }
+.rc-map-play.is-done i::after { display: block; right: 0; top: -1px; width: 5px; height: 5px; background: currentColor; clip-path: polygon(0 0, 100% 100%, 0 100%); }
+
+/* 설비 동작 클립 */
+.rc-clip { position: absolute; pointer-events: none; transition: opacity var(--ism-motion), filter var(--ism-motion); }
+.rc-clip canvas, .rc-clip img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.rc-map-stage.is-lit .rc-clip:not(.on) { opacity: 0.5; filter: saturate(0.35); }
+
+/* LED 흐름선 */
+.rc-flow { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; mask-size: 100% 100%; -webkit-mask-size: 100% 100%; mask-repeat: no-repeat; -webkit-mask-repeat: no-repeat; opacity: 0; transition: opacity 240ms ease; }
+.rc-map-stage.is-play .rc-flow { opacity: 1; }
+.rc-flow-reveal { fill: none; stroke: #fff; stroke-width: 44; stroke-linecap: round; stroke-linejoin: round; }
+.rc-flow-led { fill: none; stroke: #7ff0e2; stroke-width: 11; stroke-linecap: round; stroke-dasharray: 20 22; filter: drop-shadow(0 0 6px rgba(57, 198, 182, 0.95)); }
+.rc-flow-dot { fill: #fff; stroke: var(--ism-color-teal); stroke-width: 7; opacity: 0; filter: drop-shadow(0 0 10px rgba(57, 198, 182, 1)); transition: opacity 200ms ease; }
+
+/* 번호 핀: 지금 작업 중(호박 고리) · 끝남(청록 점) */
+.rc-hot.run span { box-shadow: 0 0 0 2px var(--ism-color-amber, #f3b64a), 0 0 0 6px rgba(243, 182, 74, 0.28), var(--rc-sh-2); }
+.rc-hot.run span::before { content: ""; position: absolute; inset: -2px; border-radius: 50%; border: 2px solid #f3b64a; animation: rc-ping 1.4s cubic-bezier(0.23, 1, 0.32, 1) infinite; }
+.rc-hot.done:not(.run) span::before { content: ""; position: absolute; right: -3px; top: -3px; width: 11px; height: 11px; border-radius: 50%; background: var(--ism-color-teal); box-shadow: 0 0 0 2px var(--rc-panel); }
+@keyframes rc-ping { from { transform: scale(1); opacity: 0.9; } to { transform: scale(1.7); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-hot.run span::before { animation: none; opacity: 0; }
+  .rc-clip, .rc-flow, .rc-flow-dot { transition: none; }
+}

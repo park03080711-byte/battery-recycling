@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useMapPlayer } from "./useMapPlayer";
 
 /* 공정 지도 — Blender로 직접 렌더한 등각 장면 위에 단계 번호를 얹는다.
    고르면: 해당 설비만 밝히고(마스크) 그쪽으로 확대, 아래 설명판이 바뀐다.
@@ -11,6 +12,10 @@ export type MapStep = { id: string; g: number; title: string; short: string; det
 export type MapGroup = { label: string; tag: string };
 export type MapOverlay = { at: string; text: string; kind: "zone" | "flow"; badge?: string; g?: number };
 export type PlantData = { w: number; h: number; pts: Record<string, number[]> };
+/** 공정 재생: 바닥 흐름선(화면 %) · 멈춤점(흐름선 꼭짓점 번호) · 설비 동작 클립(스프라이트) */
+export type MapClip = { box: number[]; fw: number; fh: number; cols: number; frames: number; fps: number; rest?: boolean };
+export type MapMotion = { path: number[][]; stops: Record<string, number>; clips: Record<string, MapClip>; flowmask?: boolean };
+
 
 type Props = {
   steps: MapStep[];
@@ -25,17 +30,25 @@ type Props = {
   keys: { k: "g0" | "g1" | "flow"; label: string }[];
   caption: ReactNode;
   capId: string;
+  motion?: MapMotion;
+  motionSrc?: string; // 예: "/rm/shop" → -clip-{id}.webp, -rest-{id}.webp
 };
 
 const ZOOM = 1.75;
 const keyCls = { g0: "k-pre", g1: "k-post", flow: "k-flow" } as const;
 
-export function SystemMap({ steps, groups, mid, overlays = [], plant, img, mask, title, sub, keys, caption, capId }: Props) {
+export function SystemMap({ steps, groups, mid, overlays = [], plant, img, mask, title, sub, keys, caption, capId, motion, motionSrc }: Props) {
   const [act, setAct] = useState(steps[0].id);
   const [hover, setHover] = useState<string | null>(null);
   const [focus, setFocus] = useState(false);
   const [box, setBox] = useState({ w: 0, h: 0, narrow: false });
   const stage = useRef<HTMLDivElement>(null);
+  const fig = useRef<HTMLElement>(null);
+  const [visible, setVisible] = useState(false);
+  const maskId = "flow" + useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const onStep = useCallback((id: string) => setAct(id), []);
+  const order = useRef(steps.map((s) => s.id)).current;
+  const player = useMapPlayer({ motion, motionSrc, plant, order, onStep, visible });
   const idx = steps.findIndex((s) => s.id === act);
   const cur = steps[idx];
   const R = plant.w / plant.h;
@@ -54,6 +67,14 @@ export function SystemMap({ steps, groups, mid, overlays = [], plant, img, mask,
     return () => ro.disconnect();
   }, []);
 
+  useEffect(() => {
+    const el = fig.current;
+    if (!el || !motion) return;
+    const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { rootMargin: "300px 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [motion]);
+
   const zoomed = focus || box.narrow;
 
   // 확대 · 이동 값 계산 (px) — 가장자리가 비지 않도록 가둔다
@@ -70,10 +91,15 @@ export function SystemMap({ steps, groups, mid, overlays = [], plant, img, mask,
     return { s, x, y };
   })();
 
-  const pick = useCallback((id: string) => {
-    setAct(id);
-    setFocus(true);
-  }, []);
+  const { pause } = player;
+  const pick = useCallback(
+    (id: string) => {
+      pause();
+      setAct(id);
+      setFocus(true);
+    },
+    [pause]
+  );
 
   useEffect(() => {
     if (!focus) return;
@@ -82,7 +108,9 @@ export function SystemMap({ steps, groups, mid, overlays = [], plant, img, mask,
     return () => window.removeEventListener("keydown", onKey);
   }, [focus]);
 
-  const lit = hover ?? (zoomed ? act : null);
+  const lit = hover ?? player.runAct ?? (zoomed ? act : null);
+  const playing = player.state !== "idle";
+  const playLabel = { idle: "공정 재생", run: "일시정지", pause: "이어서 재생", done: "다시 재생" }[player.state];
   const railBtn = (s: MapStep) => (
     <li key={s.id}>
       <button
@@ -101,7 +129,7 @@ export function SystemMap({ steps, groups, mid, overlays = [], plant, img, mask,
   );
 
   return (
-    <figure className="rc-map" aria-labelledby={capId}>
+    <figure className="rc-map" aria-labelledby={capId} ref={fig}>
       <div className="rc-map-bar">
         <p className="rc-map-title">
           {title} <span>{sub}</span>
@@ -114,6 +142,12 @@ export function SystemMap({ steps, groups, mid, overlays = [], plant, img, mask,
             </li>
           ))}
         </ul>
+        {motion && (
+          <button type="button" className={`rc-map-play is-${player.state}`} onClick={player.toggle}>
+            <i aria-hidden="true" />
+            {playLabel}
+          </button>
+        )}
         {focus && !box.narrow && (
           <button type="button" className="rc-map-reset" onClick={() => setFocus(false)}>
             전체 보기 <kbd>Esc</kbd>
@@ -121,7 +155,7 @@ export function SystemMap({ steps, groups, mid, overlays = [], plant, img, mask,
         )}
       </div>
 
-      <div className={`rc-map-stage${lit ? " is-lit" : ""}${zoomed ? " is-zoom" : ""}`} ref={stage} style={{ ["--ar" as string]: `${plant.w} / ${plant.h}` }}>
+      <div className={`rc-map-stage${lit ? " is-lit" : ""}${zoomed ? " is-zoom" : ""}${playing ? " is-play" : ""}`} ref={stage} style={{ ["--ar" as string]: `${plant.w} / ${plant.h}` }}>
         <div
           className="rc-map-canvas"
           style={{
@@ -138,6 +172,38 @@ export function SystemMap({ steps, groups, mid, overlays = [], plant, img, mask,
               </div>
             </div>
           ))}
+          {motion &&
+            Object.entries(motion.clips).map(([id, c]) => {
+              const pos = { left: `${c.box[0]}%`, top: `${c.box[1]}%`, width: `${c.box[2]}%`, height: `${c.box[3]}%` };
+              return (
+                <div key={id} className={`rc-clip${lit === id ? " on" : ""}`} style={pos} aria-hidden="true">
+                  {c.rest && !player.ready[id] && <img src={`${motionSrc}-rest-${id}.webp`} alt="" width={c.fw} height={c.fh} decoding="async" />}
+                  <canvas
+                    width={c.fw}
+                    height={c.fh}
+                    ref={(el) => {
+                      player.canvases.current[id] = el;
+                    }}
+                  />
+                </div>
+              );
+            })}
+          {motion && player.geo && (
+            <svg
+              className="rc-flow"
+              viewBox={`0 0 ${plant.w} ${plant.h}`}
+              aria-hidden="true"
+              style={motion.flowmask ? { maskImage: `url(${motionSrc}-flowmask.png)`, WebkitMaskImage: `url(${motionSrc}-flowmask.png)` } : undefined}
+            >
+              <defs>
+                <mask id={maskId} maskUnits="userSpaceOnUse">
+                  <path ref={player.trail} d={player.geo.d} className="rc-flow-reveal" strokeDasharray={player.geo.total} strokeDashoffset={player.geo.total} />
+                </mask>
+              </defs>
+              <path d={player.geo.d} className="rc-flow-led" mask={`url(#${maskId})`} />
+              <circle ref={player.dot} r="15" className="rc-flow-dot" />
+            </svg>
+          )}
           {overlays.map((o) =>
             o.kind === "zone" ? (
               <p key={o.at} className={`rc-map-zone${o.g ? " z-hub" : ""}`} aria-hidden="true" style={{ left: `${pts[o.at][0]}%`, top: `${pts[o.at][1]}%` }}>
@@ -155,7 +221,7 @@ export function SystemMap({ steps, groups, mid, overlays = [], plant, img, mask,
               type="button"
               tabIndex={-1}
               aria-hidden="true"
-              className={`rc-hot${act === s.id ? " on" : ""}${s.g ? " hub" : ""}`}
+              className={`rc-hot${act === s.id ? " on" : ""}${s.g ? " hub" : ""}${player.runAct === s.id ? " run" : ""}${player.done.includes(s.id) ? " done" : ""}`}
               style={{ left: `${pts[s.id][0]}%`, top: `${pts[s.id][1]}%` }}
               onClick={() => pick(s.id)}
               onMouseEnter={() => setHover(s.id)}
