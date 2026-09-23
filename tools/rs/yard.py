@@ -71,7 +71,11 @@ def r2_repack(M):
     # 작업대: 모듈을 새 함체(회색 캐비닛 유닛)에 다시 묶음
     box(3.4, 2.0, 0.55, u, v, Z0, M["body2"], g, bevel=0.05)
     for i in range(3):
+        before = set(bpy.context.scene.objects)
         WK.module_(M, u - 1.1 + i * 0.75, v - 0.3, Z0 + 0.55, M["mod"], g)
+        if i == 2:  # 새 함체로 옮겨 담는 모듈 (공정 재생 때 움직임)
+            for o in set(bpy.context.scene.objects) - before:
+                o["anim"] = "s2"
     open_box(1.4, 1.1, 0.7, u + 0.9, v + 0.2, Z0 + 0.55, M["body"], g, wall=0.06)
     WK.module_(M, u + 0.9, v + 0.2, Z0 + 0.62, M["mod_new"], g)
     box(0.5, 0.06, 0.2, u + 0.9, v - 0.33, Z0 + 1.05, M["pcb_g"] if "pcb_g" in M else M["green"], g, bevel=0.01)  # 새 BMS 기판

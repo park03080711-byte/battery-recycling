@@ -8,7 +8,7 @@ import type { MapMotion, PlantData } from "./SystemMap";
    매 프레임 갱신은 DOM에 직접 쓰고(React 상태는 단계가 바뀔 때만) 부드럽게 유지한다. */
 
 export type PlayState = "idle" | "run" | "pause" | "done";
-type Seg = { kind: "move"; from: number; to: number; dur: number } | { kind: "work"; id: string; at: number; dur: number };
+type Seg = { kind: "move"; r: number; from: number; to: number; dur: number } | { kind: "work"; r: number; id: string; at: number; dur: number };
 
 const SPEED = 1500; // 흐름선 이동 속도 (원본 2800폭 기준 px/초)
 const HOLD = 0.6; // 동작이 끝난 뒤 머무는 시간 (초)
@@ -36,7 +36,7 @@ export function useMapPlayer({
   const [done, setDone] = useState<string[]>([]);
   const [ready, setReady] = useState<Record<string, boolean>>({});
 
-  const trail = useRef<SVGPathElement>(null);
+  const trails = useRef<(SVGPathElement | null)[]>([]);
   const dot = useRef<SVGCircleElement>(null);
   const canvases = useRef<Record<string, HTMLCanvasElement | null>>({});
   const sprites = useRef<Record<string, HTMLImageElement>>({});
@@ -46,43 +46,59 @@ export function useMapPlayer({
   const raf = useRef(0);
   const reduce = useRef(false);
 
-  // 흐름선: 화면 좌표(원본 px) · 누적 길이
+  // 흐름선(경로 여러 개 가능 — 첫 경로는 입구부터, 나머지는 갈림점부터): 화면 좌표(원본 px) · 누적 길이
   const geo = useMemo(() => {
     if (!motion) return null;
-    const P = motion.path.map(([x, y]) => [(x / 100) * plant.w, (y / 100) * plant.h]);
-    const cum = [0];
-    for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
-    const d = "M" + P.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" L");
-    return { P, cum, total: cum[cum.length - 1], d };
+    const routes = motion.routes ?? (motion.path && motion.stops ? [{ pts: motion.path, stops: motion.stops }] : []);
+    return routes.map((rt) => {
+      const P = rt.pts.map(([x, y]) => [(x / 100) * plant.w, (y / 100) * plant.h]);
+      const cum = [0];
+      for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
+      const d = "M" + P.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" L");
+      return { P, cum, total: cum[cum.length - 1], d, stops: rt.stops };
+    });
   }, [motion, plant.w, plant.h]);
 
   const at = useCallback(
-    (len: number) => {
-      if (!geo) return [0, 0];
-      const { P, cum } = geo;
+    (r: number, len: number) => {
+      const g = geo?.[r];
+      if (!g) return [0, 0];
+      const { P, cum } = g;
       let i = 1;
       while (i < cum.length - 1 && cum[i] < len) i++;
-      const k = (len - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
-      return [P[i - 1][0] + (P[i][0] - P[i - 1][0]) * Math.min(1, Math.max(0, k)), P[i - 1][1] + (P[i][1] - P[i - 1][1]) * Math.min(1, Math.max(0, k))];
+      const k = Math.min(1, Math.max(0, (len - cum[i - 1]) / (cum[i] - cum[i - 1] || 1)));
+      return [P[i - 1][0] + (P[i][0] - P[i - 1][0]) * k, P[i - 1][1] + (P[i][1] - P[i - 1][1]) * k];
     },
     [geo]
   );
 
-  // 시간표: 입고 → (이동 → 설비 동작) × n → 출고
+  // 단계에 딸린 클립들 (한 단계에 여러 곳이 움직일 수 있음)
+  const clipsOf = useCallback((id: string) => Object.entries(motion?.clips ?? {}).filter(([k, c]) => (c.step ?? k) === id).map(([k]) => k), [motion]);
+
+  // 시간표: 경로마다 (이동 → 설비 동작) × n, 마지막 멈춤점 뒤로 경로가 이어지면 끝까지 이동
   const buildSegs = useCallback((): Seg[] => {
     if (!motion || !geo) return [];
     const rm = reduce.current;
-    const seq = ["cin", ...order.filter((id) => id in motion.stops), "cout"].filter((id) => id in motion.stops);
     const segs: Seg[] = [];
-    for (let i = 1; i < seq.length; i++) {
-      const a = geo.cum[motion.stops[seq[i - 1]]];
-      const b = geo.cum[motion.stops[seq[i]]];
-      segs.push({ kind: "move", from: a, to: b, dur: rm ? 0.001 : Math.max(0.45, (b - a) / SPEED) });
-      const c = motion.clips[seq[i]];
-      if (c || order.includes(seq[i])) segs.push({ kind: "work", id: seq[i], at: b, dur: rm ? RM_HOLD : c ? c.frames / c.fps + HOLD : 1.2 });
-    }
+    geo.forEach((g, r) => {
+      const list = Object.entries(g.stops).filter((e): e is [string, number] => typeof e[1] === "number").sort((a, b) => a[1] - b[1]);
+      if (!list.length) return;
+      let prev = g.cum[list[0][1]];
+      if (r > 0) segs.push({ kind: "move", r, from: prev, to: prev, dur: rm ? 0.001 : 0.3 });
+      for (const [id, idx] of list.slice(1)) {
+        const b = g.cum[idx];
+        segs.push({ kind: "move", r, from: prev, to: b, dur: rm ? 0.001 : Math.max(0.45, (b - prev) / SPEED) });
+        prev = b;
+        const cs = clipsOf(id);
+        if (cs.length || order.includes(id)) {
+          const n = Math.max(0, ...cs.map((k) => motion.clips[k].frames / motion.clips[k].fps));
+          segs.push({ kind: "work", r, id, at: b, dur: rm ? RM_HOLD : cs.length ? n + HOLD : 1.2 });
+        }
+      }
+      if (prev < g.total - 1) segs.push({ kind: "move", r, from: prev, to: g.total, dur: rm ? 0.001 : Math.max(0.35, (g.total - prev) / SPEED) });
+    });
     return segs;
-  }, [motion, geo, order]);
+  }, [motion, geo, order, clipsOf]);
   const segs = useRef<Seg[]>([]);
 
   const draw = useCallback(
@@ -105,11 +121,13 @@ export function useMapPlayer({
 
   // 흐름선 · 빛 점 쓰기
   const paint = useCallback(
-    (len: number, show: boolean) => {
-      if (!geo) return;
-      if (trail.current) trail.current.style.strokeDashoffset = String(geo.total - len);
+    (r: number, len: number, show: boolean) => {
+      const g = geo?.[r];
+      if (!g) return;
+      const el = trails.current[r];
+      if (el) el.style.strokeDashoffset = String(g.total - len);
       if (dot.current) {
-        const [x, y] = at(len);
+        const [x, y] = at(r, len);
         dot.current.setAttribute("cx", x.toFixed(1));
         dot.current.setAttribute("cy", y.toFixed(1));
         dot.current.style.opacity = show ? "1" : "0";
@@ -150,9 +168,9 @@ export function useMapPlayer({
         for (let j = Math.max(0, segNow.current); j < i; j++) {
           const s = list[j];
           if (s.kind === "work") {
-            draw(s.id, (motion?.clips[s.id]?.frames ?? 1) - 1);
+            for (const k of clipsOf(s.id)) draw(k, (motion?.clips[k]?.frames ?? 1) - 1);
             setDone((d) => (d.includes(s.id) ? d : [...d, s.id]));
-          }
+          } else paint(s.r, s.to, false);
         }
         segNow.current = i;
         const s = list[i];
@@ -162,7 +180,7 @@ export function useMapPlayer({
         } else if (s) setRunAct(null);
       }
       if (i >= list.length) {
-        paint(geo?.total ?? 0, false);
+        if (dot.current) dot.current.style.opacity = "0";
         setRunAct(null);
         setState("done");
         return;
@@ -171,15 +189,17 @@ export function useMapPlayer({
       const lt = t.current - acc;
       if (s.kind === "move") {
         const x = s.dur < 0.01 ? 1 : easeInOut(Math.min(1, lt / s.dur));
-        paint(s.from + (s.to - s.from) * x, true);
+        paint(s.r, s.from + (s.to - s.from) * x, true);
       } else {
-        paint(s.at, true);
-        const c = motion?.clips[s.id];
-        if (c) draw(s.id, reduce.current ? c.frames - 1 : Math.floor(lt * c.fps));
+        paint(s.r, s.at, true);
+        for (const k of clipsOf(s.id)) {
+          const c = motion!.clips[k];
+          draw(k, reduce.current ? c.frames - 1 : Math.floor(lt * c.fps));
+        }
       }
       raf.current = requestAnimationFrame((n) => tick(n, now));
     },
-    [draw, paint, geo, motion, onStep]
+    [draw, paint, motion, onStep, clipsOf]
   );
 
   const start = useCallback(() => {
@@ -188,13 +208,13 @@ export function useMapPlayer({
     t.current = 0;
     segNow.current = -1;
     setDone([]);
-    paint(0, false);
+    geo?.forEach((_, r) => paint(r, 0, false));
     for (const id of Object.keys(motion?.clips ?? {})) {
       frameNow.current[id] = -1;
       draw(id, 0);
     }
     setState("run");
-  }, [buildSegs, draw, paint, motion]);
+  }, [buildSegs, draw, paint, motion, geo]);
 
   const pause = useCallback(() => setState((s) => (s === "run" ? "pause" : s)), []);
 
@@ -222,5 +242,5 @@ export function useMapPlayer({
     return () => document.removeEventListener("visibilitychange", f);
   }, [pause]);
 
-  return { state, runAct, done, ready, geo, trail, dot, canvases, toggle, pause, active: !!motion };
+  return { state, runAct, done, ready, geo, trails, dot, canvases, toggle, pause, active: !!motion };
 }

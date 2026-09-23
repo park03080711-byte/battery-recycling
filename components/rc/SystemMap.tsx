@@ -13,8 +13,9 @@ export type MapGroup = { label: string; tag: string };
 export type MapOverlay = { at: string; text: string; kind: "zone" | "flow"; badge?: string; g?: number };
 export type PlantData = { w: number; h: number; pts: Record<string, number[]> };
 /** 공정 재생: 바닥 흐름선(화면 %) · 멈춤점(흐름선 꼭짓점 번호) · 설비 동작 클립(스프라이트) */
-export type MapClip = { box: number[]; fw: number; fh: number; cols: number; frames: number; fps: number; rest?: boolean };
-export type MapMotion = { path: number[][]; stops: Record<string, number>; clips: Record<string, MapClip>; flowmask?: boolean };
+export type MapClip = { box: number[]; fw: number; fh: number; cols: number; frames: number; fps: number; rest?: boolean; step?: string };
+export type MapRoute = { pts: number[][]; stops: Record<string, number | undefined> };
+export type MapMotion = { path?: number[][]; stops?: Record<string, number>; routes?: MapRoute[]; clips: Record<string, MapClip>; flowmask?: boolean };
 
 
 type Props = {
@@ -176,7 +177,7 @@ export function SystemMap({ steps, groups, mid, overlays = [], plant, img, mask,
             Object.entries(motion.clips).map(([id, c]) => {
               const pos = { left: `${c.box[0]}%`, top: `${c.box[1]}%`, width: `${c.box[2]}%`, height: `${c.box[3]}%` };
               return (
-                <div key={id} className={`rc-clip${lit === id ? " on" : ""}`} style={pos} aria-hidden="true">
+                <div key={id} className={`rc-clip${lit === (c.step ?? id) ? " on" : ""}`} style={pos} aria-hidden="true">
                   {c.rest && !player.ready[id] && <img src={`${motionSrc}-rest-${id}.webp`} alt="" width={c.fw} height={c.fh} decoding="async" />}
                   <canvas
                     width={c.fw}
@@ -196,11 +197,23 @@ export function SystemMap({ steps, groups, mid, overlays = [], plant, img, mask,
               style={motion.flowmask ? { maskImage: `url(${motionSrc}-flowmask.png)`, WebkitMaskImage: `url(${motionSrc}-flowmask.png)` } : undefined}
             >
               <defs>
-                <mask id={maskId} maskUnits="userSpaceOnUse">
-                  <path ref={player.trail} d={player.geo.d} className="rc-flow-reveal" strokeDasharray={player.geo.total} strokeDashoffset={player.geo.total} />
-                </mask>
+                {player.geo.map((g, r) => (
+                  <mask key={r} id={`${maskId}-${r}`} maskUnits="userSpaceOnUse">
+                    <path
+                      ref={(el) => {
+                        player.trails.current[r] = el;
+                      }}
+                      d={g.d}
+                      className="rc-flow-reveal"
+                      strokeDasharray={g.total}
+                      strokeDashoffset={g.total}
+                    />
+                  </mask>
+                ))}
               </defs>
-              <path d={player.geo.d} className="rc-flow-led" mask={`url(#${maskId})`} />
+              {player.geo.map((g, r) => (
+                <path key={r} d={g.d} className="rc-flow-led" mask={`url(#${maskId}-${r})`} />
+              ))}
               <circle ref={player.dot} r="15" className="rc-flow-dot" />
             </svg>
           )}

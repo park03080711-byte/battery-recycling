@@ -10,6 +10,7 @@ import { facts, lives, stepSrc, steps, toc } from "./data";
 import { IconCarbon, IconGrid16, IconTierMid, LifeESS, LifeEV, LifeRecycle } from "./Icons";
 import { ThresholdGrid } from "./Parts";
 import yard from "./yard.json";
+import motion from "./motion.json";
 
 const icons = [<IconTierMid key="a" />, <IconGrid16 key="b" />, <IconCarbon key="c" />];
 const kpis: Kpi[] = facts.map((f, i) => ({ ...f, icon: icons[i] }));
@@ -136,6 +137,8 @@ export default function ReusePage() {
                 plant={yard}
                 img="/rs/yard"
                 mask="/rs/mask_"
+                motion={motion}
+                motionSrc="/rs/yard"
                 title="두 번째 삶 지도"
                 sub="판정 · 재포장 · 네 갈래 활용처"
                 keys={[
@@ -146,7 +149,7 @@ export default function ReusePage() {
                 capId="yard-cap"
                 caption={
                   <>
-                    그림 3. ESS를 고르면 전력망용(지붕에 태양광을 얹은 컨테이너)과 함께 가정용(벽걸이 배터리) · 충전소용(배터리 캐비닛)도 밝아집니다. 장면은 이 사이트가 Blender로 직접
+                    그림 3. &lsquo;공정 재생&rsquo;을 누르면 배터리가 등급 판정 · 재포장을 거친 뒤 갈림점에서 네 활용처로 한 갈래씩 가며, 곳마다 쓰임이 움직임으로 보입니다 — ESS는 태양광으로 충전 표시가 차오르고, UPS는 비상 전원 표시등이 켜지고, 가로등은 낮에 충전해 밤에 불을 밝히고, 소형 모빌리티는 배터리 표시가 켜집니다. ESS를 고르면 전력망용(지붕에 태양광을 얹은 컨테이너)과 함께 가정용(벽걸이 배터리) · 충전소용(배터리 캐비닛)도 밝아집니다. 장면은 이 사이트가 Blender로 직접
                     모델링 · 렌더한 설명용 도식이며 실제 배치와 다릅니다. <Cite src={[23, 42, 25, "R"]} />
                   </>
                 }
