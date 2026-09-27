@@ -16,7 +16,7 @@ import motion from "./motion.json";
 const icons = [<IconTier key="a" />, <IconCells key="b" />, <IconSteps key="c" />];
 const kpis: Kpi[] = facts.map((f, i) => ({ ...f, icon: icons[i] }));
 
-const { papers, other } = collectCited(facts.flatMap((f) => f.src), stepSrc, ["R", "P2", 23, 26, 36, 37, 38, 39, 40, 41]);
+const { papers, other } = collectCited(facts.flatMap((f) => f.src), stepSrc, ["R", "P2", "P3", 23, 26, 36, 37, 38, 39, 40, 41]);
 
 function Pct({ v }: { v: number }) {
   // 팩 통째 교체를 0으로 둔 차이(%) — 한 축, 0 기준 양옆
@@ -263,13 +263,13 @@ export default function RemanPage() {
                   <li>
                     <b>3</b>
                     <div>
-                      <h3>사후 검사</h3>
-                      <p>유통된 뒤에도 품질을 다시 확인합니다.</p>
+                      <h3>정기 안전검사</h3>
+                      <p>유통된 뒤에도 3년마다 다시 안전검사를 받습니다.</p>
                     </div>
                   </li>
                 </ol>
                 <figcaption>
-                  그림 7. 3단계 점검 체계. <Cite src={["R"]} />
+                  그림 7. 3단계 점검 체계 (사용후배터리법 제14~16조, 2027년 5월 시행). <Cite src={["R", "P3"]} />
                 </figcaption>
               </figure>
               <aside className="rc-note" aria-label="배터리 이력 관리">

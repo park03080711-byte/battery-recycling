@@ -627,6 +627,90 @@ a.rm-tier-row:hover { background: var(--ism-color-background); }
   .up-val-art polygon, .up-ready-art polygon { transition: none; }
 }
 
+/* ───────── 05 잔존수명 진단 ───────── */
+/* 왜 어려운가 */
+.sh-reasons { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.sh-reasons li { display: flex; gap: 12px; padding: 14px 16px; border-radius: var(--r-panel); background: var(--ism-color-background); }
+.sh-reasons li > b { display: inline-grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: var(--r-badge); background: var(--rc-panel); box-shadow: var(--rc-sh-1); font-size: 12px; color: var(--ism-color-foreground); }
+.sh-reasons .t { font-size: var(--fs-md); font-weight: 800; line-height: 1.45; color: var(--ism-color-foreground); }
+.sh-reasons .d { margin-top: 4px; font-size: var(--fs-sm); line-height: 1.7; }
+.sh-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.sh-cards .rc-note { margin-top: 0; }
+.sh-cards .rc-note a { color: var(--rc-link); font-weight: 700; }
+.sh-knee { display: block; width: 100%; max-width: 320px; height: auto; margin: 10px 0 4px; }
+.sh-knee .ax { stroke: var(--rc-ctl); stroke-width: 1.2; }
+.sh-knee .curve { fill: none; stroke: var(--rc-link); stroke-width: 3; stroke-linecap: round; }
+.sh-knee .kp { fill: #fff; stroke: #c26a00; stroke-width: 3; }
+.sh-knee .lb { font-size: 10px; fill: var(--rc-sub); }
+.sh-knee .lb.strong { font-weight: 800; fill: #8a4b00; }
+.sh-knee .lb.soft { fill: var(--rc-sub); }
+
+/* 잔존용량 슬라이더 (지도 아래) */
+.sh-gate { margin-top: 16px; }
+.sh-gate-in { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 16px; }
+.sh-gate-l { font-size: var(--fs-md); font-weight: 800; color: var(--ism-color-foreground); }
+.sh-gate-v { padding: 4px 12px; border-radius: var(--r-btn); font-size: var(--fs-md); font-weight: 800; }
+.sh-gate-v b { font-size: 24px; letter-spacing: -0.02em; }
+.t-rm { background: #dfe6ff; color: #2b3fa8; }
+.t-rs { background: #d4f4ef; color: #11544d; }
+.t-rc { background: #fdecc8; color: #7a4d00; }
+.sh-gate-track { position: relative; margin-top: 14px; }
+.sh-gate-bands { display: flex; height: 26px; border-radius: 8px; overflow: hidden; }
+.sh-gate-bands span { display: grid; place-items: center; font-size: 12px; font-weight: 800; }
+.sh-gate-bands .t-rc { width: calc((30 / 70) * 100%); }
+.sh-gate-bands .t-rs { width: calc((20 / 70) * 100%); }
+.sh-gate-bands .t-rm { width: calc((20 / 70) * 100%); }
+.sh-gate-track input[type="range"] { display: block; width: 100%; height: 44px; margin: 0; accent-color: var(--rc-link); cursor: pointer; }
+.sh-gate-ticks { position: relative; height: 16px; }
+.sh-gate-ticks span { position: absolute; top: 0; transform: translateX(-50%); font-size: 11px; font-weight: 700; color: var(--rc-sub); }
+.sh-gate-what { margin-top: 10px; font-size: var(--fs-sm); line-height: 1.75; }
+.sh-gate-what a { color: var(--rc-link); font-weight: 700; }
+
+/* 빠름 vs 정확함 */
+.sh-speed-list { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.sh-m { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; border-radius: var(--r-panel); background: var(--ism-color-background); }
+.sh-m-h { font-size: var(--fs-md); font-weight: 800; color: var(--ism-color-foreground); }
+.sh-m-time { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px 10px; }
+.sh-m-k { font-size: 12px; font-weight: 700; color: var(--rc-sub); }
+.sh-m-bar { display: block; height: 12px; border-radius: 6px; background: var(--rc-panel); box-shadow: inset 0 0 0 1px var(--rc-line); overflow: hidden; }
+.sh-m-bar i { display: block; height: 100%; border-radius: 6px; background: #8fa6fc; }
+.sh-m-pulse .sh-m-bar i { background: var(--ism-color-teal); }
+.sh-m-v { grid-column: 1 / -1; font-size: var(--fs-sm); font-weight: 700; color: var(--ism-color-foreground); }
+.sh-m-time:has(.sh-m-bar) .sh-m-v { grid-column: 2; }
+.sh-m dl { display: grid; gap: 6px; margin: 0; }
+.sh-m dl div { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px; font-size: 13px; line-height: 1.6; }
+.sh-m dt { font-weight: 700; color: var(--rc-sub); }
+.sh-m dd { margin: 0; color: var(--rc-text); }
+.sh-m-note { font-size: 13px; line-height: 1.7; }
+
+/* 제도 */
+.sh-law ol { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.sh-law li { position: relative; padding: 16px 18px; border-radius: var(--r-panel); background: var(--ism-color-background); }
+.sh-law li.cur { background: var(--rc-tint); box-shadow: inset 0 0 0 1.5px #c9d5fe; }
+.sh-law li + li::before { content: "→"; position: absolute; left: -11px; top: 18px; transform: translateX(-50%); color: var(--ism-color-teal); font-weight: 800; }
+.sh-law .art { display: inline-block; padding: 2px 8px; border-radius: var(--r-badge); background: var(--rc-panel); box-shadow: var(--rc-sh-1); font-size: 11px; font-weight: 800; color: var(--rc-link); }
+.sh-law .t { margin-top: 8px; font-size: var(--fs-md); font-weight: 800; line-height: 1.45; color: var(--ism-color-foreground); }
+.sh-law .t em { margin-left: 6px; padding: 2px 8px; border-radius: var(--r-badge); background: var(--rc-link); color: #fff; font-style: normal; font-size: 11px; vertical-align: 2px; }
+.sh-law .d { margin-top: 4px; font-size: var(--fs-sm); line-height: 1.7; }
+.sh-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.sh-link { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; padding: 14px 16px; border-radius: var(--r-panel); background: var(--rc-panel); box-shadow: var(--rc-sh-1); color: var(--rc-text); text-decoration: none; transition: box-shadow var(--ism-motion); }
+.sh-link:hover { box-shadow: var(--rc-sh-2); }
+.sh-link b { display: inline-grid; place-items: center; flex: none; min-width: 32px; height: 24px; border-radius: var(--r-badge); background: var(--ism-color-background); font-size: 12px; color: var(--ism-color-foreground); }
+.sh-link span { font-size: 13px; line-height: 1.6; }
+.sh-link strong { display: block; font-size: var(--fs-md); color: var(--rc-link); }
+
+/* 용어 */
+.sh-terms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 24px; }
+.sh-terms div { padding: 10px 0; border-bottom: 1px solid var(--rc-line); }
+.sh-terms dt { font-size: var(--fs-sm); font-weight: 800; color: var(--ism-color-foreground); }
+.sh-terms dd { margin: 4px 0 0; font-size: 13px; line-height: 1.7; }
+
+@media (max-width: 900px) {
+  .sh-reasons, .sh-cards, .sh-speed-list, .sh-links, .sh-terms { grid-template-columns: minmax(0, 1fr); }
+  .sh-law ol { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+  .sh-law li + li::before { content: "↓"; left: 30px; top: -20px; transform: none; }
+}
+
 /* ───────── 공정 재생 (지도 공통) ───────── */
 .rc-map-play { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px 0 12px; border: 0; border-radius: var(--r-btn); background: var(--rc-link); font: inherit; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer; box-shadow: var(--rc-sh-1); transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background-color 160ms ease; }
 .rc-map-play:hover { background: #2f4fcf; }

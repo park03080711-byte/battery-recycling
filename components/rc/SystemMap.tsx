@@ -33,12 +33,13 @@ type Props = {
   capId: string;
   motion?: MapMotion;
   motionSrc?: string; // 예: "/rm/shop" → -clip-{id}.webp, -rest-{id}.webp
+  select?: { id: string; n: number }; // 바깥 조작(예: 잔존용량 슬라이더)으로 단계 고르기 — n이 바뀔 때마다 적용
 };
 
 const ZOOM = 1.75;
 const keyCls = { g0: "k-pre", g1: "k-post", flow: "k-flow" } as const;
 
-export function SystemMap({ steps, groups, mid, overlays = [], plant, img, mask, title, sub, keys, caption, capId, motion, motionSrc }: Props) {
+export function SystemMap({ steps, groups, mid, overlays = [], plant, img, mask, title, sub, keys, caption, capId, motion, motionSrc, select }: Props) {
   const [act, setAct] = useState(steps[0].id);
   const [hover, setHover] = useState<string | null>(null);
   const [focus, setFocus] = useState(false);
@@ -104,6 +105,10 @@ export function SystemMap({ steps, groups, mid, overlays = [], plant, img, mask,
     },
     [pause]
   );
+
+  useEffect(() => {
+    if (select && stepIds.has(select.id)) pick(select.id);
+  }, [select, stepIds, pick]);
 
   useEffect(() => {
     if (!focus) return;

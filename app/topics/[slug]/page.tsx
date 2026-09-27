@@ -13,6 +13,7 @@ import { FactIcon, TopicIcon } from "@/components/Icons";
 import RemanPage from "@/components/rm/RemanPage";
 import ReusePage from "@/components/rs/ReusePage";
 import UpcyclingPage from "@/components/up/UpcyclingPage";
+import SohPage from "@/components/sh/SohPage";
 import RecyclingPage from "@/components/rc/RecyclingPage";
 
 type Params = { slug: string };
@@ -100,6 +101,7 @@ export default async function TopicPage({ params }: { params: Promise<Params> })
   if (slug === "remanufacturing") return <RemanPage />;
   if (slug === "reuse") return <ReusePage />;
   if (slug === "upcycling") return <UpcyclingPage />;
+  if (slug === "soh-diagnosis") return <SohPage />;
 
   const layer = layerById(t.layer);
   const idx = topics.findIndex((x) => x.slug === t.slug);
