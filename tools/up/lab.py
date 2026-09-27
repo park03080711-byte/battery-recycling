@@ -219,7 +219,7 @@ def d5_photo(M):
     cyl(0.47, 0.34, u, v, Z0 + 0.35, M["organic"], g, seg=48)
     for k in range(6):
         a = k * 1.05
-        box(0.14, 0.1, 0.03, u + 0.25 * math.cos(a), v + 0.25 * math.sin(a), Z0 + 0.69, M["pet"], g, bevel=0.01, rotz=a)
+        box(0.14, 0.1, 0.03, u + 0.25 * math.cos(a), v + 0.25 * math.sin(a), Z0 + 0.69, M["pet"], g, bevel=0.01, rotz=a)["anim"] = "d5"  # 공정 재생에서 분해되며 줄어듦
     cyl(0.18, 0.04, u, v, Z0 + 0.69, M["bm"], g, seg=20)
     # 단량체 병 세 개
     for k in range(3):

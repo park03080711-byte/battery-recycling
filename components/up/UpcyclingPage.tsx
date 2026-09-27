@@ -9,6 +9,7 @@ import { facts, korea, stepSrc, steps, toc } from "./data";
 import { IconCycles, IconMOF, IconValue, PathDevice, PathElements, PathMaterial, PathNewCell, PathPack } from "./Icons";
 import { ReadyStair, ValueBars } from "./Parts";
 import lab from "./lab.json";
+import motion from "./motion.json";
 
 const icons = [<IconMOF key="a" />, <IconCycles key="b" />, <IconValue key="c" />];
 const kpis: Kpi[] = facts.map((f, i) => ({ ...f, icon: icons[i] }));
@@ -117,6 +118,8 @@ export default function UpcyclingPage() {
                 mid="재료별로"
                 overlays={[{ at: "cin", kind: "flow", text: "입고 — 폐배터리 · 폐PET · 철 캔" }]}
                 plant={lab}
+                motion={motion}
+                motionSrc="/up/lab"
                 img="/up/lab"
                 mask="/up/mask_"
                 title="업사이클링 지도"
@@ -129,8 +132,8 @@ export default function UpcyclingPage() {
                 capId="lab-cap"
                 caption={
                   <>
-                    그림 2. 번호를 누르면 그 전환만 밝아지고, 아래에 무엇이 들어가 무엇이 나오는지가 뜹니다. 장면은 이 사이트가 Blender로 직접 모델링 · 렌더한 설명용 도식이며, 각
-                    설비는 논문 속 실험 장치를 단순화한 것입니다. <Cite src={stepSrc} />
+                    그림 2. 번호를 누르면 그 전환만 밝아지고, 아래에 무엇이 들어가 무엇이 나오는지가 뜹니다. &lsquo;공정 재생&rsquo;을 누르면 해체 · 선별로 나눈 재료가 갈림점에서 다섯 갈래를 한 갈래씩 차례로 지나갑니다. 장면은 이 사이트가 Blender로 직접 모델링 · 렌더한 설명용 도식이며, 각
+                    설비와 움직임은 논문 속 실험실 규모의 장치를 단순화한 것입니다. <Cite src={stepSrc} />
                   </>
                 }
               />
