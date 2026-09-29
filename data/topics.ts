@@ -336,9 +336,9 @@ export const topics: Topic[] = [
     lead: "배터리 팩 해체는 지금도 대부분 수작업입니다. 위험하고, 팩마다 설계가 달라 표준화도 어렵습니다. 로보틱스와 원격조작으로 안전성과 비용 효율을 함께 잡으려는 연구가 이 주제입니다.",
     coverage: "병목으로 다룸",
     facts: [
-      { value: "수작업", label: "현재 해체 방식", note: "감전 · 유해물질 노출 위험" },
-      { value: "셀 단위", label: "비전 기반 로봇 분해 목표", note: "사전 위치 정보 없이" },
-      { value: "DT · XR", label: "원격 해체 접근", note: "디지털 트윈 · 확장현실" },
+      { value: "57%", label: "곧바로 자동화할 수 있는 팩→모듈 해체 작업", note: "PHEV 팩 기술경제성 분석" },
+      { value: "약 2배", label: "절단에서 로봇이 사람보다 빠른 정도", note: "집어 옮기기 · 분류는 사람이 빠름" },
+      { value: "46단계", label: "팩 하나의 해체 순서", note: "나사 풀기는 자동화, 들기는 사람" },
     ],
     sections: [
       {
@@ -371,7 +371,7 @@ export const topics: Topic[] = [
         ],
       },
     ],
-    refs: [26],
+    refs: [26, 36, 40, 62, 63, 64, 65, 66, 67, 68],
     related: ["safety", "remanufacturing", "design-for-disassembly"],
   },
   {

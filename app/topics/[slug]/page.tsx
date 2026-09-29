@@ -15,6 +15,7 @@ import ReusePage from "@/components/rs/ReusePage";
 import UpcyclingPage from "@/components/up/UpcyclingPage";
 import SohPage from "@/components/sh/SohPage";
 import SafetyPage from "@/components/sf/SafetyPage";
+import DisassemblyPage from "@/components/ad/DisassemblyPage";
 import RecyclingPage from "@/components/rc/RecyclingPage";
 
 type Params = { slug: string };
@@ -104,6 +105,7 @@ export default async function TopicPage({ params }: { params: Promise<Params> })
   if (slug === "upcycling") return <UpcyclingPage />;
   if (slug === "soh-diagnosis") return <SohPage />;
   if (slug === "safety") return <SafetyPage />;
+  if (slug === "automated-disassembly") return <DisassemblyPage />;
 
   const layer = layerById(t.layer);
   const idx = topics.findIndex((x) => x.slug === t.slug);

@@ -770,6 +770,62 @@ a.rm-tier-row:hover { background: var(--ism-color-background); }
   .sf-why-grid, .sf-cards, .sf-rules, .sf-links { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* ───────── 07 자동화 해체 ───────── */
+.ad-fig-h { margin-bottom: 10px; font-size: var(--fs-md); font-weight: 800; color: var(--ism-color-foreground); }
+.ad-atex-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: center; }
+.ad-atex { display: block; width: 100%; max-width: 320px; height: auto; margin: 0 auto; }
+.ad-atex-zone { fill: rgba(255, 138, 0, 0.08); stroke: #C2410C; stroke-width: 1.6; stroke-dasharray: 5 4; }
+.ad-atex-eq { fill: none; stroke: #C2410C; stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.6; }
+.ad-atex-src { fill: #FF8A00; stroke: #fff; stroke-width: 1.6; }
+.ad-atex-r { stroke: #C2410C; stroke-width: 1.4; }
+.ad-atex-l { font-size: 11px; font-weight: 700; fill: #8a4b00; }
+.ad-atex-l.strong { font-size: 12px; font-weight: 800; }
+.ad-atex-note { font-size: var(--fs-sm); line-height: 1.75; }
+
+.ad-share-bar { display: flex; overflow: hidden; height: 44px; border-radius: 10px; background: var(--ism-color-background); }
+.ad-share-bar span { display: grid; place-items: center; min-width: 0; font-size: 14px; font-weight: 800; color: #172033; }
+.ad-share-a { background: #39C6B6; }
+.ad-share-b { background: #BFEDE7; }
+.ad-share-c { background: #E3E8F1; }
+.ad-share-key { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.ad-share-key li { display: grid; grid-template-columns: 14px minmax(0, 1fr); column-gap: 8px; font-size: 13px; line-height: 1.55; }
+.ad-share-key i { width: 14px; height: 14px; margin-top: 3px; border-radius: 4px; }
+.ad-share-key b { color: var(--ism-color-foreground); }
+.ad-share-key span { grid-column: 2; color: var(--rc-sub); }
+.ad-gain { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 12px 24px; align-items: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--rc-line, #e3e8f1); }
+.ad-gain div { display: grid; }
+.ad-gain b { font-size: 26px; font-weight: 800; line-height: 1.1; color: var(--ism-color-foreground); }
+.ad-gain span { font-size: 13px; color: var(--rc-sub); }
+.ad-gain p { font-size: 13px; line-height: 1.7; }
+
+.ad-speed { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; margin-top: 16px; }
+.ad-speed > .rc-panel { padding: 18px 20px; }
+.ad-speed .rc-note { margin-top: 0; }
+.ad-speed-d { margin-top: 10px; font-size: var(--fs-sm); line-height: 1.75; }
+.ad-cut { display: grid; gap: 10px; }
+.ad-cut-row { display: grid; grid-template-columns: 116px minmax(0, 1fr) 64px; gap: 10px; align-items: center; font-size: 13px; }
+.ad-cut-t { color: var(--rc-text); }
+.ad-cut-track { height: 14px; border-radius: 7px; background: var(--ism-color-background); overflow: hidden; }
+.ad-cut-bar { display: block; height: 100%; border-radius: 7px; }
+.ad-cut-bar.h { background: #8A93A6; }
+.ad-cut-bar.r { background: #5B7CFA; }
+.ad-cut-v { font-weight: 800; color: var(--ism-color-foreground); text-align: right; }
+
+.ad-roles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+.ad-role { padding: 18px 20px; }
+.ad-role-h { display: inline-block; padding: 3px 12px; border-radius: var(--r-badge); font-size: 13px; font-weight: 800; }
+.ad-role.robot .ad-role-h { background: #E6ECFF; color: #3552C8; }
+.ad-role.human .ad-role-h { background: #FFF1D6; color: #8a4b00; }
+.ad-role ul { list-style: none; display: grid; gap: 12px; margin-top: 12px; }
+.ad-role .t { font-size: var(--fs-md); font-weight: 800; color: var(--ism-color-foreground); }
+.ad-role .d { margin-top: 4px; font-size: var(--fs-sm); line-height: 1.75; }
+
+@media (max-width: 900px) {
+  .ad-atex-grid, .ad-speed, .ad-roles, .ad-share-key { grid-template-columns: minmax(0, 1fr); }
+  .ad-gain { grid-template-columns: auto auto; }
+  .ad-gain p { grid-column: 1 / -1; }
+}
+
 /* ───────── 공정 재생 (지도 공통) ───────── */
 .rc-map-play { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px 0 12px; border: 0; border-radius: var(--r-btn); background: var(--rc-link); font: inherit; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer; box-shadow: var(--rc-sh-1); transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background-color 160ms ease; }
 .rc-map-play:hover { background: #2f4fcf; }
