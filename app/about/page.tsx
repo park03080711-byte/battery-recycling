@@ -40,9 +40,9 @@ export default function AboutPage() {
           <ul className="facts">
             <li className="fact" style={{ gridTemplateColumns: "1fr" }}>
               <div>
-                <b>54편</b>
+                <b>61편</b>
                 <span>검증된 학술 문헌</span>
-                <small>국제 13 · 국내 12 · 재사용·재제조 17 · 신기술 12</small>
+                <small>국제 19 · 국내 13 · 재사용·재제조 17 · 신기술 12</small>
               </div>
             </li>
             <li className="fact" style={{ gridTemplateColumns: "1fr" }}>
