@@ -5,7 +5,7 @@ import { Box, makeIso, metalRamp, ramp } from "../rc/Iso";
 export function IconMOF() {
   const iso = makeIso(6, 58, 58);
   return (
-    <svg viewBox="0 0 136 96" className="rc-kpi-ico" aria-hidden="true">
+    <svg viewBox="0 0.2 136 96" className="rc-kpi-ico" aria-hidden="true">
       <Box iso={iso} x={0} y={0} w={7} d={4.4} h={0.35} fill={metalRamp("#D9895B")} />
       <Box iso={iso} x={0.3} y={0.3} z={0.35} w={6.4} d={3.8} h={0.3} fill={metalRamp("#C23D69")} />
       {[0, 1, 2].map((i) =>
@@ -19,7 +19,7 @@ export function IconMOF() {
 export function IconCycles() {
   const iso = makeIso(6, 50, 80);
   return (
-    <svg viewBox="0 0 136 96" className="rc-kpi-ico" aria-hidden="true">
+    <svg viewBox="0 15 136 96" className="rc-kpi-ico" aria-hidden="true">
       <Box iso={iso} x={0} y={0} w={2.6} d={2.6} h={2.2} fill={ramp.base} />
       <Box iso={iso} x={3.8} y={0} w={2.6} d={2.6} h={7.8} fill={ramp.blue} />
     </svg>
@@ -30,7 +30,7 @@ export function IconCycles() {
 export function IconValue() {
   const iso = makeIso(6, 50, 80);
   return (
-    <svg viewBox="0 0 136 96" className="rc-kpi-ico" aria-hidden="true">
+    <svg viewBox="0 15 136 96" className="rc-kpi-ico" aria-hidden="true">
       <Box iso={iso} x={0} y={0} w={2.6} d={2.6} h={0.9} fill={ramp.navy} />
       <Box iso={iso} x={3.8} y={0} w={2.6} d={2.6} h={8.2} fill={metalRamp("#2BB594")} />
     </svg>

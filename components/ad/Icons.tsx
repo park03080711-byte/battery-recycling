@@ -11,7 +11,7 @@ export function IconShare() {
   ];
   let x = 0;
   return (
-    <svg viewBox="0 0 136 96" className="rc-kpi-ico" aria-hidden="true">
+    <svg viewBox="0 2.6 136 96" className="rc-kpi-ico" aria-hidden="true">
       {parts.map(([w, f], i) => {
         const b = <Box key={i} iso={iso} x={x} y={0} w={w} d={2.2} h={2.2} fill={f} />;
         x += w;
@@ -25,7 +25,7 @@ export function IconShare() {
 export function IconTwice() {
   const iso = makeIso(6, 52, 78);
   return (
-    <svg viewBox="0 0 136 96" className="rc-kpi-ico" aria-hidden="true">
+    <svg viewBox="0 13 136 96" className="rc-kpi-ico" aria-hidden="true">
       <Box iso={iso} x={0} y={0} w={2.6} d={2.6} h={7.6} fill={ramp.ghost} />
       <Box iso={iso} x={3.8} y={0} w={2.6} d={2.6} h={3.8} fill={ramp.blue} />
     </svg>
@@ -36,7 +36,7 @@ export function IconTwice() {
 export function IconSteps() {
   const iso = makeIso(5.6, 34, 70);
   return (
-    <svg viewBox="0 0 136 96" className="rc-kpi-ico" aria-hidden="true">
+    <svg viewBox="0 12.2 136 96" className="rc-kpi-ico" aria-hidden="true">
       {[0, 1, 2, 3, 4, 5].map((k) => (
         <Box key={k} iso={iso} x={k * 1.6} y={0} w={1.6} d={2.6} h={0.9 + k * 1.05} fill={k === 5 ? ramp.teal : ramp.base} />
       ))}

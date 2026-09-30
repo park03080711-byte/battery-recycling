@@ -7,7 +7,7 @@ export function IconTier() {
   const iso = makeIso(6, 60, 58);
   const hs = [5, 3.4, 1.8];
   return (
-    <svg viewBox="0 0 136 96" className="rc-kpi-ico" aria-hidden="true">
+    <svg viewBox="0 8 136 96" className="rc-kpi-ico" aria-hidden="true">
       {[2, 1, 0].map((i) => (
         <Box key={i} iso={iso} x={i * 3.4} y={0} w={3.2} d={4} h={hs[i]} fill={i === 0 ? ramp.blue : ramp.base} />
       ))}
@@ -36,7 +36,7 @@ export function IconCells() {
 export function IconSteps() {
   const iso = makeIso(3.1, 20, 86);
   return (
-    <svg viewBox="0 0 136 96" className="rc-kpi-ico" aria-hidden="true">
+    <svg viewBox="0 0.4 137 96.7" className="rc-kpi-ico" aria-hidden="true">
       {Array.from({ length: 22 }, (_, k) => 21 - k).map((i) => (
         <Box key={i} iso={iso} x={0} y={-i * 1.35} w={3.2} d={1.35} h={0.6 + i * 0.55} fill={i === 21 ? ramp.blue : ramp.base} sw={0.5} />
       ))}

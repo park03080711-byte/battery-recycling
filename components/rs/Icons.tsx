@@ -7,7 +7,7 @@ export function IconTierMid() {
   const iso = makeIso(6, 60, 58);
   const hs = [5, 3.4, 1.8];
   return (
-    <svg viewBox="0 0 136 96" className="rc-kpi-ico" aria-hidden="true">
+    <svg viewBox="0 8 136 96" className="rc-kpi-ico" aria-hidden="true">
       {[0, 1, 2].map((i) => (
         <Box key={i} iso={iso} x={i * 3.4} y={0} w={3.2} d={4} h={hs[i]} fill={i === 1 ? ramp.blue : ramp.base} />
       ))}
@@ -35,7 +35,7 @@ export function IconGrid16() {
 export function IconCarbon() {
   const iso = makeIso(6, 56, 72);
   return (
-    <svg viewBox="0 0 136 96" className="rc-kpi-ico" aria-hidden="true">
+    <svg viewBox="0 11.2 136 96" className="rc-kpi-ico" aria-hidden="true">
       <Box iso={iso} x={0} y={0} w={3} d={3} h={7} fill={ramp.navy} />
       <Box iso={iso} x={4.4} y={0} w={3} d={3} h={5.9} fill={ramp.blue} />
       <Box iso={iso} x={4.4} y={0} z={5.9} w={3} d={3} h={1.1} fill={ramp.ghost} stroke="#8A93A6" dash="2 2" />

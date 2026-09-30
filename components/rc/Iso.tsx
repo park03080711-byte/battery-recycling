@@ -106,7 +106,7 @@ export function IconRecovery() {
   // 뒤에서 앞 순서로 그리기 (x+y 작은 것 먼저)
   const order = cells.map((c, k) => ({ c, s: Math.floor(k / 4) + (k % 4) })).sort((a, b) => a.s - b.s);
   return (
-    <svg viewBox="0 0 136 96" className="rc-kpi-ico" aria-hidden="true">
+    <svg viewBox="0 -4 145.2 102.5" className="rc-kpi-ico" aria-hidden="true">
       <Shadow iso={iso} x={0} y={0} w={15.4} d={12.2} />
       {order.map((o) => o.c)}
     </svg>
@@ -117,7 +117,7 @@ export function IconRecovery() {
 export function IconLithium() {
   const iso = makeIso(6.6, 68, 50);
   return (
-    <svg viewBox="0 0 136 96" className="rc-kpi-ico" aria-hidden="true">
+    <svg viewBox="0 3.8 157.5 111.2" className="rc-kpi-ico" aria-hidden="true">
       <Shadow iso={iso} x={0} y={0} w={6} d={6} k={1.2} />
       <Box iso={iso} x={0} y={0} w={6} d={6} h={3.2} fill={ramp.blue} />
       <Box iso={iso} x={0} y={0} z={3.2} w={6} d={6} h={3.2} fill={ramp.ghost} stroke="#8A93A6" dash="3 2.5" />
@@ -134,7 +134,7 @@ export function IconNine() {
   const up = new Set([0, 1, 3, 4]);
   const tiles = Array.from({ length: 9 }, (_, k) => ({ k, i: Math.floor(k / 3), j: k % 3 })).sort((a, b) => a.i + a.j - (b.i + b.j));
   return (
-    <svg viewBox="0 0 136 96" className="rc-kpi-ico" aria-hidden="true">
+    <svg viewBox="-3 0 153.3 108.2" className="rc-kpi-ico" aria-hidden="true">
       <Shadow iso={iso} x={0} y={0} w={11} d={11} />
       {tiles.map(({ k, i, j }) => (
         <Box key={k} iso={iso} x={i * 3.8} y={j * 3.8} w={3.2} d={3.2} h={up.has(k) ? 3 : 0.5} fill={up.has(k) ? ramp.blue : ramp.base} />
@@ -166,7 +166,7 @@ export function DepthPillars() {
 export function ProductStackArt({ items, on }: { items: { f: string; fill: string }[]; on: number | null }) {
   const iso = makeIso(8.4, 92, 120);
   return (
-    <svg viewBox="0 0 184 200" className="rc-stack-art" aria-hidden="true">
+    <svg viewBox="0 24.4 190.4 207" className="rc-stack-art" aria-hidden="true">
       <Shadow iso={iso} x={0} y={0} w={9} d={9} k={1.4} />
       {items
         .map((p, i) => ({ p, i }))

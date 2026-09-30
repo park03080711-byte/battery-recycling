@@ -9,7 +9,7 @@ export function IconBooks() {
   const iso = makeIso(6, 44, 78);
   const f: Ramp[] = [ramp.blue, ramp.navy, ramp.teal, ramp.amber];
   return (
-    <svg viewBox="0 0 136 96" className="rc-kpi-ico" aria-hidden="true">
+    <svg viewBox="0 17.8 136 96" className="rc-kpi-ico" aria-hidden="true">
       {f.map((c, i) => (
         <Box key={i} iso={iso} x={0} y={0} z={i * 1.3} w={7} d={3.6} h={1.1} fill={c} />
       ))}
@@ -21,7 +21,7 @@ export function IconBooks() {
 export function IconLayers4() {
   const iso = makeIso(6, 52, 70);
   return (
-    <svg viewBox="0 0 136 96" className="rc-kpi-ico" aria-hidden="true">
+    <svg viewBox="0 8 136 96" className="rc-kpi-ico" aria-hidden="true">
       {[...layers].reverse().map((l, i) => (
         <Box key={l.id} iso={iso} x={0} y={0} z={i * 1.6} w={6} d={4} h={1} fill={tone(l.color, l.colorSoft)} />
       ))}
@@ -48,7 +48,7 @@ export function IconGrid({ done, total }: { done: number; total: number }) {
 export function LayerStack() {
   const iso = makeIso(13, 118, 118);
   return (
-    <svg viewBox="0 0 236 190" className="ab-stack" aria-hidden="true">
+    <svg viewBox="0 10 236 190" className="ab-stack" aria-hidden="true">
       {[...layers].reverse().map((l, i) => (
         <g key={l.id}>
           <Box iso={iso} x={0} y={0} z={i * 2.2} w={7} d={5} h={1.2} fill={tone(l.color, l.colorSoft)} stroke={EDGE} sw={0.6} />

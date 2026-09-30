@@ -5,7 +5,7 @@ import { Box, makeIso, ramp } from "../rc/Iso";
 export function IconPulse() {
   const iso = makeIso(6, 50, 80);
   return (
-    <svg viewBox="0 0 136 96" className="rc-kpi-ico" aria-hidden="true">
+    <svg viewBox="0 15 136 96" className="rc-kpi-ico" aria-hidden="true">
       <Box iso={iso} x={0} y={0} w={2.6} d={2.6} h={8} fill={ramp.base} />
       <Box iso={iso} x={3.8} y={0} w={2.6} d={2.6} h={2.4} fill={ramp.teal} />
     </svg>
@@ -16,7 +16,7 @@ export function IconPulse() {
 export function IconTiers() {
   const iso = makeIso(6, 44, 84);
   return (
-    <svg viewBox="0 0 136 96" className="rc-kpi-ico" aria-hidden="true">
+    <svg viewBox="0 24.4 136 96" className="rc-kpi-ico" aria-hidden="true">
       <Box iso={iso} x={0} y={0} w={2.4} d={3} h={6} fill={ramp.blue} />
       <Box iso={iso} x={2.7} y={0} w={2.4} d={3} h={4} fill={ramp.teal} />
       <Box iso={iso} x={5.4} y={0} w={2.4} d={3} h={2} fill={ramp.amber} />
@@ -28,7 +28,7 @@ export function IconTiers() {
 export function IconLaw() {
   const iso = makeIso(6, 58, 62);
   return (
-    <svg viewBox="0 0 136 96" className="rc-kpi-ico" aria-hidden="true">
+    <svg viewBox="0 3 136 96" className="rc-kpi-ico" aria-hidden="true">
       <Box iso={iso} x={0} y={0} w={6.4} d={4.6} h={0.35} fill={ramp.ghost} />
       <Box iso={iso} x={0.4} y={0.4} z={0.35} w={5.6} d={3.8} h={0.2} fill={ramp.base} />
       <Box iso={iso} x={3.6} y={1.4} z={0.55} w={1.6} d={1.6} h={2.2} fill={ramp.navy} />

@@ -22,7 +22,7 @@ const { papers, other } = collectCited(facts.flatMap((f) => f.src), stepSrc, ["R
 function DemandArt({ kind }: { kind: "car" | "ess" }) {
   const iso = makeIso(7, 70, 64);
   return (
-    <svg viewBox="0 0 150 100" className="rs-demand-art" aria-hidden="true">
+    <svg viewBox="0 8 150 100" className="rs-demand-art" aria-hidden="true">
       {kind === "car" ? (
         <>
           <Box iso={iso} x={0} y={0} w={8} d={3.4} h={1.5} fill={ramp.blue} />
