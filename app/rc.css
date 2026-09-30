@@ -867,6 +867,79 @@ a.rm-tier-row:hover { background: var(--ism-color-background); }
   .bp-lost, .bp-uses, .bp-grsteps { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* ───────── 사이트 소개 ───────── */
+.ab { padding-top: 56px; }
+.ab-hero { margin-top: 0; margin-bottom: 40px; }
+.ab .rc-title h1 { margin-top: 0; font-size: clamp(2.4rem, 5vw, 4rem); }
+.ab-kpis .rc-kpi .v small { font-size: var(--fs-lg); }
+.ab-frame { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 32px; align-items: center; }
+.ab-stack { display: block; width: 100%; height: auto; }
+.ab-stack-l { font-size: 15px; font-weight: 800; }
+.ab-layers { list-style: none; display: grid; gap: 14px; }
+.ab-layers > li { padding: 12px 16px; border-radius: var(--r-panel); background: var(--cs); }
+.ab-layers .h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: var(--fs-md); font-weight: 800; color: var(--ism-color-foreground); }
+.ab-layers .h b { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: var(--r-badge); background: var(--c); color: #fff; font-size: 12px; }
+.ab-layers .h span { font-size: 13px; font-weight: 600; color: var(--rc-text); }
+.ab-chips { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.ab-chips a { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 10px; border-radius: 999px; background: #fff; box-shadow: var(--rc-sh-1); font-size: 13px; font-weight: 700; color: var(--rc-text); text-decoration: none; }
+.ab-chips a:hover { box-shadow: var(--rc-sh-2); }
+.ab-chips em { font-style: normal; font-size: 11px; color: var(--c); }
+
+.ab-how { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 24px; }
+.ab-how li { margin: 0; padding: 20px 22px; }
+.ab-how-ico { width: 64px; height: 64px; }
+.ab-how-t { font-size: 18px; font-weight: 800; fill: #3B5BDB; }
+.ab-how-s { font-size: 12px; font-weight: 800; fill: #3B5BDB; }
+.ab-how .t { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: var(--fs-md); font-weight: 800; color: var(--ism-color-foreground); }
+.ab-how .t b { display: inline-grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--ism-color-foreground); color: #fff; font-size: 11px; }
+.ab-how .d { margin-top: 6px; font-size: var(--fs-sm); line-height: 1.75; }
+
+.ab-rules, .ab-make { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 24px 0 0; }
+.ab-make { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ab-rules li, .ab-make li { margin: 0; padding: 18px 20px; }
+.ab-rules .t, .ab-make .t { font-size: var(--fs-md); font-weight: 800; color: var(--ism-color-foreground); }
+.ab-rules .d, .ab-make .d { margin-top: 6px; font-size: var(--fs-sm); line-height: 1.75; }
+.ab-depth { margin-top: 16px; }
+.ab-depth dl { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 8px; }
+.ab-depth dl > div { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.ab-h3 { margin: 40px 0 12px; font-size: var(--fs-lg); font-weight: 800; color: var(--ism-color-foreground); }
+.ab-h3 span { margin-left: 8px; font-size: 13px; font-weight: 700; color: var(--rc-link); }
+.ab-fixes { list-style: none; display: grid; gap: 10px; }
+.ab-fixes li { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; padding: 16px 18px; border-radius: var(--r-panel); background: var(--rc-panel); box-shadow: var(--rc-sh-1); }
+.ab-fixes .when { font-size: 12px; font-weight: 800; color: var(--rc-sub); padding-top: 3px; }
+.ab-fixes .t { font-size: var(--fs-md); font-weight: 800; color: var(--ism-color-foreground); line-height: 1.5; }
+.ab-fixes .t a { color: var(--rc-link); text-decoration: underline; text-underline-offset: 3px; }
+.ab-fixes .d { margin-top: 4px; font-size: var(--fs-sm); line-height: 1.75; }
+
+.ab-grid { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.ab-grid a { display: flex; flex-direction: column; height: 100%; border-radius: var(--r-panel); background: var(--rc-panel); box-shadow: var(--rc-sh-1); text-decoration: none; overflow: hidden; transition: box-shadow var(--ism-motion); }
+.ab-grid a:hover { box-shadow: var(--rc-sh-2); }
+.ab-grid .thumb { display: grid; place-items: center; aspect-ratio: 16 / 10; padding: 8px; background: var(--ism-color-background); }
+.ab-grid .thumb img { width: 100%; height: 100%; object-fit: contain; }
+.ab-grid .cap { display: grid; gap: 2px; padding: 10px 12px 12px; }
+.ab-grid .cap em { font-style: normal; font-size: 11px; font-weight: 800; color: var(--rc-link); }
+.ab-grid .cap strong { font-size: 14px; color: var(--ism-color-foreground); }
+.ab-grid .cap small { font-size: 12px; line-height: 1.5; color: var(--rc-sub); }
+
+.ab-soon { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 16px; font-size: 13px; }
+.ab-soon b { margin-right: 4px; font-weight: 800; color: var(--ism-color-foreground); }
+.ab-soon a { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 10px; border-radius: 999px; border: 1px dashed var(--rc-ctl); color: var(--rc-text); text-decoration: none; font-weight: 700; }
+.ab-soon em { font-style: normal; font-size: 11px; color: var(--rc-link); }
+.ab-swatch { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
+.ab-swatch li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-panel); background: var(--rc-panel); box-shadow: var(--rc-sh-1); }
+.ab-swatch i { flex: none; width: 36px; height: 36px; border-radius: 8px; }
+.ab-swatch p { display: grid; font-size: 13px; line-height: 1.5; }
+.ab-swatch b { color: var(--ism-color-foreground); }
+.ab-swatch span { color: var(--rc-sub); }
+
+@media (max-width: 900px) {
+  .ab-frame { grid-template-columns: minmax(0, 1fr); }
+  .ab-stack { max-width: 220px; margin: 0 auto; }
+  .ab-how, .ab-rules, .ab-make { grid-template-columns: minmax(0, 1fr); }
+  .ab-grid, .ab-swatch { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ab-fixes li { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+}
+
 /* ───────── 공정 재생 (지도 공통) ───────── */
 .rc-map-play { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px 0 12px; border: 0; border-radius: var(--r-btn); background: var(--rc-link); font: inherit; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer; box-shadow: var(--rc-sh-1); transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background-color 160ms ease; }
 .rc-map-play:hover { background: #2f4fcf; }

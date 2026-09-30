@@ -16,7 +16,7 @@ const menu = [
   { href: "/references", label: "참고문헌" },
 ];
 
-export default function Header() {
+export default function Header({ refTotal }: { refTotal: number }) {
   const pathname = usePathname();
   const isHome = pathname === "/";
   const [atTop, setAtTop] = useState(true);
@@ -172,7 +172,7 @@ export default function Header() {
             </div>
           ))}
           <h3>자료</h3>
-          <Link href="/references"><em>—</em>참고문헌 72편</Link>
+          <Link href="/references"><em>—</em>참고문헌 {refTotal}편</Link>
         </nav>
       )}
     </>

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Header from "@/components/Header";
+import { refTotal } from "@/data/references";
 import "./globals.css";
 import "./hero.css";
 import "./anatomy.css";
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
     template: "%s | RE:CELL 14",
   },
   description:
-    "재제조·재사용·재활용부터 이력관리, 전과정평가, 분해를 고려한 설계까지. 국내외 문헌 72편을 바탕으로 정리한 폐배터리 활용방안 14개 주제 소개 사이트 (학생 과제).",
+    `재제조·재사용·재활용부터 이력관리, 전과정평가, 분해를 고려한 설계까지. 국내외 문헌 ${refTotal}편을 바탕으로 정리한 폐배터리 활용방안 14개 주제 소개 사이트 (학생 과제).`,
   robots: { index: false, follow: false },
 };
 
@@ -40,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <Header />
+        <Header refTotal={refTotal} />
         {children}
       </body>
     </html>

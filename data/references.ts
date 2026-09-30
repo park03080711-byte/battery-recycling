@@ -98,3 +98,10 @@ export const references: Reference[] = [
 ];
 
 export const refById = (id: number) => references.find((r) => r.id === id)!;
+
+/** 문헌 수 — 여러 페이지의 숫자를 손으로 고치지 않도록 목록에서 바로 센다 */
+export const refTotal = references.length;
+export const refCount = (g: RefGroup) => references.filter((r) => r.group === g).length;
+/** 예: "국제 19 · 국내 14 · 재사용·재제조 24 · 신기술 15" */
+export const refBreakdown = () =>
+  `국제 ${refCount("international")} · 국내 ${refCount("domestic")} · 재사용·재제조 ${refCount("reuse")} · 신기술 ${refCount("emerging")}`;

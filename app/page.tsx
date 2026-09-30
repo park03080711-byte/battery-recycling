@@ -3,6 +3,7 @@ import { layers } from "@/data/layers";
 import { topicsByLayer } from "@/data/topics";
 import Fullpage from "@/components/home/Fullpage";
 import Hero from "@/components/home/Hero";
+import { refTotal } from "@/data/references";
 import { AnatomyPreview } from "@/components/anatomy/Anatomy";
 import { parts } from "@/data/anatomy";
 import TopicGrid from "@/components/home/TopicGrid";
@@ -22,7 +23,7 @@ const sections = [
 export default function Home() {
   return (
     <Fullpage items={sections}>
-      <Hero />
+      <Hero refTotal={refTotal} />
 
       {/* 배터리팩 해부도 미리보기 — 누르면 전용 페이지의 해당 부위로 */}
       <section className="fp-section sec-anat anat-dark" id="s-anatomy" data-dark="true" aria-labelledby="anat-sec-title">
@@ -189,7 +190,7 @@ export default function Home() {
               <p>
                 DOI · PMID · KCI로
                 <br />
-                개별 검증한 72편
+                개별 검증한 {refTotal}편
               </p>
               <Link className="btn-line" href="/references">
                 자세히보기

@@ -18,7 +18,7 @@ function Chevron() {
   );
 }
 
-export default function Hero() {
+export default function Hero({ refTotal }: { refTotal: number }) {
   const [open, setOpen] = useState(false);
   const burgerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -175,7 +175,7 @@ export default function Hero() {
           {/* 본문 블록 */}
           <div className="hx-hero-blk">
             <p className="hx-eyebrow hx-l hx-c" style={at(65.7, -236)}>
-              폐배터리 활용방안 · 국내외 문헌 72편
+              폐배터리 활용방안 · 국내외 문헌 {refTotal}편
             </p>
             <h1 className="hx-l hx-c" style={at(62.6, -198)}>
               <span className="hx-sx">버려진 배터리를</span>
@@ -289,7 +289,7 @@ export default function Hero() {
                   <ellipse cx="32" cy="34" rx="30" ry="6" transform="rotate(-9 32 34)" fill="none" stroke="#fff" strokeWidth="1.6" />
                 </svg>
               </span>
-              <b>참고문헌 72편</b>
+              <b>참고문헌 {refTotal}편</b>
               <span className="hx-knob">
                 <Chevron />
               </span>
