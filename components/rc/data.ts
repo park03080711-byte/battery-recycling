@@ -69,14 +69,14 @@ export const processes: { stage: Stage; name: string; en: string; how: string; v
   { stage: "준상용", name: "바이오리칭", en: "Bioleaching", how: "미생물이 만든 황산으로 금속을 녹임", v: 2, src: [11] },
   { stage: "연구", name: "용융염 전기환원", en: "Molten Salt", how: "알루미늄 제련 원리. 전자를 환원제로 씀", v: 1, src: [27] },
   { stage: "연구", name: "기계화학", en: "Mechanochemistry", how: "볼밀 충격으로 용매 없이 고체 상태 반응", v: 1, src: [28] },
-  { stage: "연구", name: "초임계 CO₂", en: "Supercritical CO₂", how: "전해액 회수, 금속 추출 보조", v: 1, src: [30, 31] },
+  { stage: "연구", name: "초임계 CO₂", en: "Supercritical CO₂", how: "전해액 회수 · 블랙파우더에서 리튬 먼저 녹이기", v: 1, src: [30, 31, 69] },
   { stage: "연구", name: "분자 인식 포획", en: "Molecular Recognition", how: "MOF 기공으로 특정 금속 이온만 골라 잡음", v: 1, src: [32, 33] },
   { stage: "연구", name: "폐기물 업사이클링", en: "Waste Upcycling", how: "원소 회수 없이 곧바로 새 소재로 전환", v: 2, src: [34] },
 ];
 
 export const feas: { n: string; g: 1 | 2 | 3 | 4; gl: string; role: string; why: string; src: Src[] }[] = [
   { n: "기계화학", g: 4, gl: "상", role: "습식제련의 침출 단계 대체", why: "리튬 선택 회수에서 우위가 분명합니다.", src: [28] },
-  { n: "초임계 CO₂ (전해액)", g: 4, gl: "상", role: "전처리 단계 신설", why: "200 L 규모 파일럿 실증까지 나왔습니다.", src: [31] },
+  { n: "초임계 CO₂ (전해액 · 리튬)", g: 4, gl: "상", role: "전처리 단계 신설", why: "전해액은 실험실에서 89% 회수, CO₂와 물로 리튬을 먼저 녹이는 공정은 200 L 파일럿까지 나왔습니다.", src: [69, 31] },
   { n: "용융염 전기환원", g: 3, gl: "중상", role: "폐수 규제가 강한 지역의 대안", why: "에너지 약 20% 절감으로 우위가 제한적입니다.", src: [27] },
   { n: "초임계 CO₂ (금속)", g: 2, gl: "중", role: "보류", why: "회수율 60%대이고 산이 여전히 필요합니다.", src: [29, 30] },
   { n: "분자 인식 포획", g: 1, gl: "하", role: "최종 정제 보조", why: "선택성만 앞서고, 강산성 용액에서 버티는 소재가 아직 없습니다.", src: [32, 33] },

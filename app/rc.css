@@ -826,6 +826,47 @@ a.rm-tier-row:hover { background: var(--ism-color-background); }
   .ad-gain p { grid-column: 1 / -1; }
 }
 
+/* ───────── 08 부산물 회수 ───────── */
+.bp-lost { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.bp-lost li { position: relative; margin: 0; padding: 18px 20px; }
+.bp-tag { display: inline-block; padding: 2px 8px; border-radius: var(--r-badge); font-size: 11px; font-weight: 800; }
+.bp-lost .ok .bp-tag { background: #E3F7F4; color: #0F766E; }
+.bp-lost .lost .bp-tag { background: #FFF1D6; color: #8a4b00; }
+.bp-lost .t { margin-top: 8px; font-size: var(--fs-md); font-weight: 800; color: var(--ism-color-foreground); }
+.bp-lost .now { margin-top: 2px; font-size: 13px; font-weight: 700; color: var(--rc-sub); }
+.bp-lost .d { margin-top: 6px; font-size: var(--fs-sm); line-height: 1.75; }
+
+.bp-phase-fig { max-width: 560px; }
+.bp-phase { display: block; width: 100%; max-width: 460px; height: auto; margin: 0 auto; }
+.bp-phase .ax { stroke: var(--rc-ctl); stroke-width: 1.2; }
+.bp-phase .lb { font-size: 10px; fill: var(--rc-sub); }
+.bp-phase .lb.strong { font-size: 11px; font-weight: 800; fill: var(--ism-color-foreground); }
+.bp-phase .lb.sc { font-size: 11px; font-weight: 800; fill: #3552C8; }
+.bp-phase .lb.cp { font-weight: 800; fill: #3552C8; }
+.bp-phase-sc { fill: #E6ECFF; }
+.bp-phase-line { fill: none; stroke: var(--ism-color-foreground); stroke-width: 2; stroke-linecap: round; }
+.bp-phase-dash { stroke: #5B7CFA; stroke-width: 1.2; stroke-dasharray: 4 3; }
+.bp-phase-cp { fill: #fff; stroke: #3552C8; stroke-width: 2.4; }
+.bp-lead2 { margin-top: 20px; }
+.bp-uses { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 12px 0 0; }
+.bp-uses li { margin: 0; padding: 18px 20px; }
+.bp-stage { display: inline-block; padding: 2px 8px; border-radius: var(--r-badge); background: var(--ism-color-background); font-size: 11px; font-weight: 800; color: var(--rc-link); }
+.bp-uses .k { margin-top: 8px; font-size: var(--fs-md); font-weight: 800; color: var(--ism-color-foreground); }
+.bp-uses .t { margin-top: 2px; font-size: 13px; font-weight: 700; color: var(--rc-sub); }
+.bp-uses .d { margin-top: 6px; font-size: var(--fs-sm); line-height: 1.75; }
+
+.bp-grsteps { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+.bp-grsteps li { display: flex; gap: 12px; padding: 14px 16px; border-radius: var(--r-panel); background: var(--ism-color-background); }
+.bp-grsteps li > b { display: inline-grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: var(--r-badge); background: var(--rc-panel); box-shadow: var(--rc-sh-1); font-size: 12px; color: var(--ism-color-foreground); }
+.bp-grsteps .t { font-size: var(--fs-md); font-weight: 800; color: var(--ism-color-foreground); }
+.bp-grsteps .d { margin-top: 4px; font-size: var(--fs-sm); line-height: 1.7; }
+.bp-note-line { margin-top: 16px; }
+.bp-note-line a { color: var(--rc-link); font-weight: 700; }
+
+@media (max-width: 900px) {
+  .bp-lost, .bp-uses, .bp-grsteps { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* ───────── 공정 재생 (지도 공통) ───────── */
 .rc-map-play { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px 0 12px; border: 0; border-radius: var(--r-btn); background: var(--rc-link); font: inherit; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer; box-shadow: var(--rc-sh-1); transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background-color 160ms ease; }
 .rc-map-play:hover { background: #2f4fcf; }
