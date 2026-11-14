@@ -32,6 +32,7 @@ export default function Footer({ snap = false }: { snap?: boolean }) {
             <h2>ARCHIVE</h2>
             <Link href="/about">사이트 소개</Link>
             <Link href="/topics">주제 한눈에</Link>
+            <Link href="/lab">실험실</Link>
             <Link href="/references">참고문헌</Link>
           </div>
         </div>
