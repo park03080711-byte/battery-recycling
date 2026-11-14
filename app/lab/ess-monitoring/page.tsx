@@ -3,7 +3,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import Footer from "@/components/Footer";
 import { RcToc } from "@/components/rc/Interactive";
-import { IcoDeliver, IcoEarly, IcoTrip, RigIso, rigParts } from "@/components/lab/Art";
+import { IcoDeliver, IcoEarly, IcoTrip } from "@/components/lab/Art";
+import { RigFigure } from "@/components/lab/RigFigure";
 import { CommChart, HeatChart, RttBars } from "@/components/lab/Charts";
 import { HeroVideo, RunVideo, TripReplay } from "@/components/lab/Replay";
 import "../lab.css";
@@ -174,40 +175,30 @@ export default function EssMonitoringPage() {
                 예측 → 차단으로 이어지는 판단 순서는 실제 ESS와 같지만, 전류(약 20 mA)와 온도 변화(몇 °C)는 실제보다 훨씬 작은 축소 모형입니다.
               </p>
               <figure className="rc-panel lab-rig" aria-labelledby="lab-rig-cap">
-                <RigIso />
+                <RigFigure />
                 <div className="lab-iso-key" aria-hidden="true">
                   <span>
-                    <i className="pw" />
-                    전력 — 히터 전류가 흐르는 길
+                    <i className="dot" />
+                    전류 흐름 (5 V → 릴레이 → 히터 → 션트 → 접지)
                   </span>
                   <span>
-                    <i className="sg" />
-                    측정 신호
+                    <i className="w" style={{ background: "#e53935" }} />5 V
                   </span>
                   <span>
-                    <i className="ct" />
-                    릴레이 제어
+                    <i className="w" style={{ background: "#fb8c00" }} />3.3 V
                   </span>
                   <span>
-                    <i className="wf" />
-                    Wi-Fi → PC
+                    <i className="w" style={{ background: "#2b2f36" }} />
+                    GND
+                  </span>
+                  <span>
+                    <i className="w" style={{ background: "#1e88e5" }} />
+                    그 밖의 색: 신호선
                   </span>
                 </div>
-                <ol className="lab-parts">
-                  {rigParts.map((r) => (
-                    <li key={r.n}>
-                      <b>{r.n}</b>
-                      <div>
-                        <strong>{r.name}</strong>
-                        <span>{r.is}</span>
-                        <small className="lab-mono">{r.pin}</small>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
                 <figcaption id="lab-rig-cap">
-                  그림 1. 장치 구성. 번호는 아래 목록과 같고, 각 부품 아래 줄은 실제 ESS에서 그 부품이 맡는 역할입니다. ESP32의 5 V가 릴레이 → 220 Ω 히터 → 22 Ω 션트를 지나
-                  접지로 흐르고, A점 전압을 22 Ω으로 나눠 전류를 구합니다. 실제 전류는 약 19.6 mA, 히터는 약 210 Ω으로 쟀습니다.
+                  그림 1. 실험 장치를 실제 부품 모양으로 옮긴 3D 그림. 선은 알아보기 쉽게 다시 정리했고, 점퍼선 색은 전원 · 접지 · 신호를 구분합니다. 번호나 아래 목록을 누르면 그 부품이
+                  강조되고, &lsquo;3D로 돌려 보기&rsquo;를 누르면 직접 돌려 볼 수 있습니다. 실제 전류는 약 19.6 mA, 히터 저항은 약 210 Ω으로 쟀습니다.
                 </figcaption>
               </figure>
               <figure className="rc-panel lab-photos" aria-labelledby="lab-photo-cap">
