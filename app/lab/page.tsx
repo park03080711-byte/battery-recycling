@@ -44,14 +44,29 @@ export default function LabHub() {
         <div className="rc-wrap lab-hub">
           <ul className="lab-hub-list">
             <li>
-              <Link href="/lab/ess-monitoring" className="lab-hub-card">
+              <Link href="/lab/ess-monitoring" className="lab-hub-card has-thumb">
+                <img className="lab-hub-thumb" src="/lab/ess-run-poster.webp" width={720} height={1280} alt="" decoding="async" />
                 <span className="lab-hub-no">LAB 01</span>
                 <span className="lab-tag">
                   <i aria-hidden="true" />
                   실측 · 2026년 11월
                 </span>
                 <b>ESS 상태진단 실험</b>
-                <span>저항을 데워 셀 과열을 흉내 내고, ESP32가 이를 감지 · 예측해 경보하고 스스로 전원을 끊는지 재 봤습니다. 히터를 켠 뒤 11초에 첫 경보, 65초에 자동 차단.</span>
+                <span>저항을 데워 셀 과열을 흉내 내고, ESP32가 이를 감지 · 예측해 경보하고 스스로 전원을 끊는지 재 봤습니다.</span>
+                <dl className="lab-hub-nums">
+                  <div>
+                    <dt>첫 경보</dt>
+                    <dd>11초</dd>
+                  </div>
+                  <div>
+                    <dt>자동 차단</dt>
+                    <dd>65초</dd>
+                  </div>
+                  <div>
+                    <dt>패킷 전달</dt>
+                    <dd>616/616</dd>
+                  </div>
+                </dl>
                 <span className="go" aria-hidden="true">
                   기록 보기 →
                 </span>

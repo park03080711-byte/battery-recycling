@@ -674,6 +674,8 @@ img, svg { display: block; max-width: 100%; }
 .report-inner h2 { margin-top: 8px; font-size: var(--fs-3xl); font-weight: 700; line-height: 1.25; letter-spacing: -0.02em; }
 .report-cards { margin-top: var(--sp-6); display: flex; flex-wrap: wrap; gap: var(--sp-6); }
 .report-card { width: 240px; text-align: center; }
+.report-cards.four { gap: var(--sp-4); }
+.report-cards.four .report-card { width: 200px; }
 .report-card .ic { width: 84px; height: 84px; margin: 0 auto; color: var(--blue); }
 .report-card h3 { margin-top: 12px; font-size: var(--fs-xl); font-weight: 800; color: var(--blue); }
 .report-card p { margin-top: 8px; font-size: var(--fs-sm); color: var(--text); line-height: 1.6; }

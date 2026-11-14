@@ -176,13 +176,19 @@ export function HeatChart() {
 
 /* ── 그림: 통신 — 순번별 전달 지연 ── */
 const BUF = "#9c36b5";
+const LINK = [
+  { a: 0, b: 130, up: false, label: "연결 전 · 쌓아 둠", short: "연결 전" },
+  { a: 131, b: 500, up: true, label: "연결됨 — 바로 전달", short: "연결됨" },
+  { a: 501, b: 550, up: false, label: "끊김", short: "끊김" },
+  { a: 551, b: 615, up: true, label: "연결됨", short: "" },
+];
 const OK = "#3b5bdb";
 export function CommChart() {
   const [ref, w] = useWidth<HTMLDivElement>();
   const [hi, setHi] = useState<number | null>(null);
   const narrow = w < 560;
-  const H = narrow ? 260 : 300;
-  const m = { l: 44, r: 16, t: 24, b: 40 };
+  const H = narrow ? 290 : 330;
+  const m = { l: 44, r: 16, t: 54, b: 40 };
   const pw = w - m.l - m.r;
   const ph = H - m.t - m.b;
   const X = (s: number) => m.l + (s / 615) * pw;
@@ -228,6 +234,15 @@ export function CommChart() {
           <text x={m.l - 36} y={m.t - 10} className="lab-ax">
             지연 s ↑
           </text>
+          {/* 연결 상태 띠 */}
+          {LINK.map((g) => (
+            <g key={g.a}>
+              <rect x={X(g.a)} y={6} width={Math.max(1, X(g.b + 1) - X(g.a) - 2)} height={22} rx={4} fill={g.up ? "#e3e9fd" : "#f1e1f6"} />
+              <text x={(X(g.a) + X(g.b + 1)) / 2 - 1} y={21} textAnchor="middle" className="lab-link-t" fill={g.up ? "#2a46b8" : "#7c2593"}>
+                {narrow ? g.short : g.label}
+              </text>
+            </g>
+          ))}
           {comm.map((p) => (
             <circle key={p[0]} cx={X(p[0])} cy={Y(p[1])} r={2.6} fill={p[1] > 2 ? BUF : OK} />
           ))}

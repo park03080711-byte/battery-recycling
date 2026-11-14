@@ -28,9 +28,69 @@
 .rc-table .lab-avg > * { background: #f7f9fd; font-weight: 700; }
 .rc-table td small { color: var(--rc-sub); font-weight: 500; }
 
-/* 그림 1 블록도 */
-.lab-scroll { overflow-x: auto; }
-.lab-rig { display: block; width: 100%; min-width: 640px; height: auto; }
+/* 머리: 왼쪽 글 · 오른쪽 세로 영상 */
+.lab-hero { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 32px 64px; }
+.lab-hero .rc-lead { margin-top: 24px; }
+.lab-hero-vid { margin: 0; width: 248px; }
+.lab-hero-vid .frame { position: relative; border-radius: 18px; overflow: hidden; background: #0b0f18; box-shadow: var(--rc-sh-3), 0 0 0 6px #fff; }
+.lab-hero-vid video { display: block; width: 100%; height: auto; aspect-ratio: 9 / 16; object-fit: cover; }
+.lab-hero-lv { position: absolute; top: 12px; left: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); transition: background-color 200ms var(--ease); }
+.lab-hero-bar { position: absolute; left: 12px; right: 12px; bottom: 12px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.28); }
+.lab-hero-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 2px; background: #fff; }
+.lab-hero-bar b { position: absolute; top: -3px; width: 2px; height: 10px; margin-left: -1px; border-radius: 1px; }
+.lab-hero-bar b[data-lv="1"] { background: #ffd23a; }
+.lab-hero-bar b[data-lv="2"] { background: #ff8a5c; }
+.lab-hero-bar b[data-lv="3"] { background: #ff3b30; }
+.lab-hero-vid figcaption { display: flex; justify-content: space-between; gap: 8px; margin-top: 12px; font-size: 12px; font-weight: 600; color: var(--rc-sub); }
+.lab-hero-vid figcaption a { font-weight: 800; color: var(--rc-link); text-decoration: none; }
+
+/* 제목 부제 */
+.rc-h2 { flex-wrap: wrap; }
+.lab-h2sub { flex-basis: 100%; margin: 2px 0 0 46px; font-size: var(--fs-md); font-style: normal; font-weight: 600; letter-spacing: -0.01em; color: var(--rc-sub); }
+
+/* 그림 1 아이소메트릭 장치도 */
+.lab-iso { display: block; width: 100%; max-width: 760px; height: auto; margin: 0 auto; }
+.lab-iso-mark circle { fill: var(--ism-color-foreground); stroke: #fff; stroke-width: 3px; }
+.lab-iso-mark text { font-size: 16px; font-weight: 800; fill: #fff; }
+.lab-iso-lbl { font-size: 13px; font-weight: 800; fill: var(--ism-color-foreground); }
+.lab-iso-key { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; margin-top: 8px; font-size: 12px; font-weight: 700; color: var(--rc-sub); }
+.lab-iso-key span { display: inline-flex; align-items: center; gap: 6px; }
+.lab-iso-key i { width: 22px; height: 0; border-top: 3px solid var(--ism-color-foreground); }
+.lab-iso-key i.sg { border-top: 2px solid #3b5bdb; }
+.lab-iso-key i.ct { border-top: 2px dashed var(--ism-color-foreground); }
+.lab-iso-key i.wf { border-top: 2px dotted #1a9e90; }
+.lab-parts { list-style: none; margin: 20px 0 0; padding: 16px 0 0; border-top: 1px solid var(--rc-line); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 20px; }
+.lab-parts li { display: flex; gap: 10px; align-items: flex-start; }
+.lab-parts li > b { flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--ism-color-foreground); color: #fff; font-size: 12px; font-weight: 800; }
+.lab-parts div { display: flex; flex-direction: column; font-size: 13px; line-height: 1.5; min-width: 0; }
+.lab-parts strong { font-size: var(--fs-sm); font-weight: 800; color: var(--ism-color-foreground); }
+.lab-parts small { color: var(--rc-link); font-size: 12px; }
+
+/* 그림 3 판정 사다리 */
+.lab-ladder { list-style: none; margin: 0; padding: 0; }
+.lab-ladder > li { position: relative; display: grid; grid-template-columns: 22px 150px minmax(0, 1fr) 190px; gap: 0 20px; align-items: start; padding: 0; }
+.lab-ladder > li + li .lv, .lab-ladder > li + li .also, .lab-ladder > li + li .act { border-top: 1px solid var(--rc-line); }
+.lab-ladder .lv, .lab-ladder .also, .lab-ladder .act { padding: 16px 0; }
+.lab-ladder .tube { align-self: stretch; width: 22px; }
+.lab-ladder > li[data-lv="3"] .tube { background: var(--lv3); border-radius: 11px 11px 0 0; }
+.lab-ladder > li[data-lv="2"] .tube { background: var(--lv2); }
+.lab-ladder > li[data-lv="1"] .tube { background: var(--lv1); }
+.lab-ladder > li[data-lv="0"] .tube { position: relative; background: var(--lv0); border-radius: 0 0 11px 11px; }
+.lab-ladder > li[data-lv="0"] .tube::after { content: ""; position: absolute; left: 50%; bottom: -10px; width: 34px; height: 34px; margin-left: -17px; border-radius: 50%; background: var(--lv0); box-shadow: 0 0 0 4px #fff; }
+.lab-ladder .lv { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.lab-ladder .lv b { font-size: var(--fs-lg); font-weight: 800; color: var(--ism-color-foreground); white-space: nowrap; }
+.lab-ladder .also { list-style: none; margin: 0; display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-sm); line-height: 1.6; }
+.lab-ladder .act { margin: 0; font-size: var(--fs-sm); font-weight: 800; color: var(--ism-color-foreground); }
+.lab-ladder-fig figcaption { margin-top: 24px; }
+
+.lab-link-t { font-size: 11px; font-weight: 800; }
+
+/* 원자료 접기 */
+.lab-files-wrap { margin-top: 20px; }
+.lab-files-wrap summary { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border: 1px solid var(--rc-ctl); border-radius: var(--r-btn); background: var(--rc-panel); font-size: 14px; font-weight: 800; color: var(--ism-color-foreground); cursor: pointer; list-style: none; }
+.lab-files-wrap summary::-webkit-details-marker { display: none; }
+.lab-files-wrap summary::after { content: "▾"; font-size: 12px; color: var(--rc-sub); }
+.lab-files-wrap[open] summary::after { content: "▴"; }
 
 /* 그림 2 사진 */
 .lab-photos { display: grid; grid-template-columns: repeat(2, minmax(0, 280px)) minmax(0, 1fr); gap: 16px 24px; align-items: start; }
@@ -59,11 +119,10 @@
 .lab-levels td:last-child { white-space: nowrap; font-weight: 700; }
 
 .lab-rules, .lab-limits { list-style: none; margin: 24px 0 0; padding: 0; display: grid; gap: 10px; }
+.lab-limits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .lab-rules { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .lab-rules li, .lab-limits li { display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; background: var(--rc-panel); border-radius: var(--r-panel); box-shadow: var(--rc-sh-1); font-size: var(--fs-sm); line-height: 1.75; }
 .lab-rules b, .lab-limits b { font-size: var(--fs-sm); font-weight: 800; color: var(--ism-color-foreground); }
-.lab-limits li { flex-direction: row; gap: 16px; }
-.lab-limits b { flex: none; width: 13em; }
 
 /* 그래프 공통 */
 .lab-chart { position: relative; }
@@ -170,19 +229,42 @@ a.lab-hub-card:hover { box-shadow: var(--rc-sh-3); }
 .lab-hub-card b { font-size: var(--fs-xl); font-weight: 800; letter-spacing: -0.02em; color: var(--ism-color-foreground); }
 .lab-hub-no { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; color: var(--rc-sub); }
 .lab-hub-card .go { margin-top: auto; padding-top: 8px; font-weight: 800; color: var(--rc-link); }
+.lab-hub-card.has-thumb { padding-right: 168px; min-height: 280px; }
+.lab-hub-thumb { position: absolute; top: 20px; right: 20px; bottom: 20px; width: 128px; height: calc(100% - 40px); object-fit: cover; border-radius: 10px; background: #0b0f18; }
+.lab-hub-nums { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 0; }
+.lab-hub-nums div { padding: 6px 12px; border-radius: var(--r-btn); background: var(--rc-tint); }
+.lab-hub-nums dt { font-size: 11px; font-weight: 700; color: var(--rc-sub); }
+.lab-hub-nums dd { margin: 0; font-size: var(--fs-md); font-weight: 800; color: var(--ism-color-foreground); }
 .lab-hub-card.soon { background: rgba(255, 255, 255, 0.6); box-shadow: var(--rc-sh-1); }
 
 @media (max-width: 1080px) {
+  .lab-parts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lab-ladder > li { grid-template-columns: 22px 130px minmax(0, 1fr); }
+  .lab-ladder .act { grid-column: 3; padding-top: 0; border-top: 0 !important; color: var(--rc-sub); }
+  .lab-ladder .tube { grid-row: span 2; }
   .lab-replay-grid { grid-template-columns: minmax(0, 1fr); }
   .lab-read { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 900px) {
+  .lab-hero { grid-template-columns: minmax(0, 1fr); }
+  .lab-hero-vid { width: min(240px, 70%); margin: 0 auto; }
+  .lab-limits { grid-template-columns: minmax(0, 1fr); }
   .lab-rules { grid-template-columns: minmax(0, 1fr); }
   .lab-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lab-events { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 720px) {
+  .lab-h2sub { margin-left: 0; font-size: var(--fs-sm); }
+  .lab-parts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .lab-ladder > li { grid-template-columns: 16px minmax(0, 1fr); gap: 0 14px; }
+  .lab-ladder .tube { width: 16px; grid-row: span 3; }
+  .lab-ladder .also, .lab-ladder .act { grid-column: 2; }
+  .lab-ladder .also { padding-top: 0; border-top: 0 !important; }
+  .lab-ladder .lv { flex-direction: row; align-items: center; padding-bottom: 8px; }
+  .lab-ladder > li[data-lv="0"] .tube::after { width: 26px; height: 26px; margin-left: -13px; }
   .lab-eq, .lab-callouts, .lab-files, .lab-hub-list { grid-template-columns: minmax(0, 1fr); }
+  .lab-hub-card.has-thumb { padding-right: 26px; padding-top: 220px; }
+  .lab-hub-thumb { top: 0; left: 0; right: 0; bottom: auto; width: 100%; height: 200px; border-radius: var(--r-panel) var(--r-panel) 0 0; object-position: center 40%; }
   .lab-video-grid { grid-template-columns: minmax(0, 1fr); }
   .lab-video video { max-width: 260px; margin: 0 auto; }
   .lab-photos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -194,8 +276,6 @@ a.lab-hub-card:hover { box-shadow: var(--rc-sh-3); }
   .lab-levels tbody tr:last-child { border-bottom: 0; }
   .lab-levels tr > * { padding: 0 12px; border: 0 !important; }
   .lab-levels td:last-child { white-space: normal; }
-  .lab-limits li { flex-direction: column; gap: 4px; }
-  .lab-limits b { width: auto; }
   .lab-read { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lab-photos { gap: 10px; }
   .lab-bars { height: 170px; gap: 6px; }

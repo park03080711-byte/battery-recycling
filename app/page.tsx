@@ -153,7 +153,7 @@ export default function Home() {
             <br />
             출처가 있습니다
           </h2>
-          <div className="report-cards">
+          <div className="report-cards four">
             <div className="report-card">
               <div className="ic">
                 <ReportIcon kind="topics" />
@@ -193,6 +193,20 @@ export default function Home() {
                 개별 검증한 {refTotal}편
               </p>
               <Link className="btn-line" href="/references">
+                자세히보기
+              </Link>
+            </div>
+            <div className="report-card">
+              <div className="ic">
+                <ReportIcon kind="lab" />
+              </div>
+              <h3>실험실</h3>
+              <p>
+                작은 장치로 직접 재 본
+                <br />
+                ESS 상태진단 실측 기록
+              </p>
+              <Link className="btn-line" href="/lab">
                 자세히보기
               </Link>
             </div>

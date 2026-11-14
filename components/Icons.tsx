@@ -191,7 +191,7 @@ export function FactIcon({ kind, size = 56 }: { kind: number; size?: number }) {
   return <Frame size={size}>{icons[kind % icons.length]}</Frame>;
 }
 
-export function ReportIcon({ kind }: { kind: "report" | "refs" | "topics" }) {
+export function ReportIcon({ kind }: { kind: "report" | "refs" | "topics" | "lab" }) {
   const map = {
     report: (
       <>
@@ -206,6 +206,13 @@ export function ReportIcon({ kind }: { kind: "report" | "refs" | "topics" }) {
         <circle cx="32" cy="14" r="8" fill={ACCENT} stroke="none" />
         <path d="M8 12c6-2 11-1 16 2v26c-5-3-10-4-16-2z" />
         <path d="M40 12c-6-2-11-1-16 2v26c5-3 10-4 16-2z" />
+      </>
+    ),
+    lab: (
+      <>
+        <circle cx="30" cy="30" r="8" fill={ACCENT} stroke="none" />
+        <path d="M19 8h10M21 8v11L11 37a2.5 2.5 0 0 0 2.2 3.7h21.6A2.5 2.5 0 0 0 37 37L27 19V8" />
+        <path d="M15 30h18" />
       </>
     ),
     topics: (

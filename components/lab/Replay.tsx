@@ -46,6 +46,24 @@ export function TripReplay() {
   const [speed, setSpeed] = useState(4);
   const raf = useRef(0);
   const last = useRef(0);
+  const box = useRef<HTMLElement>(null);
+
+  // 화면에 처음 들어오면 한 번 처음부터 재생 (움직임 줄이기 설정이면 건너뜀)
+  useEffect(() => {
+    const el = box.current;
+    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (!e.isIntersecting) return;
+        io.disconnect();
+        setT(0);
+        setPlay(true);
+      },
+      { threshold: 0.5 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!play) return;
@@ -100,7 +118,7 @@ export function TripReplay() {
   };
 
   return (
-    <figure className="rc-panel lab-replay" aria-labelledby="lab-replay-cap">
+    <figure ref={box} className="rc-panel lab-replay" aria-labelledby="lab-replay-cap">
       <div className="lab-replay-bar">
         <button type="button" className="lab-btn primary" onClick={start} aria-pressed={play}>
           {play ? "일시정지" : t >= TEND - 0.01 ? "처음부터 재생" : "재생"}
@@ -253,7 +271,7 @@ export function TripReplay() {
         ))}
       </ol>
       <figcaption id="lab-replay-cap">
-        그림 4. 2단계 판정 실험(재실험)의 실측 기록 재생. 그래프를 끌거나 아래 사건을 누르면 그 순간의 판정 · LED · 릴레이 상태가 옆(좁은 화면에서는 아래)에 뜹니다. 기록은 1초 간격이며 판정 자체는 0.5초마다
+        그림 5. 2단계 판정 실험(재실험)의 실측 기록 재생. 그래프를 끌거나 아래 사건을 누르면 그 순간의 판정 · LED · 릴레이 상태가 옆(좁은 화면에서는 아래)에 뜹니다. 기록은 1초 간격이며 판정 자체는 0.5초마다
         했습니다. 위험 판정 뒤 ΔT가 내려가는 것은 히터가 꺼진 데다 주변 온도 센서(NTC) 값이 갑자기 1.7 °C 오른 탓이며, 이 오름은 아직 원인을 밝히지 못했습니다(6절).
       </figcaption>
     </figure>
@@ -313,11 +331,58 @@ export function RunVideo() {
             ))}
           </ol>
           <p className="lab-small">
-            소리를 켜면 41.8초에 릴레이가 끊어지는 &lsquo;딸깍&rsquo; 소리가 들립니다. 영상은 그림 4와 다른 회차를 찍은 것이라 단계가 바뀌는 시각이 다릅니다.
+            소리를 켜면 41.8초에 릴레이가 끊어지는 &lsquo;딸깍&rsquo; 소리가 들립니다. 영상은 그림 5와 다른 회차를 찍은 것이라 단계가 바뀌는 시각이 다릅니다.
           </p>
         </div>
       </div>
-      <figcaption id="lab-video-cap">그림 5. 실험 장치 실제 동작 영상 (45초, 소리 있음). 시각은 영상 안의 시간입니다.</figcaption>
+      <figcaption id="lab-video-cap">그림 6. 실험 장치 실제 동작 영상 (45초, 소리 있음). 시각은 영상 안의 시간입니다.</figcaption>
+    </figure>
+  );
+}
+
+/* ── 머리 부분 영상: 소리 없이 반복, 지금 단계를 위에 겹쳐 보인다 ── */
+export function HeroVideo() {
+  const v = useRef<HTMLVideoElement>(null);
+  const [now, setNow] = useState(0);
+  const [dur, setDur] = useState(44.9);
+  const cur = CHAPTERS.reduce((a, c, i) => (now >= c.s - 0.05 ? i : a), 0);
+  useEffect(() => {
+    const el = v.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) el.pause();
+  }, []);
+  return (
+    <figure className="lab-hero-vid">
+      <div className="frame">
+        <video
+          ref={v}
+          src="/lab/ess-run.mp4"
+          poster="/lab/ess-run-poster.webp"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          width={720}
+          height={1280}
+          aria-label="실험 장치 실제 동작 영상. LED가 초록에서 노랑, 빨강으로 바뀌고 마지막에 빨강으로 깜빡이며 릴레이가 끊긴다."
+          onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)}
+          onLoadedMetadata={(e) => setDur(e.currentTarget.duration || 44.9)}
+        />
+        <span className="lab-pill lab-hero-lv" data-lv={CHAPTERS[cur].lv} aria-hidden="true">
+          {CHAPTERS[cur].h}
+        </span>
+        <div className="lab-hero-bar" aria-hidden="true">
+          <i style={{ width: `${(now / dur) * 100}%` }} />
+          {CHAPTERS.slice(1).map((c) => (
+            <b key={c.s} style={{ left: `${(c.s / dur) * 100}%` }} data-lv={c.lv} />
+          ))}
+        </div>
+      </div>
+      <figcaption>
+        실제 동작 45초 · 소리 없이 반복
+        <a href="#lab-trip">소리와 함께 보기 ↓</a>
+      </figcaption>
     </figure>
   );
 }

@@ -3,9 +3,9 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import Footer from "@/components/Footer";
 import { RcToc } from "@/components/rc/Interactive";
-import { IcoBell, IcoPackets, IcoRelay, RigDiagram } from "@/components/lab/Art";
+import { IcoDeliver, IcoEarly, IcoTrip, RigIso, rigParts } from "@/components/lab/Art";
 import { CommChart, HeatChart, RttBars } from "@/components/lab/Charts";
-import { RunVideo, TripReplay } from "@/components/lab/Replay";
+import { HeroVideo, RunVideo, TripReplay } from "@/components/lab/Replay";
 import "../lab.css";
 
 export const metadata: Metadata = {
@@ -32,7 +32,7 @@ const kpis: Kpi[] = [
     label: "히터를 켠 뒤 첫 경보까지",
     detail: "온도가 0.03 °C/s 넘는 속도로 10초 넘게 오르자 ‘주의’를 냈습니다. 위험 기준(ΔT 4 °C)에 닿기 54초 전입니다.",
     run: "판정 실험 2회차",
-    icon: <IcoBell />,
+    icon: <IcoEarly />,
   },
   {
     value: "65",
@@ -40,7 +40,7 @@ const kpis: Kpi[] = [
     label: "위험 판정과 히터 자동 차단",
     detail: "ΔT 4.03 °C에서 위험으로 올리고 그 자리에서 릴레이를 끊었습니다. 그보다 앞선 27초에 ‘30초 안에 4 °C 도달’ 예측으로 경고를 냈습니다.",
     run: "판정 실험 2회차",
-    icon: <IcoRelay />,
+    icon: <IcoTrip />,
   },
   {
     value: "616",
@@ -48,35 +48,16 @@ const kpis: Kpi[] = [
     label: "PC에 도착한 측정 패킷",
     detail: "Wi-Fi가 두 번 끊긴 동안 측정값을 버퍼에 담아 두었다가, 다시 연결되자 2.7초 안에 모두 보냈습니다. 평소 왕복 지연은 중앙값 12 ms입니다.",
     run: "통신 실험 1회",
-    icon: <IcoPackets />,
+    icon: <IcoDeliver />,
   },
 ];
 
-const parts = [
-  { p: "220 Ω 저항", is: "셀 (데워지는 발열원)", pin: "릴레이 NO 쪽" },
-  { p: "DS18B20 디지털 온도 센서", is: "셀 표면 온도", pin: "GPIO13" },
-  { p: "NTC 10 kΩ 서미스터", is: "주변(실내) 온도", pin: "GPIO36" },
-  { p: "22 Ω 션트 저항", is: "전류 센서", pin: "GPIO32" },
-  { p: "10 kΩ + 10 kΩ 분압", is: "버스 전압 측정", pin: "GPIO33" },
-  { p: "릴레이 모듈", is: "차단기 (BMS의 접촉기)", pin: "GPIO22" },
-  { p: "RGB LED", is: "상태 표시등", pin: "GPIO25 · 26 · 27" },
-];
-
-const levels = [
-  { lv: 0, name: "정상", cond: "아래 조건에 하나도 해당하지 않음", act: "초록 · 히터 그대로" },
-  {
-    lv: 1,
-    name: "주의",
-    cond: "ΔT ≥ 2 °C, 또는 상승 속도 ≥ 0.03 °C/s가 10초 이어짐, 또는 전류 ≥ 23 mA, 또는 전압 < 4.30 V",
-    act: "노랑",
-  },
-  {
-    lv: 2,
-    name: "경고",
-    cond: "ΔT ≥ 3 °C, 또는 4 °C까지 예상 시간 < 30초 (ΔT ≥ 2 °C일 때만), 또는 전류 ≥ 27 mA, 또는 전압 < 4.0 V · > 5.4 V",
-    act: "빨강",
-  },
-  { lv: 3, name: "위험", cond: "ΔT ≥ 4 °C, 또는 전류 ≥ 32 mA", act: "빨강 깜빡임 · 히터 즉시 차단 · 잠금" },
+/* 판정 사다리: 위에서부터 위험 → 정상. t = ΔT 기준, also = 같은 단계로 올리는 다른 조건 */
+const ladder = [
+  { lv: 3, name: "위험", t: "ΔT ≥ 4 °C", also: ["전류 ≥ 32 mA"], act: "빨강 깜빡임 · 히터 즉시 차단 · 잠금" },
+  { lv: 2, name: "경고", t: "ΔT ≥ 3 °C", also: ["4 °C까지 30초 안에 닿을 것으로 예측 (ΔT ≥ 2 °C일 때)", "전류 ≥ 27 mA", "전압 < 4.0 V 또는 > 5.4 V"], act: "빨강" },
+  { lv: 1, name: "주의", t: "ΔT ≥ 2 °C", also: ["0.03 °C/s 넘는 속도로 10초 넘게 상승", "전류 ≥ 23 mA", "전압 < 4.30 V"], act: "노랑" },
+  { lv: 0, name: "정상", t: "ΔT < 2 °C", also: ["위 조건에 하나도 해당하지 않음"], act: "초록 · 히터 그대로" },
 ];
 
 const heat = [
@@ -91,7 +72,7 @@ const files = [
   { f: "heat_cool_220ohm_run3.csv", h: "발열 3회", d: "같은 조건" },
   { f: "heat_runs_summary.csv", h: "발열 요약", d: "회차별 상승량 · 시간상수 · 도달 시간과 평균 · 변동계수" },
   { f: "stage2_run1.csv", h: "판정 1회차", d: "센서를 늦게 붙인 회차 (그대로 공개)" },
-  { f: "stage2_run2.csv", h: "판정 2회차", d: "그림 4의 원자료 — ΔT · 기울기 · 예측 · 단계 · 릴레이" },
+  { f: "stage2_run2.csv", h: "판정 2회차", d: "그림 5의 원자료 — ΔT · 기울기 · 예측 · 단계 · 릴레이" },
   { f: "comm_run1.csv", h: "통신 실험", d: "PC 수신 기록 616개 + 중복 8개 (전송 횟수 · 왕복 지연 포함)" },
 ];
 
@@ -111,7 +92,7 @@ function LabHead() {
           </ol>
         </nav>
 
-        <div className="rc-hero">
+        <div className="rc-hero lab-hero">
           <div className="rc-title">
             <p className="rc-meta">
               <span className="rc-chip">
@@ -121,8 +102,6 @@ function LabHead() {
             </p>
             <h1>ESS 상태진단 실험</h1>
             <p className="rc-tag">데워지는 셀을 먼저 알아채고, 스스로 끊는다</p>
-          </div>
-          <div className="rc-hero-side">
             <p className="rc-lead">
               재사용 배터리로 만든 ESS는 셀 하나의 과열이 화재로 번지기 전에 잡아내야 합니다. 실제 배터리 대신 저항을 데워 셀이 뜨거워지는 상황을 만들고, ESP32가 이를 감지 ·
               예측해 경보를 내고 전원을 끊는지 직접 재 봤습니다.
@@ -142,6 +121,7 @@ function LabHead() {
               </div>
             </dl>
           </div>
+          <HeroVideo />
         </div>
 
         <section id="rc-summary" className="rc-summary" aria-labelledby="h-sum">
@@ -186,42 +166,50 @@ export default function EssMonitoringPage() {
             {/* ── 1 장치 ── */}
             <section id="lab-setup" className="rc-sec" aria-labelledby="h-setup">
               <h2 id="h-setup" className="rc-h2">
-                <span>1</span>실험 장치 — 배터리 대신 저항을 데운다
+                <span>1</span>실험 장치
+                <em className="lab-h2sub">배터리 대신 저항을 데운다</em>
               </h2>
               <p>
                 실제 배터리는 다루다 다칠 수 있어 쓰지 않았습니다. 대신 ESP32 보드의 5 V 전원으로 220 Ω 저항에 전류를 흘려 &lsquo;셀이 데워지는 상황&rsquo;을 만들었습니다. 감지 →
                 예측 → 차단으로 이어지는 판단 순서는 실제 ESS와 같지만, 전류(약 20 mA)와 온도 변화(몇 °C)는 실제보다 훨씬 작은 축소 모형입니다.
               </p>
-              <figure className="rc-panel" aria-labelledby="lab-rig-cap">
-                <div className="lab-scroll">
-                  <RigDiagram />
+              <figure className="rc-panel lab-rig" aria-labelledby="lab-rig-cap">
+                <RigIso />
+                <div className="lab-iso-key" aria-hidden="true">
+                  <span>
+                    <i className="pw" />
+                    전력 — 히터 전류가 흐르는 길
+                  </span>
+                  <span>
+                    <i className="sg" />
+                    측정 신호
+                  </span>
+                  <span>
+                    <i className="ct" />
+                    릴레이 제어
+                  </span>
+                  <span>
+                    <i className="wf" />
+                    Wi-Fi → PC
+                  </span>
                 </div>
+                <ol className="lab-parts">
+                  {rigParts.map((r) => (
+                    <li key={r.n}>
+                      <b>{r.n}</b>
+                      <div>
+                        <strong>{r.name}</strong>
+                        <span>{r.is}</span>
+                        <small className="lab-mono">{r.pin}</small>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
                 <figcaption id="lab-rig-cap">
-                  그림 1. 장치 구성. 굵은 선은 히터 전류가 흐르는 길, 파란 선은 측정 신호, 점선은 ESP32가 릴레이를 켜고 끄는 제어선입니다. 좁은 화면에서는 옆으로 밀어 볼 수
-                  있습니다.
+                  그림 1. 장치 구성. 번호는 아래 목록과 같고, 각 부품 아래 줄은 실제 ESS에서 그 부품이 맡는 역할입니다. ESP32의 5 V가 릴레이 → 220 Ω 히터 → 22 Ω 션트를 지나
+                  접지로 흐르고, A점 전압을 22 Ω으로 나눠 전류를 구합니다. 실제 전류는 약 19.6 mA, 히터는 약 210 Ω으로 쟀습니다.
                 </figcaption>
               </figure>
-              <div className="rc-table-wrap rc-panel">
-                <table className="rc-table">
-                  <caption className="lab-tcap">표 1. 부품과 그것이 흉내 내는 실제 장치</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">부품</th>
-                      <th scope="col">실제 ESS에서는</th>
-                      <th scope="col">ESP32 연결</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {parts.map((r) => (
-                      <tr key={r.p}>
-                        <th scope="row">{r.p}</th>
-                        <td>{r.is}</td>
-                        <td className="lab-mono">{r.pin}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
               <figure className="rc-panel lab-photos" aria-labelledby="lab-photo-cap">
                 <div>
                   <img src="/lab/rig.webp" width={1200} height={1600} alt="책상 위의 실험 장치. 왼쪽 아래 ESP32 보드에 점퍼선이 여럿 꽂혀 있고, 초록으로 켜진 RGB LED와 파란 릴레이 모듈, 오른쪽 뒤에 브레드보드가 있다." loading="lazy" decoding="async" />
@@ -238,7 +226,8 @@ export default function EssMonitoringPage() {
             {/* ── 2 판정 ── */}
             <section id="lab-rule" className="rc-sec" aria-labelledby="h-rule">
               <h2 id="h-rule" className="rc-h2">
-                <span>2</span>판정 방법 — 얼마나 뜨거운가보다 얼마나 빨리 오르나
+                <span>2</span>판정 방법
+                <em className="lab-h2sub">얼마나 뜨거운가보다 얼마나 빨리 오르나</em>
               </h2>
               <p>
                 온도 그 자체 대신 &lsquo;셀이 주변보다 얼마나 더 뜨거운가&rsquo;를 봅니다. 방이 더워지거나 추워져도 셀과 주변이 같이 움직이므로 잘못 경보하지 않습니다. 여기에 오르는
@@ -267,31 +256,31 @@ export default function EssMonitoringPage() {
                   <p className="lab-small">상승 속도는 최근 10초 기록에 그은 직선의 기울기(최소제곱)입니다.</p>
                 </div>
               </div>
-              <div className="rc-table-wrap rc-panel">
-                <table className="rc-table lab-levels">
-                  <caption className="lab-tcap">표 2. 네 단계와 올라가는 조건 (하나라도 맞으면 그 단계)</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">단계</th>
-                      <th scope="col">조건</th>
-                      <th scope="col">LED · 대응</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {levels.map((l) => (
-                      <tr key={l.lv}>
-                        <th scope="row">
-                          <span className="lab-pill" data-lv={l.lv}>
-                            {l.name}
-                          </span>
-                        </th>
-                        <td>{l.cond}</td>
-                        <td>{l.act}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <figure className="rc-panel lab-ladder-fig" aria-labelledby="lab-ladder-cap">
+                <ol className="lab-ladder">
+                  {ladder.map((l) => (
+                    <li key={l.lv} data-lv={l.lv}>
+                      <span className="tube" aria-hidden="true" />
+                      <div className="lv">
+                        <span className="lab-pill" data-lv={l.lv}>
+                          {l.name}
+                        </span>
+                        <b>{l.t}</b>
+                      </div>
+                      <ul className="also">
+                        {l.also.map((x) => (
+                          <li key={x}>{l.lv === 0 ? x : <>또는 {x}</>}</li>
+                        ))}
+                      </ul>
+                      <p className="act">{l.act}</p>
+                    </li>
+                  ))}
+                </ol>
+                <figcaption id="lab-ladder-cap">
+                  그림 3. 네 단계와 올라가는 조건. 왼쪽 막대는 ΔT 눈금이고, 오른쪽 조건 가운데 하나라도 맞으면 그 단계로 올립니다. 속도 · 예측 조건 덕분에 온도가 기준선에 닿기 전에
+                  경보가 나갑니다.
+                </figcaption>
+              </figure>
               <ul className="lab-rules">
                 <li>
                   <b>흔들림 거르기</b>
@@ -311,7 +300,8 @@ export default function EssMonitoringPage() {
             {/* ── 3 발열 ── */}
             <section id="lab-heat" className="rc-sec" aria-labelledby="h-heat">
               <h2 id="h-heat" className="rc-h2">
-                <span>3</span>발열 특성 — 같은 조건으로 세 번
+                <span>3</span>발열 특성
+                <em className="lab-h2sub">같은 조건으로 세 번</em>
               </h2>
               <p>
                 기준을 정하기 전에, 히터를 180초 켜고 120초 식히는 실험을 같은 장치로 세 번 했습니다. 그림 위에 손가락이나 마우스를 올리면 그 시각의 회차별 값이 뜹니다.
@@ -319,7 +309,7 @@ export default function EssMonitoringPage() {
               <figure className="rc-panel" aria-labelledby="lab-heat-cap">
                 <HeatChart />
                 <figcaption id="lab-heat-cap">
-                  그림 3. 셀 온도(DS18B20)의 시작 대비 상승량, 1초 간격 실측. 점선은 판정 기준과 같은 2 · 3 · 4 °C입니다. 1회는 251초부터 센서 신호가 끊겨 그 뒤가 비어
+                  그림 4. 셀 온도(DS18B20)의 시작 대비 상승량, 1초 간격 실측. 점선은 판정 기준과 같은 2 · 3 · 4 °C입니다. 1회는 251초부터 센서 신호가 끊겨 그 뒤가 비어
                   있습니다. 위 단추로 회차를 끄고 켤 수 있습니다.
                 </figcaption>
               </figure>
@@ -380,7 +370,8 @@ export default function EssMonitoringPage() {
             {/* ── 4 판정 · 차단 ── */}
             <section id="lab-trip" className="rc-sec" aria-labelledby="h-trip">
               <h2 id="h-trip" className="rc-h2">
-                <span>4</span>판정 · 차단 — 경보가 차례로 나고 스스로 끊었다
+                <span>4</span>판정 · 차단
+                <em className="lab-h2sub">경보가 차례로 나고 스스로 끊었다</em>
               </h2>
               <p>
                 판정 기능을 넣은 펌웨어를 올리고 히터를 켠 채 두었습니다. 사람이 손대지 않아도 주의 → 경고 → 위험 순서로 올라가고, 위험에서 스스로 전원을 끊는지가 관심사였습니다.
@@ -392,7 +383,7 @@ export default function EssMonitoringPage() {
                 <h3>1회차는 센서를 늦게 붙였다</h3>
                 <p>
                   첫 판정 실험은 센서를 저항에서 떼어 둔 채 시작했다가 도중에 붙였습니다. 온도가 한꺼번에 뛰어 주의를 건너뛰고 93.1초에 예측 경고로 바로 올라갔습니다. 판정이
-                  틀렸다기보다 조건이 달랐던 것이라, 그림 4는 다시 한 2회차를 썼고 1회차 기록도 아래 원자료에 그대로 두었습니다. 이 회차에서는 기록 한 줄(순번 45)이 빠졌는데, 순번이
+                  틀렸다기보다 조건이 달랐던 것이라, 그림 5는 다시 한 2회차를 썼고 1회차 기록도 아래 원자료에 그대로 두었습니다. 이 회차에서는 기록 한 줄(순번 45)이 빠졌는데, 순번이
                   건너뛴 것으로 바로 찾아냈습니다.
                 </p>
               </aside>
@@ -401,7 +392,8 @@ export default function EssMonitoringPage() {
             {/* ── 5 통신 ── */}
             <section id="lab-comm" className="rc-sec" aria-labelledby="h-comm">
               <h2 id="h-comm" className="rc-h2">
-                <span>5</span>통신 — 끊겨도 잃지 않는다
+                <span>5</span>통신
+                <em className="lab-h2sub">끊겨도 잃지 않는다</em>
               </h2>
               <p>
                 다음으로 ESP32가 측정값을 Wi-Fi(휴대폰 핫스팟)로 PC에 보내게 했습니다. PC는 받을 때마다 &lsquo;받았다&rsquo;고 답하고, 1초 안에 답이 없으면 ESP32가 다시 보냅니다.
@@ -450,7 +442,7 @@ export default function EssMonitoringPage() {
                   </li>
                 </ol>
                 <figcaption id="lab-comm-cap">
-                  그림 6. 패킷마다 측정한 순간부터 PC에 닿기까지 걸린 시간(두 기기의 시계 차는 가장 빨리 온 패킷을 0으로 맞춰 없앴습니다). 대각선으로 내려오는 보라 점들은 끊긴 동안
+                  그림 7. 패킷마다 측정한 순간부터 PC에 닿기까지 걸린 시간(두 기기의 시계 차는 가장 빨리 온 패킷을 0으로 맞춰 없앴습니다). 대각선으로 내려오는 보라 점들은 끊긴 동안
                   쌓였다가 늦게 도착한 패킷이고, 빠진 순번은 없습니다.
                 </figcaption>
               </figure>
@@ -458,7 +450,7 @@ export default function EssMonitoringPage() {
                 <p className="lab-fig-h">정상 구간 왕복 지연 (ms) — 패킷 수</p>
                 <RttBars />
                 <figcaption id="lab-rtt-cap">
-                  그림 7. 연결이 이어져 있던 435개의 왕복 지연. 대부분 20 ms 안에 답이 왔고(95 %가 34 ms 이내), 가장 늦은 것은 336 ms였습니다. 다시 보낸 13번과 중복 수신 8번은 모두 몰아 보내는 동안
+                  그림 8. 연결이 이어져 있던 435개의 왕복 지연. 대부분 20 ms 안에 답이 왔고(95 %가 34 ms 이내), 가장 늦은 것은 336 ms였습니다. 다시 보낸 13번과 중복 수신 8번은 모두 몰아 보내는 동안
                   생겼습니다.
                 </figcaption>
               </figure>
@@ -533,6 +525,8 @@ export default function EssMonitoringPage() {
                 <span>※</span>원자료 내려받기
               </h2>
               <p>그래프에 쓴 측정 기록을 손대지 않은 CSV로 올립니다. 1회차처럼 조건이 어긋난 기록도 빼지 않았습니다.</p>
+              <details className="lab-files-wrap">
+                <summary>CSV 7개 펼치기</summary>
               <ul className="lab-files">
                 {files.map((f) => (
                   <li key={f.f}>
@@ -544,6 +538,7 @@ export default function EssMonitoringPage() {
                   </li>
                 ))}
               </ul>
+              </details>
             </section>
           </div>
         </div>
