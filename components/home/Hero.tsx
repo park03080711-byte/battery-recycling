@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import HeroPlate, { HeroRingFront } from "./HeroPlate";
+import HeroLife, { type LifeStep } from "./HeroLife";
 import { Logo } from "../Icons";
 
 /* 1280×960 기준 시안의 좌표를 그대로 쓰는 첫 화면.
    모든 크기는 --u(시안 1px) 단위, 위치는 --x · --y 인라인 값. */
-const CELL = { w: 820, h: 1483 };
 const at = (x: number, y: number): CSSProperties => ({ ["--x" as string]: x, ["--y" as string]: y });
 
 function Chevron() {
@@ -18,7 +18,7 @@ function Chevron() {
   );
 }
 
-export default function Hero({ refTotal }: { refTotal: number }) {
+export default function Hero({ refTotal, life }: { refTotal: number; life: LifeStep[] }) {
   const [open, setOpen] = useState(false);
   const burgerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -223,23 +223,9 @@ export default function Hero({ refTotal }: { refTotal: number }) {
             </Link>
           </div>
 
-          {/* 절개한 21700 원통형 셀 — Blender로 직접 모델링·렌더(tools/hero). 넓은 화면에서는 제목과 패널 사이 빈 통로에,
+          {/* 배터리의 일생 영상 — Blender로 직접 모델링 · 렌더(tools/hero/life.py). 넓은 화면에서는 제목과 패널 사이 빈 통로에,
               세로 화면에서는 문구와 수치 사이에 남는 세로 공간에만 놓여 글자를 가리지 않는다 */}
-          <div className="hx-cell" aria-hidden="true">
-            <picture>
-              <source type="image/avif" srcSet="/hero/cell-480.avif 480w, /hero/cell-820.avif 820w" sizes="(max-aspect-ratio: 87/80) 40vw, 30vw" />
-              <img
-                src="/hero/cell-820.webp"
-                srcSet="/hero/cell-480.webp 480w, /hero/cell-820.webp 820w"
-                sizes="(max-aspect-ratio: 87/80) 40vw, 30vw"
-                width={CELL.w}
-                height={CELL.h}
-                alt=""
-                decoding="async"
-                fetchPriority="high"
-              />
-            </picture>
-          </div>
+          <HeroLife steps={life} />
           <HeroRingFront />
 
           {/* 수치 줄 */}

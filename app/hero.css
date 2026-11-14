@@ -40,25 +40,111 @@
 .hx-fg { position: absolute; left: -2px; top: -2px; width: calc(100% + 4px); height: calc(100% + 4px); z-index: 1; pointer-events: none; }
 .hx-fg svg { width: 100%; height: 100%; display: block; }
 
-/* 절개 셀 — 넓은 화면: 제목 오른쪽 끝(711u)과 패널 왼쪽 끝(오른쪽에서 354u) 사이 통로,
-   위로는 가운데 메뉴 아래(140u), 아래로는 수치 줄 위(200u)까지만. 그 상자 안에서 비율 유지로 맞춘다 */
+/* 배터리의 일생 영상 — 넓은 화면: 제목 오른쪽 끝과 패널 왼쪽 끝 사이 통로,
+   위로는 가운데 메뉴 아래(140u), 아래로는 수치 줄 위(196u)까지만. 그 상자 안에 정사각형 무대 + 단계 칩 줄을 맞춘다 */
 .hx-cell {
   position: absolute;
   z-index: 1;
-  left: calc(735 * var(--u));
-  right: calc(378 * var(--u));
+  left: calc(690 * var(--u));
+  right: calc(360 * var(--u));
   top: calc(140 * var(--u));
-  bottom: calc(200 * var(--u));
+  bottom: calc(196 * var(--u));
+  container-type: size;
   pointer-events: none;
+  --lb: max(calc(34 * var(--u)), 28px);   /* 칩 줄 높이 */
+  --p: 0;
 }
-.hx-cell picture, .hx-cell img { display: block; width: 100%; height: 100%; }
-.hx-cell img {
-  object-fit: contain;
-  filter: drop-shadow(0 calc(34 * var(--u)) calc(40 * var(--u)) rgba(36, 64, 110, 0.16));
+.hx-life-in { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.hx-life-stage { position: relative; flex: none; width: 100%; aspect-ratio: 1; }
+@supports (width: 1cqw) {
+  .hx-life-stage { width: min(100cqw, calc(100cqh - var(--lb) - 10 * var(--u))); }
 }
-@keyframes hxCell { from { transform: translateY(calc(8 * var(--u))) rotate(0.5deg); } to { transform: translateY(calc(-8 * var(--u))) rotate(-0.5deg); } }
-@media (prefers-reduced-motion: no-preference) {
-  .hx-cell img { animation: hxCell 9s ease-in-out infinite alternate; }
+.hx-life-stage picture, .hx-life-stage img, .hx-life-stage canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.hx-life-stage canvas { opacity: 0; }
+.hx-life-stage canvas[data-live] { opacity: 1; }
+.hx-life-stage picture[data-live] { visibility: hidden; }
+.hx-life-stage video { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+.hx-life-bar {
+  flex: none;
+  height: var(--lb);
+  margin-top: calc(10 * var(--u));
+  padding: 0 calc(5 * var(--u));
+  display: flex;
+  align-items: center;
+  gap: calc(6 * var(--u));
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.66);
+  border: calc(1 * var(--u)) solid rgba(255, 255, 255, 0.85);
+  -webkit-backdrop-filter: blur(calc(24 * var(--u)));
+  backdrop-filter: blur(calc(24 * var(--u)));
+  box-shadow: 0 0 0 calc(1.2 * var(--u)) rgba(120, 145, 180, 0.16), 0 calc(6 * var(--u)) calc(18 * var(--u)) rgba(28, 52, 92, 0.05);
+  pointer-events: auto;
+  white-space: nowrap;
+}
+.hx-life-btn {
+  flex: none;
+  width: calc(var(--lb) - 8 * var(--u));
+  height: calc(var(--lb) - 8 * var(--u));
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--cta);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.hx-life-btn svg { width: 42%; height: 42%; fill: #fff; }
+.hx .hx-life-btn:focus-visible { outline: calc(2 * var(--u)) solid #2f5f9e; outline-offset: calc(3 * var(--u)); }
+.hx-life-steps { display: flex; align-items: center; gap: calc(3 * var(--u)); margin: 0; padding: 0; list-style: none; }
+.hx-life-steps a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(5 * var(--u));
+  height: calc(var(--lb) - 8 * var(--u));
+  min-height: 24px;
+  min-width: calc(22 * var(--u));
+  padding: 0 calc(5 * var(--u));
+  border-radius: 999px;
+  font-size: max(calc(14 * var(--u)), 12px);
+  font-weight: 560;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--muted2);
+  text-decoration: none;
+  overflow: hidden;
+  pointer-events: none;   /* 좁은 통로: 펼쳐진 현재 단계만 누를 수 있다 (키보드로는 모두 이동 가능) */
+}
+.hx-ls-n { font-variant-numeric: tabular-nums; font-weight: 500; }
+.hx-ls-t { display: none; }
+.hx-life-steps li[data-done] a { color: var(--accent); }
+.hx-life-steps li[data-on] a { padding: 0 calc(12 * var(--u)); background: var(--cta); color: #fff; pointer-events: auto; }
+.hx-life-steps li[data-on] .hx-ls-n { opacity: 0.62; }
+.hx-life-steps li[data-on] .hx-ls-t { display: inline; }
+/* 현재 단계의 진행 막대 */
+.hx-life-steps i { position: absolute; left: 0; right: 0; bottom: 0; height: max(calc(3 * var(--u)), 2px); background: #2bb594; transform-origin: 0 50%; transform: scaleX(0); }
+.hx-life-steps li[data-on] i { transform: scaleX(var(--p)); }
+/* 자리가 아주 낮을 때(작은 폰): 무대 옆에 재생 단추와 현재 단계만 */
+@container (max-height: 118px) {
+  .hx-life-in { flex-direction: row; gap: calc(26 * var(--u)); }
+  .hx-life-stage { width: min(100cqh, 50cqw); }
+  .hx-life-bar { margin-top: 0; }
+  .hx-life-steps li:not([data-on]) { display: none; }
+}
+@container (max-height: 40px) {
+  .hx-life-in { display: none; }
+}
+/* 넓은 통로(16:10 이상): 여섯 단계 이름을 모두 펼친다 */
+@media (min-aspect-ratio: 153/100) and (min-width: 900px) and (min-height: 640px) {
+  .hx-life-steps a { padding: 0 calc(11 * var(--u)); pointer-events: auto; }
+  .hx-life-steps li:not([data-on]) a:hover { background: rgba(15, 27, 49, 0.07); color: var(--ink-soft); }
+  .hx-ls-n { display: none; }
+  .hx-ls-t { display: inline; }
 }
 .hx-tint { position: absolute; inset: 0; background: rgba(255, 249, 240, 0.05); z-index: 1; pointer-events: none; }
 
@@ -336,6 +422,7 @@ html.pre .hx-dot { scale: 0; }
   .hx-nav { position: relative; left: auto; top: auto; transform: none; flex: none; }
   /* 세로 화면: 문구와 수치 사이 남는 공간만 차지 — 공간이 적으면 작아질 뿐 글자와 겹치지 않는다 */
   .hx-cell { position: relative; left: auto; right: auto; top: auto; bottom: auto; flex: 1 1 0; min-height: 0; width: 100%; margin: calc(6 * var(--u)) 0; }
+  .hx-cell { --lb: max(calc(40 * var(--u)), 28px); }
   .hx-hero-blk { flex: none; }
 
   /* 작은 가로 화면: 문구와 패널을 나란히 */
@@ -400,6 +487,9 @@ html.pre .hx-dot { scale: 0; }
     .hx-thumb { left: calc(9 * var(--t)); top: calc(5 * var(--t)); width: calc(62 * var(--t)); height: calc(62 * var(--t)); }
     .hx-meet b { left: calc(84 * var(--t)); top: calc(28 * var(--t)); font-size: calc(17 * var(--t)); }
     .hx-meet .hx-knob { left: auto; right: calc(11 * var(--t)); top: calc(11 * var(--t)); width: calc(50 * var(--t)); height: calc(50 * var(--t)); }
+    /* 폰: 영상 자리가 낮으므로 무대를 조금 키운다 — 틀 가장자리는 비어 있어 위아래 여백에 겹쳐도 가리는 것이 없다 */
+    .hx-life-stage { transform: scale(1.3); transform-origin: 50% 56%; }
+    .hx-life-bar { position: relative; z-index: 1; }
   }
 }
 

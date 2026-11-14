@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { layers } from "@/data/layers";
-import { topicsByLayer } from "@/data/topics";
+import { topicBySlug, topicsByLayer } from "@/data/topics";
 import Fullpage from "@/components/home/Fullpage";
 import Hero from "@/components/home/Hero";
 import { refTotal } from "@/data/references";
@@ -20,10 +20,25 @@ const sections = [
   { id: "s-report", label: "ARCHIVE" },
 ];
 
+/* 첫 화면 영상의 여섯 단계 — 각 단계를 다루는 주제 페이지로 잇는다 (시각은 tools/hero/life.py의 STAGES와 같다) */
+const life = (
+  [
+    [0, "제조", "design-for-disassembly"],
+    [2.6, "사용", "traceability"],
+    [5.0, "진단", "soh-diagnosis"],
+    [7.4, "재사용", "reuse"],
+    [9.8, "해체 · 파쇄", "automated-disassembly"],
+    [12.4, "소재 회수", "recycling"],
+  ] as const
+).map(([at, label, slug]) => {
+  const t = topicBySlug(slug)!;
+  return { at, label, href: `/topics/${slug}`, to: `${t.no} ${t.title}` };
+});
+
 export default function Home() {
   return (
     <Fullpage items={sections}>
-      <Hero refTotal={refTotal} />
+      <Hero refTotal={refTotal} life={life} />
 
       {/* 배터리팩 해부도 미리보기 — 누르면 전용 페이지의 해당 부위로 */}
       <section className="fp-section sec-anat anat-dark" id="s-anatomy" data-dark="true" aria-labelledby="anat-sec-title">
