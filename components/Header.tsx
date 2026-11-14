@@ -13,6 +13,7 @@ const menu = [
   { href: "/topics#paths", label: "처리 경로", layer: "paths" },
   { href: "/topics#support", label: "지원 기술", layer: "support" },
   { href: "/topics#evaluation", label: "평가 · 설계", layer: "evaluation" },
+  { href: "/lab", label: "실험실" },
   { href: "/references", label: "참고문헌" },
 ];
 
@@ -66,7 +67,7 @@ export default function Header({ refTotal }: { refTotal: number }) {
   }, [isHome]);
 
   // 밝은 머리를 쓰는 개편 페이지에서는 투명(흰 글씨) 헤더를 쓰지 않는다
-  const lightTop = ["/topics/recycling", "/topics/remanufacturing", "/topics/reuse", "/topics/upcycling", "/topics/soh-diagnosis", "/topics/safety", "/topics/automated-disassembly", "/topics/byproduct-recovery"].includes(pathname);
+  const lightTop = ["/topics/recycling", "/topics/remanufacturing", "/topics/reuse", "/topics/upcycling", "/topics/soh-diagnosis", "/topics/safety", "/topics/automated-disassembly", "/topics/byproduct-recovery"].includes(pathname) || pathname.startsWith("/lab");
   const overlay = atTop && !megaOpen && !mobileOpen && !lightTop;
   const hidden = isHome && onHero && !mobileOpen;
   const cls = ["header", overlay ? "is-overlay" : "", megaOpen || mobileOpen ? "is-open" : "", hidden ? "is-hidden" : ""].join(" ");
@@ -77,6 +78,7 @@ export default function Header({ refTotal }: { refTotal: number }) {
       if (!currentTopic) return false;
       return m.layer === "evaluation" ? ["evaluation", "design"].includes(currentTopic.layer) : currentTopic.layer === m.layer;
     }
+    if (m.href === "/lab") return pathname.startsWith("/lab");
     return pathname === m.href;
   };
 
@@ -171,6 +173,8 @@ export default function Header({ refTotal }: { refTotal: number }) {
               ))}
             </div>
           ))}
+          <h3>실험실</h3>
+          <Link href="/lab/ess-monitoring"><em>01</em>ESS 상태진단 실험</Link>
           <h3>자료</h3>
           <Link href="/references"><em>—</em>참고문헌 {refTotal}편</Link>
         </nav>
