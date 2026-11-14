@@ -12,6 +12,14 @@ import "../lab.css";
 export const metadata: Metadata = {
   title: "ESS 상태진단 실험",
   description: "ESP32와 저항 히터로 만든 축소 모형에서 셀 과열을 감지 · 예측하고 스스로 차단하는지 실측한 기록입니다.",
+  openGraph: {
+    type: "article",
+    locale: "ko_KR",
+    siteName: "RE:CELL 14",
+    title: "ESS 상태진단 실험 | RE:CELL 14 실험실",
+    description: "히터를 켠 뒤 11초에 첫 경보, 65초에 스스로 차단. ESP32 축소 모형으로 셀 과열 감지 · 차단 · 전송을 실측한 기록입니다.",
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 const toc = [

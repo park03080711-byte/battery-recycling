@@ -6,6 +6,14 @@ import "./lab.css";
 export const metadata: Metadata = {
   title: "실험실",
   description: "조사한 기술을 작은 장치로 직접 재 본 실측 기록과 모의실험을 모았습니다.",
+  openGraph: {
+    type: "website",
+    locale: "ko_KR",
+    siteName: "RE:CELL 14",
+    title: "실험실 | RE:CELL 14",
+    description: "조사한 기술을 작은 장치로 직접 재 본 실측 기록과 모의실험을 모았습니다.",
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export default function LabHub() {

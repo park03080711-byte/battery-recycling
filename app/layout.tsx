@@ -7,6 +7,7 @@ import "./anatomy.css";
 import "./rc.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://battery-recycling-xi.vercel.app"),
   title: {
     default: "RE:CELL 14 — 폐배터리 활용방안 14개 주제",
     template: "%s | RE:CELL 14",
