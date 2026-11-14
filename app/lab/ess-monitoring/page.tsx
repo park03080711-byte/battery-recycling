@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 
 const toc = [
   { id: "rc-summary", label: "요약" },
+  { id: "lab-process", label: "실험 과정" },
   { id: "lab-setup", label: "실험 장치" },
   { id: "lab-rule", label: "판정 방법" },
   { id: "lab-heat", label: "발열 특성" },
@@ -53,6 +54,66 @@ const kpis: Kpi[] = [
     run: "통신 실험 1회",
     icon: <VizDeliver />,
     href: "#lab-comm",
+  },
+];
+
+/* 실험 과정: 단계마다 한 일 · 막힌 곳 · 푼 방법 · 결과 */
+const steps = [
+  {
+    tag: "준비",
+    title: "부품 고르기와 배선 설계",
+    did: "실제 배터리는 위험해 쓰지 않기로 하고, 센서 키트에서 쓸 부품을 골라 3D 배선도로 연결을 미리 그렸습니다.",
+    issue: "배터리 없이 셀의 상태를 어떻게 만들까",
+    fix: "ESP32의 5 V로 220 Ω 저항을 데워 ‘데워지는 셀’을 흉내 내기로 함",
+    result: "축소 모형 설계",
+  },
+  {
+    tag: "점검 1",
+    title: "부품 전체 연결 점검 (9개 항목)",
+    did: "3.5인치 화면, 조이스틱(셀 전압 흉내), 불꽃 센서, 버저까지 모두 연결하고 항목별로 OK / 확인 필요를 표시하는 점검 코드를 올렸습니다.",
+    issue: "화면이 켜지지 않고 디지털 온도 센서 값이 nan",
+    fix: "화면 라이브러리 기본 설정이 온도 센서 핀(GPIO13)을 화면 데이터선으로 쓰고 있었음 → 설정 파일을 실제 핀 배치에 맞게 교체",
+    result: "핀 충돌 해결",
+  },
+  {
+    tag: "정리",
+    title: "부품 줄이기",
+    did: "연결이 너무 많아 어디가 문제인지 가려내기 어려워, 판단에 꼭 필요한 부품만 남기기로 했습니다.",
+    issue: "조이스틱 · 불꽃 센서 값이 3165 mV에 고정",
+    fix: "원인을 끝내 찾지 못해 빼고, 온도 2 · 전류 · 전압 · 릴레이 · LED 6종으로 다시 구성",
+    result: "부품 6종",
+  },
+  {
+    tag: "점검 2",
+    title: "핵심 부품 점검",
+    did: "남은 부품을 자동으로 확인하고, 릴레이를 3초 켜서 흐른 전류로 히터 저항을 거꾸로 계산하는 점검 코드를 만들었습니다.",
+    issue: "전류가 예상(약 20 mA)의 6배인 121 mA로 나옴",
+    fix: "션트를 10 Ω으로 계산하던 값을 실제 22 Ω으로 고치고, 아날로그 입력 설정(감쇠 0 dB → 11 dB)과 바닥값 처리를 바로잡음",
+    result: "19.6 mA · 히터 약 210 Ω",
+  },
+  {
+    tag: "측정",
+    title: "발열 특성 3회",
+    did: "히터를 180초 켜고 120초 식히는 실험을 세 번 해 상승량과 시간상수를 구했습니다.",
+    issue: "1회 251초에 온도 센서 신호가 끊겨 요약 값이 비어 나옴 · 회차마다 상승량이 23 % 다름",
+    fix: "끊기면 마지막 정상값을 쓰고 경고를 띄우게 고침 · 온도 기준만으로는 부족해 상승 속도와 도달 예측을 판정에 넣기로 함",
+    result: "τ 평균 87 s",
+  },
+  {
+    tag: "판정",
+    title: "판정 · 차단 펌웨어",
+    did: "걸러내기, 4단계 판정, 4 °C 도달 예측, 위험 시 자동 차단을 넣은 펌웨어를 올리고 히터를 켠 채 두었습니다.",
+    issue: "발열 기록에 미리 적용해 보니 예측 경고가 19.5초에 너무 일찍 나옴 · 첫 실험은 센서를 늦게 붙임",
+    fix: "ΔT가 2 °C 이상일 때만 예측을 쓰도록 고침 · 센서를 붙인 채 다시 실험",
+    result: "11 s 주의 → 65 s 차단",
+  },
+  {
+    tag: "통신",
+    title: "Wi-Fi로 PC에 기록 보내기",
+    did: "휴대폰 핫스팟으로 PC와 연결하고, 받았다는 답이 없으면 다시 보내고 끊기면 쌓아 두는 전송 방식을 더했습니다.",
+    issue: "평균 지연이 부풀려짐 — 끊긴 동안 쌓였다가 늦게 온 패킷이 함께 계산됨",
+    fix: "PC 수신 프로그램이 정상 구간과 버퍼 구간을 나눠 계산하도록 고침",
+    result: "616 / 616 · 왕복 12 ms",
   },
 ];
 
@@ -172,10 +233,51 @@ export default function EssMonitoringPage() {
           <RcToc items={toc} />
 
           <div className="rc-main">
-            {/* ── 1 장치 ── */}
+            {/* ── 1 과정 ── */}
+            <section id="lab-process" className="rc-sec" aria-labelledby="h-process">
+              <h2 id="h-process" className="rc-h2">
+                <span>1</span>실험 과정
+                <em className="lab-h2sub">일곱 단계 — 막힌 곳과 푼 방법</em>
+              </h2>
+              <p>
+                처음부터 지금 모습이었던 것은 아닙니다. 부품을 많이 연결했다가 줄이고, 이상한 값이 나오면 원인을 찾아 고치면서 판정과 통신을 차례로 더했습니다.
+              </p>
+              <ol className="lab-steps">
+                {steps.map((st, i) => (
+                  <li key={st.title}>
+                    <span className="no" aria-hidden="true">
+                      {i + 1}
+                    </span>
+                    <div className="body">
+                      <p className="head">
+                        <span className="tag">{st.tag}</span>
+                        <b>{st.title}</b>
+                        <span className="res">{st.result}</span>
+                      </p>
+                      <p className="did">{st.did}</p>
+                      <div className="pf">
+                        <div className="pb">
+                          <span className="k">막힌 곳</span>
+                          {st.issue}
+                        </div>
+                        <span className="arr" aria-hidden="true">
+                          →
+                        </span>
+                        <div className="fx">
+                          <span className="k">푼 방법</span>
+                          {st.fix}
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+
+            {/* ── 2 장치 ── */}
             <section id="lab-setup" className="rc-sec" aria-labelledby="h-setup">
               <h2 id="h-setup" className="rc-h2">
-                <span>1</span>실험 장치
+                <span>2</span>실험 장치
                 <em className="lab-h2sub">배터리 대신 저항을 데운다</em>
               </h2>
               <p>
@@ -218,14 +320,14 @@ export default function EssMonitoringPage() {
                   <img src="/lab/breadboard.webp" width={1200} height={1600} alt="브레드보드 확대. 베이지색 220옴 저항에 검은 반원형 DS18B20 센서 머리가 기대어 있고, 옆에 파란 22옴 저항, 오른쪽에 10킬로옴 저항 두 개가 꽂혀 있다." loading="lazy" decoding="async" />
                   <p>브레드보드 — 220 Ω 저항(베이지)에 DS18B20 머리를 기대 놓았습니다</p>
                 </div>
-                <figcaption id="lab-photo-cap">그림 2. 실제 장치 사진. 센서를 테이프 없이 기대만 놓아서 회차마다 닿는 정도가 조금씩 달랐습니다(3절).</figcaption>
+                <figcaption id="lab-photo-cap">그림 2. 실제 장치 사진. 센서를 테이프 없이 기대만 놓아서 회차마다 닿는 정도가 조금씩 달랐습니다(4절).</figcaption>
               </figure>
             </section>
 
             {/* ── 2 판정 ── */}
             <section id="lab-rule" className="rc-sec" aria-labelledby="h-rule">
               <h2 id="h-rule" className="rc-h2">
-                <span>2</span>판정 방법
+                <span>3</span>판정 방법
                 <em className="lab-h2sub">얼마나 뜨거운가보다 얼마나 빨리 오르나</em>
               </h2>
               <p>
@@ -299,7 +401,7 @@ export default function EssMonitoringPage() {
             {/* ── 3 발열 ── */}
             <section id="lab-heat" className="rc-sec" aria-labelledby="h-heat">
               <h2 id="h-heat" className="rc-h2">
-                <span>3</span>발열 특성
+                <span>4</span>발열 특성
                 <em className="lab-h2sub">같은 조건으로 세 번</em>
               </h2>
               <p>
@@ -369,7 +471,7 @@ export default function EssMonitoringPage() {
             {/* ── 4 판정 · 차단 ── */}
             <section id="lab-trip" className="rc-sec" aria-labelledby="h-trip">
               <h2 id="h-trip" className="rc-h2">
-                <span>4</span>판정 · 차단
+                <span>5</span>판정 · 차단
                 <em className="lab-h2sub">경보가 차례로 나고 스스로 끊었다</em>
               </h2>
               <p>
@@ -391,7 +493,7 @@ export default function EssMonitoringPage() {
             {/* ── 5 통신 ── */}
             <section id="lab-comm" className="rc-sec" aria-labelledby="h-comm">
               <h2 id="h-comm" className="rc-h2">
-                <span>5</span>통신
+                <span>6</span>통신
                 <em className="lab-h2sub">끊겨도 잃지 않는다</em>
               </h2>
               <p>
@@ -459,7 +561,7 @@ export default function EssMonitoringPage() {
             {/* ── 6 한계 ── */}
             <section id="lab-limit" className="rc-sec" aria-labelledby="h-limit">
               <h2 id="h-limit" className="rc-h2">
-                <span>6</span>한계와 다음 단계
+                <span>7</span>한계와 다음 단계
               </h2>
               <p>이 실험이 보여 준 것은 &lsquo;판단 순서가 실제 장치에서 제대로 돈다&rsquo;는 데까지입니다. 숫자를 읽을 때 다음을 함께 봐 주세요.</p>
               <ul className="lab-limits">
