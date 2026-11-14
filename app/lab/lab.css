@@ -41,7 +41,7 @@
 /* 머리: 왼쪽 글 · 오른쪽 세로 영상 */
 .lab-hero { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 32px 64px; }
 .lab-hero .rc-lead { margin-top: 24px; }
-.lab-hero-vid { margin: 0; width: 248px; }
+.lab-hero-vid { margin: 0; width: clamp(248px, 20vw, 280px); }
 .lab-hero-vid .frame { position: relative; border-radius: 18px; overflow: hidden; background: #0b0f18; box-shadow: var(--rc-sh-3), 0 0 0 6px #fff; }
 .lab-hero-vid video { display: block; width: 100%; height: auto; aspect-ratio: 9 / 16; object-fit: cover; }
 .lab-hero-lv { position: absolute; top: 12px; left: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); transition: background-color 200ms var(--ease); }
@@ -179,6 +179,9 @@
 .lab-rules { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .lab-rules li, .lab-limits li { display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; background: var(--rc-panel); border-radius: var(--r-panel); box-shadow: var(--rc-sh-1); font-size: var(--fs-sm); line-height: 1.75; }
 .lab-rules b, .lab-limits b { font-size: var(--fs-sm); font-weight: 800; color: var(--ism-color-foreground); }
+.lab-limits li.lab-limit-next { box-shadow: var(--rc-sh-1), inset 4px 0 0 var(--ism-color-accent); }
+.lab-limit-next .go { margin-top: auto; padding-top: 4px; font-size: 13px; font-weight: 800; color: var(--rc-link); text-decoration: none; }
+.lab-limit-next .go:hover { text-decoration: underline; }
 
 /* 그래프 공통 */
 .lab-chart { position: relative; }

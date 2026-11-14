@@ -181,8 +181,8 @@ function LabHead() {
                 <dd>발열 3 · 판정 2 · 통신 1</dd>
               </div>
               <div>
-                <dt>기간</dt>
-                <dd>2026년 11월</dd>
+                <dt>환경</dt>
+                <dd>실내 22~24 °C · USB 5 V</dd>
               </div>
             </dl>
           </div>
@@ -558,7 +558,7 @@ export default function EssMonitoringPage() {
               <p>이 통신 실험 중에도 판정은 그대로 동작해 히터를 켠 뒤 15초에 주의, 55초에 경고, 123초에 위험으로 올리고 히터를 끊었습니다.</p>
             </section>
 
-            {/* ── 6 한계 ── */}
+            {/* ── 7 한계와 다음 단계 ── */}
             <section id="lab-limit" className="rc-sec" aria-labelledby="h-limit">
               <h2 id="h-limit" className="rc-h2">
                 <span>7</span>한계와 다음 단계
@@ -591,13 +591,17 @@ export default function EssMonitoringPage() {
                   <b>반복이 적다</b>
                   <span>발열 3회, 판정 2회, 통신 1회입니다. 경향을 보기에는 충분하지만 통계적으로 단정하기에는 적습니다. 과전류(전류 기준) 경로는 아직 실제로 시험하지 않았습니다.</span>
                 </li>
+                <li className="lab-limit-next">
+                  <b>다음 — 모의실험</b>
+                  <span>
+                    여기서 잰 값(최종 상승 약 6 °C, 시간상수 87초, 판정 기준)을 그대로 넣은 가상 ESP32를 만들어, 센서 접촉이나 열 조건을 바꿔 가며 직접 판정을 돌려 볼 수 있게 할
+                    예정입니다.
+                  </span>
+                  <Link href="/lab" className="go">
+                    실험실 목록 · LAB 02 준비 중 →
+                  </Link>
+                </li>
               </ul>
-              <aside className="rc-note" aria-label="다음 단계">
-                <h3>다음 — 모의실험</h3>
-                <p>
-                  여기서 잰 값(최종 상승 약 6 °C, 시간상수 87초, 판정 기준)을 그대로 넣은 가상 ESP32를 만들어, 센서 접촉이나 열 조건을 바꿔 가며 직접 판정을 돌려 볼 수 있게 할 예정입니다.
-                </p>
-              </aside>
               <div className="sf-links">
                 <Link href="/topics/reuse" className="sf-link">
                   <b>02</b>
