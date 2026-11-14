@@ -52,7 +52,7 @@
 .lab-hero-bar b[data-lv="2"] { background: #ff8a5c; }
 .lab-hero-bar b[data-lv="3"] { background: #ff3b30; }
 .lab-hero-vid figcaption { display: flex; justify-content: space-between; gap: 8px; margin-top: 12px; font-size: 12px; font-weight: 600; color: var(--rc-sub); }
-.lab-hero-vid figcaption a { font-weight: 800; color: var(--rc-link); text-decoration: none; }
+.lab-hero-vid figcaption a { flex: none; font-weight: 800; color: var(--rc-link); text-decoration: none; white-space: nowrap; }
 
 /* 제목 부제 */
 .rc-h2 { flex-wrap: wrap; }

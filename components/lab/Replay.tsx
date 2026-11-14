@@ -298,7 +298,7 @@ export function RunVideo() {
           poster="/lab/ess-run-poster.webp"
           controls
           playsInline
-          preload="metadata"
+          preload="none"
           width={720}
           height={1280}
           onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)}
@@ -314,7 +314,9 @@ export function RunVideo() {
                   onClick={() => {
                     const el = v.current;
                     if (!el) return;
-                    el.currentTime = c.s;
+                    /* 영상은 누르기 전까지 받지 않으므로(preload none), 아직 안 받았으면 길이 정보가 온 뒤에 옮긴다 */
+                    if (el.readyState >= 1) el.currentTime = c.s;
+                    else el.addEventListener("loadedmetadata", () => (el.currentTime = c.s), { once: true });
                     el.play().catch(() => {});
                   }}
                 >
@@ -346,25 +348,36 @@ export function HeroVideo() {
   const [now, setNow] = useState(0);
   const [dur, setDur] = useState(44.9);
   const cur = CHAPTERS.reduce((a, c, i) => (now >= c.s - 0.05 ? i : a), 0);
+  /* 머리 영상은 소리 없는 480p 경량본(0.7 MB). 화면에 보일 때만 받아서 재생하고, 벗어나면 멈춘다.
+     움직임 줄이기 설정이나 데이터 절약 모드에서는 포스터만 보여 준다. */
   useEffect(() => {
     const el = v.current;
     if (!el) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) el.pause();
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches || (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
+    if (still) return;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) el.play().catch(() => {});
+        else el.pause();
+      },
+      { threshold: 0.25 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
   }, []);
   return (
     <figure className="lab-hero-vid">
       <div className="frame">
         <video
           ref={v}
-          src="/lab/ess-run.mp4"
+          src="/lab/ess-run-hero.mp4"
           poster="/lab/ess-run-poster.webp"
-          autoPlay
           muted
           loop
           playsInline
-          preload="auto"
-          width={720}
-          height={1280}
+          preload="metadata"
+          width={480}
+          height={854}
           aria-label="실험 장치 실제 동작 영상. LED가 초록에서 노랑, 빨강으로 바뀌고 마지막에 빨강으로 깜빡이며 릴레이가 끊긴다."
           onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)}
           onLoadedMetadata={(e) => setDur(e.currentTarget.duration || 44.9)}
@@ -380,8 +393,8 @@ export function HeroVideo() {
         </div>
       </div>
       <figcaption>
-        실제 동작 45초 · 소리 없이 반복
-        <a href="#lab-trip">소리와 함께 보기 ↓</a>
+        실제 동작 45초 · 무음
+        <a href="#lab-trip">소리 켜고 보기 ↓</a>
       </figcaption>
     </figure>
   );
