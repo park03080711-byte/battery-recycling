@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import Footer from "@/components/Footer";
 import { RcToc } from "@/components/rc/Interactive";
-import { IcoDeliver, IcoEarly, IcoTrip } from "@/components/lab/Art";
+import { VizDeliver, VizFirstAlert, VizTrip } from "@/components/lab/Art";
 import { RigFigure } from "@/components/lab/RigFigure";
 import { CommChart, HeatChart, RttBars } from "@/components/lab/Charts";
 import { HeroVideo, RunVideo, TripReplay } from "@/components/lab/Replay";
@@ -25,31 +25,34 @@ const toc = [
   { id: "lab-files", label: "원자료" },
 ];
 
-type Kpi = { value: string; unit: string; label: string; detail: ReactNode; run: string; icon: ReactNode };
+type Kpi = { value: string; unit: string; label: string; detail: ReactNode; run: string; icon: ReactNode; href: string };
 const kpis: Kpi[] = [
   {
     value: "11",
     unit: "초",
     label: "히터를 켠 뒤 첫 경보까지",
-    detail: "온도가 0.03 °C/s 넘는 속도로 10초 넘게 오르자 ‘주의’를 냈습니다. 위험 기준(ΔT 4 °C)에 닿기 54초 전입니다.",
+    detail: "0.03 °C/s 넘는 상승이 10초 이어져 ‘주의’. 위험 기준보다 54초 먼저 알렸습니다.",
     run: "판정 실험 2회차",
-    icon: <IcoEarly />,
+    icon: <VizFirstAlert />,
+    href: "#lab-trip",
   },
   {
     value: "65",
     unit: "초",
     label: "위험 판정과 히터 자동 차단",
-    detail: "ΔT 4.03 °C에서 위험으로 올리고 그 자리에서 릴레이를 끊었습니다. 그보다 앞선 27초에 ‘30초 안에 4 °C 도달’ 예측으로 경고를 냈습니다.",
+    detail: "ΔT 4.03 °C에서 위험 판정과 동시에 릴레이 차단. 27초에 예측 경고가 먼저 나갔습니다.",
     run: "판정 실험 2회차",
-    icon: <IcoTrip />,
+    icon: <VizTrip />,
+    href: "#lab-trip",
   },
   {
     value: "616",
     unit: "/ 616",
     label: "PC에 도착한 측정 패킷",
-    detail: "Wi-Fi가 두 번 끊긴 동안 측정값을 버퍼에 담아 두었다가, 다시 연결되자 2.7초 안에 모두 보냈습니다. 평소 왕복 지연은 중앙값 12 ms입니다.",
+    detail: "Wi-Fi가 두 번 끊겼지만 버퍼에 담았다가 2.7초 안에 모두 보냈습니다.",
     run: "통신 실험 1회",
-    icon: <IcoDeliver />,
+    icon: <VizDeliver />,
+    href: "#lab-comm",
   },
 ];
 
@@ -132,7 +135,7 @@ function LabHead() {
           <ul className="rc-kpis">
             {kpis.map((k) => (
               <li key={k.label} className="rc-kpi">
-                <div className="rc-kpi-in">
+                <a className="rc-kpi-in lab-kpi-link" href={k.href}>
                   {k.icon}
                   <p className="v">
                     {k.value}
@@ -140,11 +143,16 @@ function LabHead() {
                   </p>
                   <h3>{k.label}</h3>
                   <p className="d">{k.detail}</p>
-                  <span className="lab-tag">
-                    <i aria-hidden="true" />
-                    실측 · {k.run}
+                  <span className="lab-kpi-foot">
+                    <span className="lab-tag">
+                      <i aria-hidden="true" />
+                      실측 · {k.run}
+                    </span>
+                    <span className="go" aria-hidden="true">
+                      기록 보기 →
+                    </span>
                   </span>
-                </div>
+                </a>
               </li>
             ))}
           </ul>
