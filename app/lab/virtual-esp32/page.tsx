@@ -42,7 +42,7 @@ export default function VirtualEspPage() {
                 <span className="rc-chip">
                   <b>LAB 02</b> 모의실험
                 </span>
-                <span className="rc-meta-sub">1차 공개 · 실측 부품 6종 · 환경 3가지</span>
+                <span className="rc-meta-sub">1차 공개 · 부품 16종 · 환경 7가지 · 규칙 카드 15장</span>
               </p>
               <h1>가상 ESP32 실험대</h1>
               <p className="rc-tag">부품을 바꿔 꽂고, 환경을 바꾸고, 판정을 직접 돌려 본다</p>
@@ -90,7 +90,7 @@ export default function VirtualEspPage() {
                 <b>센서 모델</b>
                 <span>
                   같은 실제 값을 센서마다 다르게 읽어요. DS18B20은 0.125 °C 단위, NTC는 아날로그 잡음, 션트는 0점 근처를 0으로. 접촉 불량이면 셀 온도를 {Math.round(MODEL.contactGain * 100)}
-                  %만, {MODEL.contactTau}초 늦게 느껴요(LAB 01 발열 2회와 비슷).
+                  %만, {MODEL.contactTau}초 늦게 느껴요(LAB 01 발열 2회와 비슷). 키트 부품은 데이터시트대로: DHT11은 1초에 한 번 1 °C 단위, 온도 스위치는 {MODEL.tauMod}초 늦게, 인체감지는 켠 직후 헛신호.
                 </span>
               </li>
               <li>
@@ -129,12 +129,12 @@ export default function VirtualEspPage() {
                 <span>실제 리튬이온 셀이 아니라 220 Ω 저항이 6 °C쯤 데워지는 모형이에요. 열폭주처럼 급격한 변화는 담지 않았어요.</span>
               </li>
               <li>
-                <b>환경은 단순화</b>
-                <span>방 온도 변화는 일정한 속도로, 센서 고장은 정해진 시각에 일어나요. 실제로는 더 불규칙해요.</span>
+                <b>환경은 단순화 · 일부 가정</b>
+                <span>사건은 정해진 시각에 일정하게 일어나요. 팬이 멈추면 셀이 {MODEL.fanLoss}배 더 데워진다는 값과 충격 · 단락의 크기는 실측이 아니라 가정이에요.</span>
               </li>
               <li>
                 <b>3D 배선은 기본 핀</b>
-                <span>핀을 바꿔도 3D의 선은 실제 실험 배선 그대로예요. 바뀐 핀은 코드 탭과 검사 결과로 확인하세요.</span>
+                <span>핀을 바꿔도 3D의 선은 기본 배선 그대로예요. 키트 부품은 신호선만 그렸고 전원선(3.3 V · GND)은 생략했어요. 바뀐 핀은 코드 탭과 검사 결과로 확인하세요.</span>
               </li>
               <li>
                 <b>잡음은 고정</b>

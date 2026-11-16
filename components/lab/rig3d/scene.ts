@@ -17,6 +17,8 @@ export type RigHandle = {
   setHeat: (k: number | null) => void;
   /** 모의실험용: LED 색 · 깜빡임을 직접 정함 (null이면 단계 색) */
   setLed: (s: { color: number | null; blink: "none" | "fast" | "slow" } | null) => void;
+  /** 모의실험용: 키트 부품 상태 (kit 장면에서만) */
+  setKit: (k: KitState) => void;
   reset: () => void;
   /** 번호 표식의 화면 위치(0~1) */
   marks: () => { n: number; x: number; y: number; hidden: boolean }[];
@@ -35,7 +37,10 @@ const WIRE = { red: 0xe53935, black: 0x2b2f36, orange: 0xfb8c00, yellow: 0xfdd83
 const BAND: Record<string, number> = { black: 0x141414, brown: 0x6d3b1f, red: 0xd32f2f, orange: 0xf07c12, gold: 0xc9a23a };
 const LED = [0x2fdc5a, 0xffd23a, 0xff3b30, 0xff3b30];
 
-export function createRig(canvas: HTMLCanvasElement): RigHandle {
+export type KitState = { fanOn: boolean; door: boolean; tilt: number; shock: number; beep: "none" | "slow" | "fast"; dtmodOn: boolean; pirOut: boolean };
+
+/** opts.kit: 모의실험의 키트 부품 10종(10~19번)을 앞쪽 오른편에 함께 놓는다 */
+export function createRig(canvas: HTMLCanvasElement, opts: { kit?: boolean } = {}): RigHandle {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: false });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.shadowMap.enabled = true;
@@ -46,7 +51,7 @@ export function createRig(canvas: HTMLCanvasElement): RigHandle {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(30, 16 / 10, 0.5, 200);
-  const HOME = { pos: new THREE.Vector3(6.0, 17.8, 19.4), target: new THREE.Vector3(2.9, 0, 1.9) };
+  const HOME = opts.kit ? { pos: new THREE.Vector3(7.6, 22.5, 24.5), target: new THREE.Vector3(4.2, 0, 3.9) } : { pos: new THREE.Vector3(6.0, 17.8, 19.4), target: new THREE.Vector3(2.9, 0, 1.9) };
   camera.position.copy(HOME.pos);
 
   const controls = new OrbitControls(camera, canvas);
@@ -54,7 +59,7 @@ export function createRig(canvas: HTMLCanvasElement): RigHandle {
   controls.enableDamping = true;
   controls.enablePan = false;
   controls.minDistance = 12;
-  controls.maxDistance = 42;
+  controls.maxDistance = opts.kit ? 50 : 42;
   controls.maxPolarAngle = Math.PI * 0.47;
   controls.update();
 
@@ -659,6 +664,243 @@ export function createRig(canvas: HTMLCanvasElement): RigHandle {
   scene.add(dots);
   const tmp = new THREE.Object3D();
 
+
+  /* ── 키트 부품 10종 (모의실험) — 앞쪽 오른편 탁자 위, 핀 헤더가 ESP 쪽 통로를 향함 ── */
+  const kit = {
+    fan: null as THREE.Group | null,
+    door: null as THREE.Object3D | null,
+    doorHome: new THREE.Vector3(),
+    doLed: null as THREE.MeshStandardMaterial | null,
+    rings: null as THREE.Group | null,
+    pirMat: null as THREE.MeshStandardMaterial | null,
+  };
+  if (opts.kit) {
+    const kitWire = (key: string, tip: THREE.Vector3, back: boolean, pin: THREE.Vector3, color: number, k: number) =>
+      own(key, () => {
+        const dz = back ? -1 : 1;
+        const pts: THREE.Vector3[] = [tip, new THREE.Vector3(tip.x, 0.2, tip.z + dz * 0.35)];
+        if (back) {
+          const h = 1.9 + k * 0.16,
+            lane = 4.15 - k * 0.12;
+          pts.push(new THREE.Vector3(tip.x, h, lane), new THREE.Vector3(pin.x, h, lane), new THREE.Vector3(pin.x, h, pin.z), new THREE.Vector3(pin.x, pin.y + 0.06, pin.z));
+        } else {
+          const lane = 10.0 + k * 0.14,
+            h = 1.5 + k * 0.08;
+          pts.push(new THREE.Vector3(tip.x, 0.2, lane), new THREE.Vector3(pin.x, 0.2, lane), new THREE.Vector3(pin.x, h, pin.z + 0.55), new THREE.Vector3(pin.x, pin.y + 0.06, pin.z));
+        }
+        ends(pin);
+        return route(pts, color, 0.26, 0.05);
+      });
+    /** 평평하게 놓인 KY 모듈: 기판 + 핀 헤더(뒤 줄은 −z, 앞 줄은 +z) */
+    const ky = (n: number, x: number, z: number, w: number, d: number, color: number, back: boolean, npin = 3) => {
+      const g = part(n, new THREE.Vector3(x, 1.3, z));
+      const inner = new THREE.Group();
+      inner.add(pcb(w, d, color));
+      const tips = headerPins(inner, 0, back ? -d / 2 + 0.12 : d / 2 - 0.12, npin, "z", back ? -1 : 1).map((p) => p.clone().add(new THREE.Vector3(x, 0, z)));
+      at(inner, x, 0, z);
+      g.add(inner);
+      return { g: inner, tips };
+    };
+    const black = 0x17191c;
+    const metal = (c = 0xc9ccd1) => mat(c, { metalness: 0.85, roughness: 0.28 });
+    const BZ = 5.35,
+      FZ = 8.45;
+
+    // 10 온도 스위치 모듈 (KY-028): 빨간 기판 · 파란 가변저항 · 비교기 · NTC 머리 · LED 2개
+    {
+      const { g, tips } = ky(10, 5.4, BZ, 2.0, 1.4, 0xb3261e, true, 4);
+      const pot = box(0.5, 0.45, 0.5, mat(0x2a63d6, { roughness: 0.45 }));
+      at(pot, -0.45, 0.38, 0.12);
+      const screw = cyl(0.11, 0.11, 0.05, mat(0xe8e8e8), 16);
+      at(screw, -0.45, 0.62, 0.12);
+      const chip = box(0.48, 0.12, 0.3, mat(0x1d1f23));
+      at(chip, 0.3, 0.22, 0.28);
+      const bead = mesh(new THREE.SphereGeometry(0.14, 14, 10), mat(0x1a1a1a, { roughness: 0.3 }));
+      at(bead, 0.7, 0.55, -0.15);
+      const legM = metal();
+      for (const dx of [0.62, 0.78]) {
+        const l = cyl(0.018, 0.018, 0.4, legM, 6);
+        at(l, dx, 0.35, -0.15);
+        g.add(l);
+      }
+      const pled = box(0.12, 0.07, 0.08, mat(0xff4646, { emissive: 0xff2020, emissiveIntensity: 1.2 }));
+      at(pled, -0.82, 0.2, 0.45);
+      kit.doLed = mat(0x2a6b3a, { emissive: 0x30ff6a, emissiveIntensity: 0 });
+      const dled = box(0.12, 0.07, 0.08, kit.doLed);
+      at(dled, -0.6, 0.2, 0.45);
+      g.add(pot, screw, chip, bead, pled, dled);
+      kitWire("p10", tips[0], true, espPin.L14, WIRE.orange, 1);
+    }
+    // 11 DHT11: 파란 격자 케이스
+    {
+      const { g, tips } = ky(11, 7.4, BZ, 1.5, 1.6, black, true);
+      const grid = canvasTex(128, 160, (c, W, Hh) => {
+        c.fillStyle = "#2f7fe0";
+        c.fillRect(0, 0, W, Hh);
+        c.fillStyle = "#1a4f9a";
+        for (let yy = 14; yy < Hh - 10; yy += 18) for (let xx = 12; xx < W - 10; xx += 18) c.fillRect(xx, yy, 10, 10);
+      });
+      const caseM = texBox(0.95, 0.42, 1.15, 0x2f7fe0, grid);
+      at(caseM, 0, 0.37, 0.1);
+      g.add(caseM);
+      kitWire("p11", tips[0], true, espPin.R4, WIRE.white, 2);
+    }
+    // 12 ADXL335 가속도: 보라 기판 · 칩 · 핀 5개 (X · Y · Z 세 선)
+    {
+      const { g, tips } = ky(12, 3.35, BZ, 1.6, 1.4, 0x5b2bb5, true, 5);
+      const chip = box(0.42, 0.1, 0.42, mat(0x1d1f23));
+      at(chip, 0, 0.21, 0.15);
+      const capM = mat(0xc89b5a);
+      for (const [cx, cz] of [
+        [-0.45, 0.35],
+        [0.45, 0.35],
+        [0.45, -0.05],
+      ]) {
+        const c = box(0.12, 0.08, 0.07, capM);
+        at(c, cx, 0.2, cz);
+        g.add(c);
+      }
+      g.add(chip);
+      kitWire("p12", tips[1], true, espPin.L34, WIRE.blue, 3);
+      kitWire("p12", tips[2], true, espPin.L35, WIRE.green, 4);
+      kitWire("p12", tips[3], true, espPin.L39, WIRE.yellow, 5);
+    }
+    // 13 기울기 스위치 (볼): 은색 원통
+    {
+      const { g, tips } = ky(13, 9.4, BZ, 1.5, 1.2, black, true);
+      const c = cyl(0.17, 0.17, 0.55, metal(0xd5d8de), 20);
+      c.rotation.z = Math.PI / 2;
+      at(c, 0, 0.36, 0.1);
+      g.add(c);
+      kitWire("p13", tips[0], true, espPin.R16, WIRE.brown, 6);
+    }
+    // 14 진동 스위치 (스프링): 투명 관 + 검은 끝
+    {
+      const { g, tips } = ky(14, 11.4, BZ, 1.5, 1.2, black, true);
+      const tube = cyl(0.14, 0.14, 0.6, mat(0xdfe6ee, { transparent: true, opacity: 0.55, roughness: 0.1 }), 18);
+      tube.rotation.z = Math.PI / 2;
+      at(tube, 0, 0.33, 0.1);
+      const coil = mesh(new THREE.TorusKnotGeometry(0.06, 0.012, 48, 6, 7, 1), metal());
+      coil.rotation.y = Math.PI / 2;
+      coil.scale.set(2.6, 1, 1);
+      at(coil, 0, 0.33, 0.1);
+      g.add(tube, coil);
+      kitWire("p14", tips[0], true, espPin.R17, WIRE.gray, 7);
+    }
+    // 15 리드 스위치: 유리관 + 문에 붙은 자석
+    {
+      const { g, tips } = ky(15, 3.35, FZ, 1.5, 1.2, black, false);
+      const glass = cyl(0.08, 0.08, 0.8, mat(0xf0f6ff, { transparent: true, opacity: 0.5, roughness: 0.05 }), 14);
+      glass.rotation.z = Math.PI / 2;
+      at(glass, 0, 0.3, -0.15);
+      const reedM = box(0.6, 0.02, 0.03, metal(0xb08d57));
+      at(reedM, 0, 0.3, -0.15);
+      g.add(glass, reedM);
+      const mag = new THREE.Group();
+      const m1 = box(0.32, 0.22, 0.22, mat(0xd63a3a));
+      at(m1, -0.16, 0, 0);
+      const m2 = box(0.32, 0.22, 0.22, mat(0xc0c5cc, { metalness: 0.6 }));
+      at(m2, 0.16, 0, 0);
+      mag.add(m1, m2);
+      at(mag, 3.35, 0.13, FZ - 1.15);
+      g.parent!.add(mag);
+      kit.door = mag;
+      kit.doorHome.copy(mag.position);
+      kitWire("p15", tips[0], false, espPin.R18, WIRE.purple, 1);
+    }
+    // 16 인체감지 HC-SR501: 초록 기판 · 흰 프레넬 돔
+    {
+      const { g, tips } = ky(16, 5.55, FZ, 1.9, 1.9, 0x2e7d32, false);
+      const frame = box(1.4, 0.18, 1.4, mat(0xf2f2ee));
+      at(frame, 0, 0.25, -0.1);
+      kit.pirMat = mat(0xf7f7f2, { roughness: 0.35, transparent: true, opacity: 0.95, flatShading: true });
+      const dome = mesh(new THREE.SphereGeometry(0.62, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), kit.pirMat);
+      at(dome, 0, 0.33, -0.1);
+      g.add(frame, dome);
+      kitWire("p16", tips[0], false, espPin.R19, WIRE.yellow, 2);
+    }
+    // 17 포토인터럽트 + 냉각팬
+    {
+      const { g, tips } = ky(17, 7.85, FZ, 1.5, 1.2, black, false);
+      const slotM = mat(0x111214, { roughness: 0.4 });
+      for (const dx of [-0.2, 0.2]) {
+        const b = box(0.22, 0.55, 0.42, slotM);
+        at(b, dx, 0.42, -0.15);
+        g.add(b);
+      }
+      const fanG = new THREE.Group();
+      const frameM = mat(0x202226, { roughness: 0.5 });
+      const ring = mesh(new THREE.TorusGeometry(0.72, 0.1, 8, 32), frameM);
+      const hub = cyl(0.26, 0.26, 0.42, mat(0x2b2d33), 20);
+      hub.rotation.x = Math.PI / 2;
+      const blades = new THREE.Group();
+      const bladeM = mat(0x2b2d33, { roughness: 0.45, side: THREE.DoubleSide });
+      for (let i = 0; i < 7; i++) {
+        const b = box(0.5, 0.05, 0.22, bladeM);
+        b.position.set(0.45, 0, 0);
+        b.rotation.x = 0.5;
+        const holder = new THREE.Group();
+        holder.add(b);
+        holder.rotation.z = (i / 7) * Math.PI * 2;
+        blades.add(holder);
+      }
+      for (const [cx, cy] of [
+        [-0.75, -0.75],
+        [0.75, -0.75],
+        [-0.75, 0.75],
+        [0.75, 0.75],
+      ]) {
+        const post = box(0.2, 0.2, 0.4, frameM);
+        at(post, cx, cy, 0);
+        fanG.add(post);
+      }
+      fanG.add(ring, hub, blades);
+      at(fanG, 7.85, 0.95, FZ - 1.25);
+      g.parent!.add(fanG);
+      kit.fan = blades;
+      kitWire("p17", tips[0], false, espPin.R21, WIRE.green, 3);
+    }
+    // 18 푸시 버튼
+    {
+      const { g, tips } = ky(18, 9.85, FZ, 1.5, 1.2, black, false);
+      const base = box(0.5, 0.16, 0.5, metal(0xb9bec6));
+      at(base, 0, 0.25, -0.1);
+      const cap = cyl(0.16, 0.16, 0.14, mat(0x23252a), 18);
+      at(cap, 0, 0.39, -0.1);
+      g.add(base, cap);
+      kitWire("p18", tips[0], false, espPin.R23, WIRE.blue, 4);
+    }
+    // 19 능동 버저 + 소리 물결
+    {
+      const { g, tips } = ky(19, 11.65, FZ, 1.5, 1.2, black, false);
+      const bz = cyl(0.45, 0.45, 0.45, mat(0x15161a, { roughness: 0.35 }), 28);
+      at(bz, 0, 0.4, -0.1);
+      const hole = cyl(0.07, 0.07, 0.02, mat(0x050505), 12);
+      at(hole, 0, 0.63, -0.1);
+      g.add(bz, hole);
+      const rings = new THREE.Group();
+      const rm = new THREE.MeshBasicMaterial({ color: 0xe8703a, transparent: true, opacity: 0.85, depthWrite: false });
+      mats.push(rm);
+      [0.35, 0.6, 0.85].forEach((r, i) => {
+        const t = mesh(new THREE.TorusGeometry(r, 0.035, 6, 28, Math.PI * 0.6), rm, false);
+        t.rotation.z = Math.PI / 2 - Math.PI * 0.3;
+        t.userData.ring = i;
+        rings.add(t);
+      });
+      at(rings, 11.65, 1.3, FZ - 0.1);
+      g.parent!.add(rings);
+      rings.visible = false;
+      kit.rings = rings;
+      kitWire("p19", tips[0], false, espPin.R2, WIRE.red, 5);
+    }
+  }
+
+  /* 기울임 · 흔들림용으로 장치 전체를 한 묶음에 */
+  const root = new THREE.Group();
+  scene.children.filter((o) => !(o instanceof THREE.Light) && o !== ground).forEach((o) => root.add(o));
+  scene.add(root);
+  let kitSt: KitState | null = null;
+
   /* ── 상태 ── */
   let flowOn = true;
   let level: 0 | 1 | 2 | 3 = 0;
@@ -775,6 +1017,26 @@ export function createRig(canvas: HTMLCanvasElement): RigHandle {
       c.visible = reduce ? true : (Math.floor(t * 2.5) % 4) >= ring;
     });
     wifi.lookAt(camera.position.x, wifi.position.y, camera.position.z);
+    if (kitSt) {
+      if (kit.fan && kitSt.fanOn && !reduce) kit.fan.rotation.z = -t * 14;
+      if (kit.doLed) kit.doLed.emissiveIntensity = kitSt.dtmodOn ? 1.6 : 0;
+      if (kit.door) {
+        kit.door.position.copy(kit.doorHome);
+        if (kitSt.door) kit.door.position.add(new THREE.Vector3(0.9, 0.9, -0.4));
+      }
+      if (kit.pirMat) {
+        kit.pirMat.emissive.set(kitSt.pirOut ? 0xff6a3a : 0x000000);
+        kit.pirMat.emissiveIntensity = kitSt.pirOut ? 0.35 : 0;
+      }
+      if (kit.rings) {
+        const on = kitSt.beep !== "none" && (reduce || Math.floor(t / (kitSt.beep === "fast" ? 0.15 : 0.5)) % 2 === 0);
+        kit.rings.visible = on;
+        kit.rings.lookAt(camera.position.x, kit.rings.position.y, camera.position.z);
+      }
+      root.rotation.z = (-kitSt.tilt * Math.PI) / 180 / 2.5;
+      const sh = reduce ? 0 : Math.min(1, kitSt.shock / 2.8);
+      root.position.set(sh * 0.25 * Math.sin(t * 70), 0, sh * 0.18 * Math.cos(t * 53));
+    }
   }
   function loop() {
     raf = 0;
@@ -866,6 +1128,9 @@ export function createRig(canvas: HTMLCanvasElement): RigHandle {
     },
     onPick(cb) {
       pickCb = cb;
+    },
+    setKit(k) {
+      kitSt = k;
     },
     onFrame(cb) {
       frameCb = cb;

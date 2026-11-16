@@ -22,7 +22,7 @@
 .sim-stage.is-3d .r3-gl { opacity: 1; pointer-events: auto; cursor: grab; }
 .sim-stage.is-3d .r3-gl:active { cursor: grabbing; }
 .sim-stage.is-3d .r3-still { opacity: 0; }
-.sim-still-led { position: absolute; left: 33.6%; top: 25.5%; width: 14px; height: 14px; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+.sim-still-led { position: absolute; left: 34%; top: 24.5%; width: 14px; height: 14px; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
 .sim-hud-top { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; pointer-events: none; }
 .sim-chip { display: inline-flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.92); box-shadow: var(--rc-sh-1); font-size: 13px; color: var(--rc-sub); }
 .sim-chip b { color: var(--ism-color-foreground); font-weight: 800; }
@@ -206,6 +206,26 @@
 .sim-valid { display: flex; flex-direction: column; gap: 14px; }
 .sim-vtable { font-variant-numeric: tabular-nums; }
 .sim-links { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 640px; }
+
+
+/* 1-2: 묶음 제목 · 빠른 고르기 · 핀 여유 · 키트 신호 */
+.sim-group-h { list-style: none; margin: 14px 0 2px; padding: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; color: var(--rc-sub); }
+.sim-envs > .sim-group-h:first-of-type, .sim-rules > .sim-group-h:first-of-type, .sim-plist > .sim-group-h:first-child { margin-top: 0; }
+.sim-plist > li.sim-group-h { padding: 12px 0 4px; border-top: 0; }
+.sim-quick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px; }
+.sim-pinbudget { margin-left: auto; display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 12.5px; font-weight: 700; color: var(--rc-sub); line-height: 1.3; white-space: nowrap; }
+.sim-pinbudget b { color: var(--ism-color-foreground); font-size: 15px; }
+.sim-pinbudget small { font-size: 11px; font-weight: 600; }
+.sim-kit { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.sim-kit li { display: inline-flex; align-items: baseline; gap: 6px; padding: 6px 10px; border-radius: 8px; background: var(--rc-panel); box-shadow: var(--rc-sh-1); font-size: 12.5px; }
+.sim-kit li span { color: var(--rc-sub); font-weight: 700; }
+.sim-kit li b { color: var(--ism-color-foreground); font-weight: 800; font-variant-numeric: tabular-nums; }
+.sim-kit li.alert { background: var(--lv1-bg); box-shadow: inset 0 0 0 1px #e9c35a; }
+.sim-kit li.alert b { color: #6b4d00; }
+.sim-score.v-partial .sim-vmark { background: var(--lv1); color: #3d2c00; }
+.sim-score.v-partial { box-shadow: var(--rc-sh-1), inset 4px 0 0 var(--lv1); }
+.sim-res.v-partial { background: var(--lv1-bg); color: #6b4d00; }
+.sim-score.v-idle .sim-vmark { background: var(--rc-tint); }
 
 @media (max-width: 1080px) {
   .sim-top, .sim-mid { grid-template-columns: minmax(0, 1fr); }

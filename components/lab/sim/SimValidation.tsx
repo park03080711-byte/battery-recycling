@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { stage2 } from "@/data/lab/essData";
 import { ticks, useWidth } from "../useWidth";
 import { defaultCards, defaultParams, defaultPins } from "./catalog";
-import { Sim, defaultPresent } from "./engine";
+import { SEED, Sim, defaultPresent } from "./engine";
 
 /* 이 모의실험은 얼마나 맞나 — 기본 환경을 LAB 01 판정 실험 2회차 실측과 겹쳐 본다 (히터를 켠 순간을 0초로) */
 const C_REAL = "#0b9488";
@@ -16,7 +16,7 @@ const LBL = ["주의", "경고", "위험"];
 
 export function useValidation() {
   return useMemo(() => {
-    const s = new Sim({ env: "heat", present: defaultPresent(), pins: defaultPins(), cards: defaultCards(), params: defaultParams(), seed: 7 }).runAll();
+    const s = new Sim({ env: "heat", present: defaultPresent(), pins: defaultPins(), cards: defaultCards(), params: defaultParams(), seed: SEED }).runAll();
     const h0 = s.env.heaterAt!;
     const sim = s.samples.filter((x) => x.dT !== null && x.t >= h0 - 0.01).map((x) => ({ t: x.t - h0, dT: x.dT as number }));
     const evt = [1, 2, 3].map((lv) => s.events.find((e) => e.kind === "level" && e.level === lv && !e.text.includes("내려감"))?.t ?? NaN).map((t) => t - h0);

@@ -1,14 +1,34 @@
 /* 가상 ESP32 실험대 — 계산 모듈 (화면과 분리).
-   ① 환경 모델: 방 온도 · 셀 온도 · 전류 · 전압의 '실제 값'
+   ① 환경 모델: 방 온도 · 셀 온도 · 전류 · 전압 · 팬 · 문 · 충격의 '실제 값'
    ② 센서 모델: 센서마다 다르게 읽음 (반응 속도 · 잡음 · 해상도 · 고장)
-   ③ 가상 펌웨어: LAB 01의 ess_stage3.ino 판정 부분을 그대로 옮김 (0.5초마다)
+   ③ 가상 펌웨어: LAB 01의 ess_stage3.ino 판정 부분을 그대로 옮기고, 키트 부품 규칙을 같은 방식으로 더함 (0.5초마다)
    셀 발열은 LAB 01 판정 실험 2회차 기록에 맞춘 1차 모델: 최종 상승 K = 6.5 °C, 가열 시간상수 66 s.
-   (펌웨어의 지수 평활까지 거친 값이 기록과 맞도록 맞춤. 이 모델로 판정하면 주의 13 · 경고 26 · 위험 65초, 실측은 11 · 27 · 65초)
-   냉각 시간상수 220 s는 발열 실험 1 · 3회 평균. */
+   (펌웨어의 지수 평활까지 거친 값이 기록과 맞도록 맞춤. 잡음 40가지로 돌린 평균이 주의 13.8 · 경고 26.4 · 위험 64.7초, 실측은 11 · 27 · 65초)
+   냉각 시간상수 220 s는 발열 실험 1 · 3회 평균. 키트 부품 값은 데이터시트 기반. */
 import { CARDS, ENVS, PARTS, checkPins, type CardId, type EnvId, type PartId, type PinIssue } from "./catalog";
 
-export const MODEL = { K: 6.5, tauHeat: 66, tauCool: 220, tauCellAmb: 220, tauNtc: 20, tauDs: 0.1, contactGain: 0.73, contactTau: 25, Ta0: 23, ntcBias: -0.55 };
+export const MODEL = {
+  K: 6.5,
+  tauHeat: 66,
+  tauCool: 220,
+  tauCellAmb: 220,
+  tauNtc: 20,
+  tauDs: 0.1,
+  contactGain: 0.73,
+  contactTau: 25,
+  Ta0: 23,
+  ntcBias: -0.55,
+  /** 팬이 멈추면 같은 열에 셀이 몇 배 더 데워지나 (가정) */
+  fanLoss: 2.6,
+  Rheat: 211,
+  Rshort: 100,
+  tauMod: 8,
+  tauDht: 10,
+  dhtBias: 1.0,
+};
 const TICK = 0.5;
+/** 기본 잡음: 40가지 중 평균에 가장 가까운 것 (주의 13.5 · 경고 26 · 위험 64.5초) */
+export const SEED = 18;
 const SUB = 0.1;
 export const LEVEL_KO = ["정상", "주의", "경고", "위험"] as const;
 
@@ -35,19 +55,44 @@ export type Sample = {
   fault: boolean;
 };
 export type Led = { color: "g" | "y" | "r" | "b" | "off"; blink: "none" | "fast" | "slow" };
-export type SimEvent = { t: number; kind: "level" | "cut" | "fault" | "heater" | "boot" | "cmd"; text: string; level?: number };
+export type SimEvent = { t: number; kind: "level" | "cut" | "fault" | "heater" | "boot" | "cmd"; text: string; level?: number; bogus?: boolean };
 
 export type Score = {
-  verdict: "pass" | "late" | "miss" | "false" | "boot" | "idle";
+  verdict: "pass" | "partial" | "late" | "miss" | "false" | "boot" | "idle";
   title: string;
   detail: string;
   firstAlarm: number | null;
   cut: number | null;
+  /** 사건 뒤 히터(충전)를 멈추기까지 (초) */
+  react: number | null;
   peakTruth: number;
   falseAlarms: number;
   parts: number;
   pinsUsed: number;
 };
+
+/** 3D · 화면에 보여 줄 현장 상태 */
+export type Site = {
+  fanOn: boolean;
+  door: boolean;
+  person: boolean;
+  pirOut: boolean;
+  tilt: number;
+  shock: number;
+  dtmodOn: boolean;
+  dhtT: number | null;
+  dhtRH: number | null;
+  beep: "none" | "slow" | "fast";
+  maint: boolean;
+};
+
+/** 받침에 맞는 조사: 로/으로, 을/를 */
+const jong = (w: string) => {
+  const c = w.trim().charCodeAt(w.trim().length - 1);
+  return c >= 0xac00 && c <= 0xd7a3 ? (c - 0xac00) % 28 : /[0-9]$/.test(w) ? -1 : 0;
+};
+export const ro = (w: string) => w + (jong(w) === 0 || jong(w) === 8 ? "로" : "으로");
+export const eul = (w: string) => w + (jong(w) === 0 ? "를" : "을");
 
 function rng(seed: number) {
   let a = seed >>> 0;
@@ -65,7 +110,7 @@ export class Sim {
   readonly env = ENVS[0];
   readonly issues: PinIssue[];
   readonly has: (p: PartId) => boolean;
-  private ok: (p: PartId) => boolean;
+  readonly ok: (p: PartId) => boolean;
   private rand: () => number;
   private gauss = () => {
     const u = Math.max(1e-9, this.rand()),
@@ -73,18 +118,32 @@ export class Sim {
     return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
   };
   private P = (k: string) => this.cfg.params[k];
-  private card = (id: CardId) => !!this.cfg.cards[id] && CARDS.find((c) => c.id === id)!.needs.every((n) => this.has(n));
+  readonly card = (id: CardId) => !!this.cfg.cards[id] && CARDS.find((c) => c.id === id)!.needs.every((n) => this.has(n));
 
-  /* 세계 */
+  /* ── 세계 ── */
   t = 0;
   Ta = MODEL.Ta0;
   Tca = MODEL.Ta0;
   x = 0;
   Tn = MODEL.Ta0;
   Ts = MODEL.Ta0;
-  load = false;
+  Tmod = MODEL.Ta0;
+  Tdht = MODEL.Ta0;
+  loadOn = false;
+  fanOn = true;
+  door = false;
+  person = false;
+  tilt = 0;
+  shock = 0;
+  get Rh() {
+    return this.env.id === "short" && this.t >= (this.env.event ?? 0) ? MODEL.Rshort : MODEL.Rheat;
+  }
+  /** 히터 전류 (평균, mA) */
+  get Iheat() {
+    return this.power ? (4.56 / (this.Rh + 22)) * 1000 * this.env.load : 0;
+  }
   get power() {
-    if (!this.load) return false;
+    if (!this.loadOn) return false;
     if (!this.has("relay")) return true;
     return this.ok("relay") && this.heaterOn && !this.bootFail;
   }
@@ -92,7 +151,7 @@ export class Sim {
     return this.Tca + this.x - this.Ta;
   }
 
-  /* 펌웨어 상태 */
+  /* ── 펌웨어 상태 ── */
   readonly bootFail: boolean;
   heaterOn = false;
   tripped = false;
@@ -105,12 +164,18 @@ export class Sim {
   curMa = 0;
   fault = false;
   suspect = false;
+  /** 충전을 멈춰야 하는 현장 이유 (정비 · 충격 · 팬) */
+  halt: string | null = null;
+  maint = false;
+  private haltBogus = false;
   private offset = 0;
   private calib: number[] = [];
   private calibrated = false;
   private emaDs = NaN;
-  private emaNtc = NaN;
+  private emaAmb = NaN;
   private dsRaw = NaN;
+  private dhtRaw = NaN;
+  private dhtRH = NaN;
   private win: [number, number][] = [];
   private avgV: number[] = [];
   private avgI: number[] = [];
@@ -121,6 +186,14 @@ export class Sim {
   private heaterAt = 0;
   private hotSince = 0;
   private lastLog = -1;
+  private ticks = 0;
+  private dtmodOn = false;
+  private pirHoldUntil = -1;
+  private pulseLast = 0;
+  private shockUntil = -1;
+  private vibUntil = -1;
+  private tiltSince = 0;
+  private shockPeak = 0;
 
   readonly samples: Sample[] = [];
   readonly events: SimEvent[] = [];
@@ -136,7 +209,7 @@ export class Sim {
     const broken = new Set(this.issues.filter((i) => i.breaks).map((i) => i.part));
     this.ok = (p) => present.has(p) && !broken.has(p);
     this.bootFail = this.issues.some((i) => i.bootFail);
-    this.rand = rng(cfg.seed ?? 7);
+    this.rand = rng(cfg.seed ?? SEED);
     this.boot();
   }
 
@@ -144,8 +217,8 @@ export class Sim {
   private say(line: string) {
     this.log.push(`${this.t.toFixed(1).padStart(5)}s  ${line}`);
   }
-  private ev(kind: SimEvent["kind"], text: string, level?: number) {
-    this.events.push({ t: this.t, kind, text, level });
+  private ev(kind: SimEvent["kind"], text: string, level?: number, bogus = false) {
+    this.events.push({ t: this.t, kind, text, level, bogus });
   }
 
   private boot() {
@@ -156,15 +229,17 @@ export class Sim {
     }
     this.say("# === ESS 가상 ESP32 — 4단계 판정 · 자동 차단 ===");
     if (this.has("shunt")) this.say(this.ok("shunt") ? "# 전류 0점 142 mV" : "# 전류 0점 0 mV (션트 핀에서 값을 못 읽음)");
+    const kit = PARTS.filter((p) => p.group === "kit" && this.has(p.id));
+    if (kit.length) this.say(`# 키트 부품 ${kit.length}종: ${kit.map((p) => (this.ok(p.id) ? p.name : `${p.name}(핀 오류)`)).join(", ")}`);
     if (this.has("ds")) this.say(`# 온도 기준 잡는 중 (8초, 히터 OFF 상태여야 함)...`);
     else this.say("# 셀 온도 센서 없음 — 온도 판정을 하지 않습니다");
   }
 
-  /** 시리얼 명령 (사람이 입력한 것과 같음) */
-  command(c: "h" | "o" | "x") {
+  /** 시리얼 명령 (사람이 입력한 것과 같음). b는 현장 버튼 */
+  command(c: "h" | "o" | "x" | "b") {
     if (this.bootFail) return;
     if (c === "h") {
-      this.load = true;
+      this.loadOn = true;
       if (!this.has("relay")) {
         this.say("# 히터 ON (차단기 없음 — 전원에 바로 연결)");
         this.heaterAt = this.t;
@@ -172,21 +247,23 @@ export class Sim {
       }
       if (this.tripped) this.say("# 차단 상태입니다. 온도가 내려간 뒤 'x'로 해제하세요.");
       else if (this.fault || this.suspect) this.say("# 센서 고장 상태라 히터를 켤 수 없습니다.");
+      else if (this.halt) this.say(`# ${this.halt} — 지금은 히터를 켤 수 없습니다.`);
       else {
         this.setHeater(true);
         this.say(this.ok("relay") ? "# 히터 ON" : "# 히터 ON 명령 — 그러나 릴레이 핀이 동작하지 않아 히터에 전기가 안 감");
       }
     } else if (c === "o") {
-      this.load = false;
+      this.loadOn = false;
       this.setHeater(false);
       this.say("# 히터 OFF");
-    } else if (c === "x") {
-      const dW = this.P("dt.w");
-      if (this.dT < dW - 0.3 && this.curMa < this.P("cur.w")) {
+    } else if (c === "x" || c === "b") {
+      if (c === "b" && !this.ok("btn")) return;
+      const who = c === "b" ? "# 현장 버튼 → " : "# ";
+      if (this.dT < this.P("dt.w") - 0.3 && this.curMa < this.P("cur.w")) {
         this.tripped = false;
         this.suspect = false;
-        this.say("# 차단 해제");
-      } else this.say(`# 아직 해제할 수 없습니다 (ΔT ${this.dT.toFixed(2)} °C, ${this.curMa.toFixed(1)} mA)`);
+        this.say(`${who}차단 해제`);
+      } else this.say(`${who}아직 해제할 수 없습니다 (ΔT ${this.dT.toFixed(2)} °C, ${this.curMa.toFixed(1)} mA)`);
     }
     this.ev("cmd", c);
   }
@@ -198,15 +275,32 @@ export class Sim {
 
   /* ── 환경 ── */
   private world(dt: number) {
-    const e = this.env.id;
-    if (e === "room") this.Ta = MODEL.Ta0 + 4.5 * Math.min(1, Math.max(0, (this.t - 15) / 90));
+    const e = this.env.id,
+      t = this.t,
+      E = this.env.event ?? Infinity;
+    if (e === "room") this.Ta = MODEL.Ta0 + 4.5 * Math.min(1, Math.max(0, (t - 15) / 90));
+    this.fanOn = !(e === "fan" && t >= E);
+    this.door = e === "door" && t >= E && t < 130;
+    this.person = e === "door" && t >= E + 2 && t < 125;
+    if (e === "shock") {
+      this.shock = t >= E ? 2.8 * Math.exp(-(t - E) / 0.5) : 0;
+      if (this.shock < 0.02) this.shock = 0;
+      this.tilt = 30 * Math.min(1, Math.max(0, (t - E - 0.5) / 1.5));
+    }
     this.Tca += (dt * (this.Ta - this.Tca)) / MODEL.tauCellAmb;
     const pw = this.power;
-    this.x += (dt * ((pw ? MODEL.K : 0) - this.x)) / (pw ? MODEL.tauHeat : MODEL.tauCool);
+    // 같은 셀에 들어가는 열: 평소 전력 대비 비율 (단락이면 커짐) × 충전 세기 × 팬이 멈추면 더 데워짐
+    const i = 4.56 / (this.Rh + 22),
+      i0 = 4.56 / (MODEL.Rheat + 22);
+    const pf = (i * i * this.Rh) / (i0 * i0 * MODEL.Rheat);
+    const K = MODEL.K * pf * this.env.load * (this.fanOn ? 1 : MODEL.fanLoss);
+    this.x += (dt * ((pw ? K : 0) - this.x)) / (pw ? MODEL.tauHeat : MODEL.tauCool);
     this.Tn += (dt * (this.Ta - this.Tn)) / MODEL.tauNtc;
     const contact = e === "sensor" && this.cfg.variant === "contact";
     const target = contact ? this.Tca + MODEL.contactGain * this.x : this.Tca + this.x;
     this.Ts += (dt * (target - this.Ts)) / (contact ? MODEL.contactTau : MODEL.tauDs);
+    this.Tmod += (dt * (this.Tca + this.x - this.Tmod)) / MODEL.tauMod;
+    this.Tdht += (dt * (this.Ta - this.Tdht)) / MODEL.tauDht;
   }
 
   /* ── 센서 ── */
@@ -221,17 +315,52 @@ export class Sim {
   }
   private readCur() {
     if (!this.ok("shunt")) return 0;
-    if (!this.power) return 0; // 0점 근처는 0으로 처리 (펌웨어와 같음)
-    const i = (4.56 / 233) * 1000 + 0.3 * this.gauss();
-    return i * 22 <= 157 ? 0 : i;
+    if (!this.power) return 0;
+    const i = this.Iheat + 0.3 * this.gauss();
+    return i * 22 <= 157 ? 0 : i; // 0점 근처(약 7 mA 아래)는 0으로 (펌웨어와 같음)
   }
   private readBus() {
     if (!this.ok("div")) return 0;
-    return (this.power ? 4.56 : 4.6) + 0.01 * this.gauss();
+    return 4.6 - 0.0021 * this.Iheat + 0.01 * this.gauss();
+  }
+  /** 주변 온도: NTC가 있으면 NTC, 없으면 DHT11, 둘 다 없으면 null */
+  private ambSrc(): "ntc" | "dht" | null {
+    return this.has("ntc") ? "ntc" : this.has("dht") ? "dht" : null;
+  }
+
+  /* ── 키트 부품 읽기 ── */
+  private readKit() {
+    // DHT11: 1초에 한 번, 1 °C 단위
+    if (this.ok("dht") && this.ticks % 2 === 0) {
+      this.dhtRaw = Math.round(this.Tdht + MODEL.dhtBias + 0.3 * this.gauss());
+      this.dhtRH = Math.round(45 + (this.door ? 8 : 0) + 1.5 * this.gauss());
+    } else if (!this.ok("dht")) {
+      this.dhtRaw = NaN;
+      this.dhtRH = NaN;
+    }
+    // 온도 스위치: 비교기, 0.5 °C 여유
+    if (this.ok("dtmod")) {
+      const set = this.P("dtsw.t");
+      if (!this.dtmodOn && this.Tmod >= set) this.dtmodOn = true;
+      else if (this.dtmodOn && this.Tmod < set - 0.5) this.dtmodOn = false;
+    } else this.dtmodOn = false;
+    // 가속도: 빠른 루프에서 잰 0.5초 최대값
+    this.shockPeak = this.ok("accel") ? this.shock + 0.02 * Math.abs(this.gauss()) : 0;
+    // 인체감지: 켠 뒤 30~60초는 헛신호 (6~9초, 22~25초)
+    const warm = (this.t >= 6 && this.t < 9) || (this.t >= 22 && this.t < 25);
+    if (this.ok("pir") && (this.person || warm)) this.pirHoldUntil = this.t + 2.5;
+    // 팬 펄스
+    if (this.ok("photo") && this.fanOn) this.pulseLast = this.t;
+    // 진동 스위치
+    if (this.ok("vib") && this.shock > 0.5) this.vibUntil = this.t + 10;
+  }
+  get pirOut() {
+    return this.ok("pir") && this.t < this.pirHoldUntil;
   }
 
   /* ── 펌웨어 tick (0.5초) ── */
   private tick() {
+    this.ticks++;
     const avg = (buf: number[], v: number) => {
       buf.push(v);
       if (buf.length > 5) buf.shift();
@@ -239,34 +368,38 @@ export class Sim {
     };
     this.busV = avg(this.avgV, this.readBus());
     this.curMa = avg(this.avgI, this.readCur());
-    const ntc = this.readNtc();
+    this.readKit();
+    const src = this.ambSrc();
+    const amb = src === "ntc" ? this.readNtc() : src === "dht" ? this.dhtRaw : NaN;
     this.dsRaw = this.readDs();
-    const hasNtc = this.has("ntc");
-    if (!isNaN(ntc)) this.emaNtc = isNaN(this.emaNtc) ? ntc : 0.3 * ntc + 0.7 * this.emaNtc;
+    if (!isNaN(amb)) this.emaAmb = isNaN(this.emaAmb) ? amb : 0.3 * amb + 0.7 * this.emaAmb;
     if (!isNaN(this.dsRaw)) this.emaDs = isNaN(this.emaDs) ? this.dsRaw : 0.3 * this.dsRaw + 0.7 * this.emaDs;
     const wasFault = this.fault;
-    this.fault = this.has("ds") && (isNaN(this.dsRaw) || (hasNtc && isNaN(this.emaNtc)));
+    this.fault = this.has("ds") && (isNaN(this.dsRaw) || (src !== null && isNaN(this.emaAmb)));
     if (this.fault && !wasFault) this.ev("fault", isNaN(this.dsRaw) ? "셀 온도 센서 값 없음 (nan)" : "주변 온도 센서 값 없음 (nan)");
 
     // 기준 잡기 (처음 8초)
     if (!this.calibrated && this.has("ds")) {
       if (this.t <= 8) {
-        if (!isNaN(this.dsRaw) && (!hasNtc || !isNaN(ntc))) this.calib.push(hasNtc ? this.dsRaw - ntc : this.dsRaw);
+        if (!isNaN(this.dsRaw) && (src === null || !isNaN(amb))) this.calib.push(src ? this.dsRaw - amb : this.dsRaw);
+        this.outputs();
         return;
       }
       this.calibrated = true;
       if (this.calib.length >= 5) {
         this.offset = this.calib.reduce((a, b) => a + b, 0) / this.calib.length;
-        this.say(hasNtc ? `# 기준 차이 (DS18B20 − NTC) = ${this.offset >= 0 ? "+" : ""}${this.offset.toFixed(2)} °C  (${this.calib.length}회 평균)` : `# 주변 센서 없음 → 켤 때 셀 온도 ${this.offset.toFixed(2)} °C를 기준으로 삼음`);
+        const nm = src === "ntc" ? "NTC" : "DHT11";
+        this.say(src ? `# 기준 차이 (DS18B20 − ${nm}) = ${this.offset >= 0 ? "+" : ""}${this.offset.toFixed(2)} °C  (${this.calib.length}회 평균)` : `# 주변 센서 없음 → 켤 때 셀 온도 ${this.offset.toFixed(2)} °C를 기준으로 삼음`);
       } else this.say("# 기준을 잡지 못했습니다. 센서 연결을 확인하세요.");
       this.emaDs = NaN;
-      this.emaNtc = NaN;
+      this.emaAmb = NaN;
       this.win = [];
+      this.outputs();
       return;
     }
 
     if (this.has("ds") && !this.fault && !isNaN(this.emaDs)) {
-      this.dT = hasNtc ? this.emaDs - this.emaNtc - this.offset : this.emaDs - this.offset;
+      this.dT = src ? this.emaDs - this.emaAmb - this.offset : this.emaDs - this.offset;
       this.win.push([this.t, this.dT]);
       if (this.win.length > 20) this.win.shift();
       this.slope = this.lsq();
@@ -291,6 +424,33 @@ export class Sim {
         this.ev("fault", "가열 대비 온도가 너무 낮음 — 센서 접촉 의심");
       }
     }
+
+    // 현장 카드: 충전을 멈출 이유
+    let halt: string | null = null,
+      bogus = false,
+      maint = false;
+    if (this.card("fan") && this.t - this.pulseLast >= this.P("fan.s") && this.t > 3) halt = "냉각팬 멈춤";
+    if (this.card("shock") && Math.abs(this.shockPeak) >= this.P("shock.g")) this.shockUntil = this.t + 30;
+    if (this.card("shock") && this.t < this.shockUntil) halt = "충격 감지";
+    if (this.card("tiltA") && this.ok("accel") && this.tilt >= this.P("tiltA.a")) halt = "기울어짐 (가속도)";
+    if (this.card("tiltSw") && this.ok("tilt") && this.tilt > 25) {
+      if (!this.tiltSince) this.tiltSince = this.t;
+      if (this.t - this.tiltSince >= 1) halt = "기울기 스위치";
+    } else this.tiltSince = 0;
+    if (this.card("door") && this.ok("reed") && this.door) {
+      halt = "정비 중 — 문 열림";
+      maint = true;
+    }
+    if (this.card("person") && this.pirOut && this.t >= this.P("person.i")) {
+      if (!halt) {
+        halt = "정비 중 — 사람 접근";
+        bogus = !this.person;
+      }
+      maint = true;
+    }
+    this.halt = halt;
+    this.haltBogus = bogus;
+    this.maint = maint;
 
     const cand = this.judge();
     if (cand > this.level) {
@@ -317,6 +477,11 @@ export class Sim {
         this.say(this.suspect ? "# 센서 접촉 의심 → 히터 차단" : "# 센서 고장 → 히터 차단");
         this.ev("cut", this.suspect ? "센서 접촉 의심으로 히터 정지" : "센서 고장으로 히터 정지");
       }
+    }
+    if (this.halt && this.heaterOn) {
+      this.setHeater(false);
+      this.say(`# ${this.halt} → 충전(히터) 정지`);
+      this.ev("cut", `${ro(this.halt)} 충전 정지`, undefined, this.haltBogus);
     }
     this.outputs();
   }
@@ -378,6 +543,7 @@ export class Sim {
       }
       if (this.card("eta") && this.eta !== null && this.eta < this.P("eta.e") && this.dT >= this.P("dt.c")) raise(2, `위험 예측: 위험까지 ${this.P("eta.e")}초 미만`);
     }
+    if (this.card("dtsw") && this.dtmodOn) raise(3, "온도 스위치 동작");
     if (this.card("cur")) {
       if (this.curMa >= this.P("cur.d")) raise(3, "과전류 위험");
       else if (this.curMa >= this.P("cur.w")) raise(2, "과전류 경고");
@@ -387,6 +553,8 @@ export class Sim {
       if (this.busV < this.P("volt.w") || this.busV > this.P("volt.h")) raise(2, "전압 이상");
       else if (this.busV < this.P("volt.c")) raise(1, "저전압 주의");
     }
+    if (this.halt) raise(this.maint ? 1 : 2, this.halt);
+    if (this.card("vib") && this.t < this.vibUntil) raise(1, "진동 감지");
     return cand;
   }
 
@@ -406,17 +574,36 @@ export class Sim {
         }
       }
       this.say(`# 단계 상승 ${LEVEL_KO[from]} → ${LEVEL_KO[to]} (${this.reason}) | 기준 초과 후 ${Math.round((this.t - this.firstExceed) * 1000)} ms 만에 확정${tail}`);
-      this.ev("level", `${LEVEL_KO[to]} — ${this.reason}`, to);
+      this.ev("level", `${LEVEL_KO[to]} — ${this.reason}`, to, this.haltBogus && this.reason === this.halt);
     } else {
       this.say(`# 단계 하강 ${LEVEL_KO[from]} → ${LEVEL_KO[to]}`);
-      this.ev("level", `${LEVEL_KO[to]}로 내려감`, to);
+      this.ev("level", `${ro(LEVEL_KO[to])} 내려감`, to);
     }
   }
 
   private outputs() {
     if (!this.ok("rgb") || this.bootFail) this.led = { color: "off", blink: "none" };
     else if ((this.fault && this.card("fault")) || this.suspect) this.led = this.level >= 3 ? { color: "r", blink: "fast" } : { color: "b", blink: "slow" };
+    else if (this.maint && this.level <= 1) this.led = { color: "y", blink: "slow" };
+    else if (!this.calibrated && this.has("ds")) this.led = { color: "b", blink: "none" };
     else this.led = [{ color: "g", blink: "none" }, { color: "y", blink: "none" }, { color: "r", blink: "none" }, { color: "r", blink: "fast" }][this.level] as Led;
+  }
+
+  get site(): Site {
+    const beep = !this.ok("buzz") || this.bootFail ? "none" : this.level >= 3 ? "fast" : this.level >= 2 ? "slow" : "none";
+    return {
+      fanOn: this.fanOn,
+      door: this.door,
+      person: this.person,
+      pirOut: this.pirOut,
+      tilt: this.tilt,
+      shock: this.shock,
+      dtmodOn: this.dtmodOn,
+      dhtT: this.ok("dht") && !isNaN(this.dhtRaw) ? this.dhtRaw : null,
+      dhtRH: this.ok("dht") && !isNaN(this.dhtRH) ? this.dhtRH : null,
+      beep,
+      maint: this.maint,
+    };
   }
 
   /** 0.5초 진행 */
@@ -426,6 +613,7 @@ export class Sim {
       this.t = Math.round((this.t + SUB) * 10) / 10;
     }
     if (this.env.heaterAt !== null && Math.abs(this.t - this.env.heaterAt) < 1e-6) this.command("h");
+    if (this.env.event !== undefined && Math.abs(this.t - this.env.event) < 1e-6) this.ev("heater", `사건: ${this.env.eventLabel}`);
     if (!this.bootFail) this.tick();
     const s: Sample = {
       t: this.t,
@@ -447,6 +635,9 @@ export class Sim {
       if (this.has("ds")) parts.push(this.fault ? "ΔT nan" : `ΔT ${this.dT.toFixed(2)}`, `${this.slope >= 0 ? "+" : ""}${this.slope.toFixed(3)}/s`);
       if (this.has("shunt")) parts.push(`${this.curMa.toFixed(1)} mA`);
       if (this.has("div")) parts.push(`${this.busV.toFixed(2)} V`);
+      if (this.ok("dht") && !isNaN(this.dhtRaw)) parts.push(`${this.dhtRaw} °C ${this.dhtRH}%`);
+      if (this.ok("accel")) parts.push(`${this.tilt.toFixed(0)}°`);
+      if (this.ok("photo")) parts.push(this.fanOn ? "팬 회전" : "팬 정지");
       parts.push(LEVEL_KO[this.level], this.power ? "ON" : "OFF");
       this.say(parts.join(" · "));
     }
@@ -466,34 +657,66 @@ export class Sim {
   score(): Score {
     const parts = this.cfg.present.length;
     const pinsUsed = PARTS.filter((p) => this.has(p.id)).reduce((a, p) => a + p.pins.length, 0);
-    const base = { parts, pinsUsed };
     const peak = Math.max(...this.samples.map((s) => s.truth));
     const alarms = this.events.filter((e) => e.kind === "level" && (e.level ?? 0) >= 1 && e.text.indexOf("내려감") < 0);
     const h0 = this.env.heaterAt ?? 0;
+    const E = this.env.event;
     const firstAlarm = alarms.length ? alarms[0].t - h0 : null;
-    // 히터 전원이 끊긴 첫 시각 (켜진 뒤)
-    let cut: number | null = null;
-    for (let i = 1; i < this.samples.length; i++) if (this.samples[i - 1].heat && !this.samples[i].heat) {
-      cut = this.samples[i].t - h0;
-      break;
-    }
-    if (this.bootFail)
-      return { verdict: "boot", title: "부팅 실패", detail: "ESP32가 켜지지 않아 아무것도 측정하지 못했어요. 릴레이도 켜지지 않아 히터는 돌지 않았지만, 실제 장치였다면 감시가 전혀 없는 상태예요.", firstAlarm: null, cut: null, peakTruth: peak, falseAlarms: 0, ...base };
+    const offAt = (from: number) => {
+      for (let i = 1; i < this.samples.length; i++) if (this.samples[i].t >= from && this.samples[i - 1].heat && !this.samples[i].heat) return this.samples[i].t;
+      return null;
+    };
+    const cutAbs = offAt(0);
+    const cut = cutAbs === null ? null : cutAbs - h0;
+    const afterAbs = E === undefined ? null : offAt(E);
+    const react = afterAbs === null || E === undefined ? null : afterAbs - E;
+    const base = { parts, pinsUsed, firstAlarm, cut, react, peakTruth: peak, falseAlarms: 0 };
+    const S = (verdict: Score["verdict"], title: string, detail: string, extra: Partial<Score> = {}): Score => ({ ...base, verdict, title, detail, ...extra });
+
+    if (this.bootFail) return S("boot", "부팅 실패", "ESP32가 켜지지 않아 아무것도 측정하지 못했어요. 릴레이도 켜지지 않아 히터는 돌지 않았지만, 실제 장치였다면 감시가 전혀 없는 상태예요.", { firstAlarm: null, cut: null });
     if (this.env.heaterAt !== null && !this.samples.some((s) => s.heat)) {
-      const why = !this.has("relay") ? "" : !this.ok("relay") ? "릴레이 핀이 동작하지 않아 히터에 전기가 가지 않았어요." : this.fault ? "처음부터 센서 고장 상태라 펌웨어가 히터를 켜 주지 않았어요." : "히터가 켜지지 않았어요.";
-      return { verdict: "idle", title: "시작 못 함", detail: `${why} 셀은 안전했지만 장치가 제 일을 못 한 상태예요. 부품 · 핀 탭의 빨간 표시를 확인하세요.`, firstAlarm, cut: null, peakTruth: peak, falseAlarms: 0, ...base };
+      const why = !this.has("relay") ? "" : !this.ok("relay") ? "릴레이 핀이 동작하지 않아 히터에 전기가 가지 않았어요." : this.fault ? "처음부터 센서 고장 상태라 펌웨어가 히터를 켜 주지 않았어요." : this.halt ? `‘${this.halt}’ 상태라 히터를 켜지 못했어요.` : "히터가 켜지지 않았어요.";
+      return S("idle", "시작 못 함", `${why} 셀은 안전했지만 장치가 제 일을 못 한 상태예요. 부품 · 핀 탭의 빨간 표시를 확인하세요.`, { cut: null });
     }
-    if (this.env.expect === "quiet") {
+    const bogus = this.events.find((e) => e.kind === "cut" && e.bogus);
+    if (bogus)
+      return S("partial", "헛신호로 멈춤", `아무도 없는데 ${bogus.t.toFixed(0)}초에 인체감지 센서의 헛신호로 충전을 멈췄어요. 켠 직후 30~60초는 이 센서를 믿으면 안 돼요. ‘켠 뒤 무시’ 시간을 늘려 보세요.`, {
+        falseAlarms: alarms.filter((a) => a.bogus).length || 1,
+      });
+
+    const ex = this.env.expect;
+    if (ex === "quiet") {
       const n = alarms.length;
       const cutAny = this.events.some((e) => e.kind === "cut");
-      if (!n && !cutAny) return { verdict: "pass", title: "통과 — 조용히 지켜봄", detail: "셀은 정상이었고, 경보를 한 번도 내지 않았어요.", firstAlarm: null, cut: null, peakTruth: peak, falseAlarms: 0, ...base };
-      return { verdict: "false", title: `잘못된 경보 ${n}번`, detail: `셀은 정상인데 ${alarms[0]?.t.toFixed(0)}초에 ‘${alarms[0]?.text}’ 경보를 냈어요.${cutAny ? " 히터 차단까지 했어요." : ""}`, firstAlarm: alarms[0]?.t ?? null, cut: null, peakTruth: peak, falseAlarms: n, ...base };
+      if (!n && !cutAny) return S("pass", "통과 — 조용히 지켜봄", "셀은 정상이었고, 경보를 한 번도 내지 않았어요.", { firstAlarm: null, cut: null });
+      return S("false", `잘못된 경보 ${n}번`, `셀은 정상인데 ${alarms[0]?.t.toFixed(0)}초에 ‘${alarms[0]?.text}’ 경보를 냈어요.${cutAny ? " 히터 차단까지 했어요." : ""}`, { firstAlarm: alarms[0]?.t ?? null, cut: null, falseAlarms: n });
     }
-    if (cut === null)
-      return { verdict: "miss", title: "놓침 — 끝까지 데워짐", detail: `셀이 주변보다 ${peak.toFixed(1)} °C까지 데워졌는데 히터를 끊지 못했어요.`, firstAlarm, cut: null, peakTruth: peak, falseAlarms: 0, ...base };
-    if (peak < 4.6) return { verdict: "pass", title: "통과 — 위험 전에 차단", detail: `히터를 켠 뒤 ${cut.toFixed(1)}초에 끊었고, 실제 셀은 최고 +${peak.toFixed(2)} °C에서 멈췄어요.`, firstAlarm, cut, peakTruth: peak, falseAlarms: 0, ...base };
-    return { verdict: "late", title: "늦은 차단", detail: `${cut.toFixed(1)}초에 끊었지만 그때 실제 셀은 이미 +${peak.toFixed(2)} °C였어요. 센서가 셀을 제대로 못 느꼈어요.`, firstAlarm, cut, peakTruth: peak, falseAlarms: 0, ...base };
+    if (ex === "trip") {
+      if (cut === null) return S("miss", "놓침 — 끝까지 데워짐", `셀이 주변보다 ${peak.toFixed(1)} °C까지 데워졌는데 히터를 끊지 못했어요.`);
+      if (peak < 4.6) return S("pass", "통과 — 위험 전에 차단", `히터를 켠 뒤 ${cut.toFixed(1)}초에 끊었고, 실제 셀은 최고 +${peak.toFixed(2)} °C에서 멈췄어요.`);
+      return S("late", "늦은 차단", `${cut.toFixed(1)}초에 끊었지만 그때 실제 셀은 이미 +${peak.toFixed(2)} °C였어요. 센서가 셀을 제대로 못 느꼈어요.`);
+    }
+    const after = alarms.filter((a) => E !== undefined && a.t >= E);
+    if (ex === "cause") {
+      const seen = this.events.some((e) => E !== undefined && e.t >= E && e.t <= E + 10 && e.text.includes("냉각팬"));
+      if (react !== null && seen && react <= 10) return S("pass", "통과 — 팬 고장을 바로 알아챔", `팬이 멈추고 ${react.toFixed(1)}초 만에 알리고 충전을 멈췄어요. 실제 셀은 최고 +${peak.toFixed(2)} °C.`);
+      if (react !== null && peak < 4.6) return S("partial", "부분 통과 — 원인은 몰랐어요", `셀 온도가 오르고 나서야 팬이 멈춘 지 ${react.toFixed(0)}초 뒤에 멈췄어요. 정비하는 사람은 왜 멈췄는지 몰라요.`);
+      if (react !== null) return S("late", "늦은 정지", `팬이 멈춘 지 ${react.toFixed(0)}초 뒤에야 멈췄고, 실제 셀은 +${peak.toFixed(2)} °C까지 올랐어요.`);
+      return S("miss", "놓침 — 팬이 멈춘 채 계속 충전", `셀이 주변보다 ${peak.toFixed(1)} °C까지 데워졌는데 멈추지 못했어요.`);
+    }
+    if (ex === "fast") {
+      if (react !== null && react <= 5) return S("pass", "통과 — 단락을 바로 끊음", `단락 ${react.toFixed(1)}초 만에 히터를 끊었어요. 실제 셀은 최고 +${peak.toFixed(2)} °C.`);
+      if (react !== null) return S("late", `늦은 차단 — 단락 ${react.toFixed(0)}초 뒤`, `그동안 평소의 약 1.9배 전류가 흘렀어요. 전류가 아니라 온도로 뒤늦게 막았어요. 실제 셀은 +${peak.toFixed(2)} °C까지.`);
+      return S("miss", "놓침 — 단락된 채 계속", `과전류가 끝까지 흘렀고 셀은 +${peak.toFixed(1)} °C까지 데워졌어요.`);
+    }
+    // stop: 충격 · 문
+    const what = this.env.id === "door" ? "문이 열리고" : "충격";
+    if (react !== null && react <= 5) return S("pass", "통과 — 바로 멈춤", this.env.id === "door" ? `문이 열리고 ${react.toFixed(1)}초 만에 정비 모드로 충전을 멈췄어요.` : `충격 ${react.toFixed(1)}초 만에 충전을 멈추고 알렸어요.`);
+    if (after.length && react === null) return S("partial", "알렸지만 충전은 계속", `${eul(after[0].text.replace(/^[^—]*— /, ""))} 알렸지만 충전을 멈추지 않았어요.`);
+    if (react !== null) return S("late", `늦은 정지 — ${react.toFixed(0)}초`, `${what} ${react.toFixed(0)}초 뒤에야 멈췄어요.`);
+    return S("miss", "몰랐어요", this.env.id === "door" ? "사람이 손대는 동안에도 충전이 계속됐어요." : "충격도 기울어짐도 알아채지 못하고 충전을 계속했어요.");
   }
 }
 
-export const defaultPresent = (): PartId[] => PARTS.map((p) => p.id);
+export const defaultPresent = (): PartId[] => ["ds", "ntc", "shunt", "div", "relay", "rgb"];
+export const allParts = (): PartId[] => PARTS.map((p) => p.id);

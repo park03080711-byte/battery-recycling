@@ -9,7 +9,7 @@ const LVC = ["var(--lv0)", "var(--lv1)", "var(--lv2)", "var(--lv3)"];
 const C_FW = "#3b5bdb";
 const C_TRUE = "#172033";
 
-export function SimChart({ samples, duration, th, events }: { samples: Sample[]; duration: number; th: { c: number; w: number; d: number } | null; events: SimEvent[] }) {
+export function SimChart({ samples, duration, th, events, event = null }: { samples: Sample[]; duration: number; th: { c: number; w: number; d: number } | null; events: SimEvent[]; event?: { t: number; label: string } | null }) {
   const [ref, W] = useWidth<HTMLDivElement>(640);
   const [hover, setHover] = useState<number | null>(null);
   const narrow = W < 520;
@@ -125,6 +125,14 @@ export function SimChart({ samples, duration, th, events }: { samples: Sample[];
                 )}
               </g>
             ))}
+          {event && (
+            <g>
+              <line x1={x(event.t)} x2={x(event.t)} y1={m.t - 2} y2={m.t + ih} stroke="#9c36b5" strokeWidth={1.5} strokeDasharray="3 3" />
+              <text x={x(event.t) + 5} y={m.t + 12} className="lab-evt" fill="#7c2593">
+                {event.label}
+              </text>
+            </g>
+          )}
           <path d={line((s) => s.truth)} fill="none" stroke={C_TRUE} strokeWidth={2} strokeDasharray="6 4" strokeLinejoin="round" />
           {hasFw && <path d={line((s) => s.dT)} fill="none" stroke={C_FW} strokeWidth={2.2} strokeLinejoin="round" />}
           {cuts.map((c, i) => (

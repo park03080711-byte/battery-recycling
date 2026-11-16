@@ -3,15 +3,20 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { RigHandle } from "../rig3d/scene";
 import { PARTS, type PartId } from "./catalog";
-import type { Led } from "./engine";
+import type { Led, Site } from "./engine";
 
 /* 가상 실험대의 3D 장면 — LAB 01과 같은 장면에, 고른 부품만 보이고
    히터 달아오름 · LED · 전류 흐름이 계산 결과를 따라간다. */
-export type StageState = { present: PartId[]; level: number; led: Led; heat: number; flow: boolean; cut: boolean };
+export type StageState = { present: PartId[]; level: number; led: Led; heat: number; flow: boolean; cut: boolean; site: Site };
 
 const LED_HEX: Record<Led["color"], number | null> = { g: 0x2fdc5a, y: 0xffd23a, r: 0xff3b30, b: 0x3b82ff, off: null };
 const LED_CSS: Record<Led["color"], string> = { g: "#2fdc5a", y: "#ffd23a", r: "#ff3b30", b: "#3b82ff", off: "transparent" };
-const NAMES: Record<number, string> = { 1: "ESP32 — 판단 · 차단 · 전송", 2: "릴레이 — 히터 차단기", 3: "220 Ω 저항 — 데워지는 셀", 4: "DS18B20 — 셀 표면 온도", 5: "NTC — 주변 온도", 6: "22 Ω 션트 — 히터 전류", 7: "분압 저항 — 버스 전압", 8: "RGB LED — 상태 표시등", 9: "Wi-Fi — PC로 기록 전송" };
+const NAMES: Record<number, string> = {
+  1: "ESP32 — 판단 · 차단 · 전송",
+  3: "220 Ω 저항 — 데워지는 셀",
+  9: "Wi-Fi — PC로 기록 전송",
+  ...Object.fromEntries(PARTS.map((p) => [p.rig, `${p.name} — ${p.role}`])),
+};
 
 export function SimStage({ state, children }: { state: StageState; children?: ReactNode }) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -32,6 +37,7 @@ export function SimStage({ state, children }: { state: StageState; children?: Re
     h.setFlow(s.flow);
     h.setLevel(Math.min(3, Math.max(0, s.level)) as 0 | 1 | 2 | 3);
     h.setLed({ color: LED_HEX[s.led.color], blink: s.led.blink });
+    h.setKit({ fanOn: s.site.fanOn, door: s.site.door, tilt: s.site.tilt, shock: s.site.shock, beep: s.site.beep, dtmodOn: s.site.dtmodOn, pirOut: s.site.pirOut });
   };
 
   const start = async () => {
@@ -40,7 +46,7 @@ export function SimStage({ state, children }: { state: StageState; children?: Re
     try {
       if (!document.createElement("canvas").getContext("webgl2")) throw new Error("no webgl");
       const { createRig } = await import("../rig3d/scene");
-      const h = createRig(canvas.current!);
+      const h = createRig(canvas.current!, { kit: true });
       rig.current = h;
       h.onPick((n) => {
         setPicked(n);
@@ -72,7 +78,7 @@ export function SimStage({ state, children }: { state: StageState; children?: Re
 
   return (
     <div ref={box} className={`sim-stage is-${mode}`}>
-      <img src="/lab/rig3d.webp" width={1600} height={1000} alt="" className="r3-still" decoding="async" />
+      <img src="/lab/sim-still.webp" width={1600} height={1000} alt="" className="r3-still" decoding="async" />
       {mode !== "3d" && <span className="sim-still-led" style={{ background: LED_CSS[state.led.color], boxShadow: state.led.color === "off" ? "none" : `0 0 18px 6px ${LED_CSS[state.led.color]}` }} aria-hidden="true" />}
       <canvas ref={canvas} className="r3-gl" aria-label="가상 실험대 3D 장면. 끌어서 돌리고, 휠이나 두 손가락으로 확대할 수 있습니다. 부품을 누르면 이름이 나옵니다." />
       {children}

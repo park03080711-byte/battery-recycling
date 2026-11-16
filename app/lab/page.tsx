@@ -92,15 +92,15 @@ export default function LabHub() {
                 <dl className="lab-hub-nums">
                   <div>
                     <dt>부품</dt>
-                    <dd>6종</dd>
+                    <dd>16종</dd>
                   </div>
                   <div>
                     <dt>환경</dt>
-                    <dd>3가지</dd>
+                    <dd>7가지</dd>
                   </div>
                   <div>
                     <dt>규칙 카드</dt>
-                    <dd>7장</dd>
+                    <dd>15장</dd>
                   </div>
                 </dl>
                 <span className="go" aria-hidden="true">
