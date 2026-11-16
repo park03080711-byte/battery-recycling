@@ -9,6 +9,14 @@ export type RigHandle = {
   highlight: (n: number | null) => void;
   setFlow: (on: boolean) => void;
   setLevel: (lv: 0 | 1 | 2 | 3) => void;
+  /** 모의실험용: 부품(과 그 부품 선)을 보이거나 숨김 */
+  setPresent: (n: number, on: boolean) => void;
+  /** 모의실험용: DS18B20 신호선이 빠진 모습 */
+  setCut: (on: boolean) => void;
+  /** 모의실험용: 히터 달아오름 0~1 (null이면 전류 흐름에 맞춰 깜빡임) */
+  setHeat: (k: number | null) => void;
+  /** 모의실험용: LED 색 · 깜빡임을 직접 정함 (null이면 단계 색) */
+  setLed: (s: { color: number | null; blink: "none" | "fast" | "slow" } | null) => void;
   reset: () => void;
   /** 번호 표식의 화면 위치(0~1) */
   marks: () => { n: number; x: number; y: number; hidden: boolean }[];
@@ -491,6 +499,23 @@ export function createRig(canvas: HTMLCanvasElement): RigHandle {
 
   /* ── 점퍼선: 둥근 모서리 경로 ── */
   const plug = mat(0x1d1f23);
+  /** 선을 부품별 묶음에 담는다 (모의실험에서 부품을 빼면 선도 같이 숨김) */
+  const wireGroups = new Map<string, THREE.Group>();
+  let owner: THREE.Group | null = null;
+  const own = <T>(key: string, fn: () => T): T => {
+    let g = wireGroups.get(key);
+    if (!g) {
+      g = new THREE.Group();
+      scene.add(g);
+      wireGroups.set(key, g);
+    }
+    const prev = owner;
+    owner = g;
+    const r = fn();
+    owner = prev;
+    return r;
+  };
+  const put = (o: THREE.Object3D) => (owner ?? scene).add(o);
   const route = (pts: THREE.Vector3[], color: number, r = 0.28, rad = 0.055) => {
     const path = new THREE.CurvePath<THREE.Vector3>();
     let prev = pts[0];
@@ -504,14 +529,14 @@ export function createRig(canvas: HTMLCanvasElement): RigHandle {
     }
     path.add(new THREE.LineCurve3(prev, pts[pts.length - 1]));
     const segs = Math.max(24, Math.round(path.getLength() * 10));
-    scene.add(mesh(new THREE.TubeGeometry(path as unknown as THREE.Curve<THREE.Vector3>, segs, rad, 8), mat(color, { roughness: 0.45 })));
+    put(mesh(new THREE.TubeGeometry(path as unknown as THREE.Curve<THREE.Vector3>, segs, rad, 8), mat(color, { roughness: 0.45 })));
     return path;
   };
   const ends = (...ps: THREE.Vector3[]) =>
     ps.forEach((p) => {
       const c = box(0.2, 0.42, 0.2, plug);
       at(c, p.x, p.y + 0.24, p.z);
-      scene.add(c);
+      put(c);
     });
   const H = (c: number, r: string | number, dy = 0) => hole(c, r).setY(BB_TOP + dy);
   const AIR = BB_TOP + 1.05; // ESP에서 브레드보드로 건너가는 높이
@@ -541,50 +566,62 @@ export function createRig(canvas: HTMLCanvasElement): RigHandle {
   const w5v = straight(espPin.L5V, H(37, RAIL.bot5v), WIRE.red);
   const wGnd = straight(espPin.LGND, H(31, RAIL.botGnd), WIRE.black);
   straight(espPin.L3V3, H(19, RAIL.top3v3), WIRE.orange, AIR + 0.25);
-  straight(espPin.L36, H(21, "e"), WIRE.gray, AIR + 0.2);
-  straight(espPin.L32, H(25, "e"), WIRE.blue, AIR + 0.2);
-  straight(espPin.L33, H(26, "g"), WIRE.green);
-  straight(espPin.L25, H(27, "j"), WIRE.red, AIR - 0.3);
-  straight(espPin.L26, H(28, "j"), WIRE.green, AIR - 0.3);
-  straight(espPin.L27, H(29, "j"), WIRE.blue, AIR - 0.3);
-  straight(espPin.L13, H(33, "e"), WIRE.white, AIR + 0.2);
+  own("p5", () => straight(espPin.L36, H(21, "e"), WIRE.gray, AIR + 0.2));
+  own("p6", () => straight(espPin.L32, H(25, "e"), WIRE.blue, AIR + 0.2));
+  own("p7", () => straight(espPin.L33, H(26, "g"), WIRE.green));
+  own("p8", () => {
+    straight(espPin.L25, H(27, "j"), WIRE.red, AIR - 0.3);
+    straight(espPin.L26, H(28, "j"), WIRE.green, AIR - 0.3);
+    straight(espPin.L27, H(29, "j"), WIRE.blue, AIR - 0.3);
+  });
+  own("p4sig", () => straight(espPin.L13, H(33, "e"), WIRE.white, AIR + 0.2));
   // 보드 위 짧은 선
   const wBridge = flat([H(3, RAIL.botGnd), H(3, 0), H(3, RAIL.topGnd)], WIRE.black);
-  flat([H(25, "b"), H(50, "b")], WIRE.blue); // GPIO32 → A점(50열)
+  own("p6", () => flat([H(25, "b"), H(50, "b")], WIRE.blue)); // GPIO32 → A점(50열)
   const wShuntGnd = flat([H(56, "a"), H(56, -2.0), H(57, -2.0), H(57, RAIL.topGnd)], WIRE.black);
-  flat([H(20, "j"), H(21, RAIL.bot5v)], WIRE.red); // 분압 위
-  flat([H(32, "j"), H(33, RAIL.botGnd)], WIRE.black); // 분압 아래
-  flat([H(30, "j"), H(30, RAIL.botGnd)], WIRE.black); // RGB −
+  own("p7", () => {
+    flat([H(20, "j"), H(21, RAIL.bot5v)], WIRE.red); // 분압 위
+    flat([H(32, "j"), H(33, RAIL.botGnd)], WIRE.black); // 분압 아래
+  });
+  own("p8", () => flat([H(30, "j"), H(30, RAIL.botGnd)], WIRE.black)); // RGB −
   // 브레드보드 뒤 모듈
-  fromBack(ntcPin.S, new THREE.Vector3(0, 0, 1), -3.0, H(21, "a"), WIRE.gray);
-  fromBack(ntcPin["+"], new THREE.Vector3(0, 0, 1), -3.25, H(21, RAIL.top3v3), WIRE.orange);
-  fromBack(ntcPin["-"], new THREE.Vector3(0, 0, 1), -3.5, H(19, RAIL.topGnd), WIRE.black);
-  fromBack(dsPin.Y, new THREE.Vector3(-1, 0, 0), -3.0, H(33, "a"), WIRE.white);
-  fromBack(dsPin.R, new THREE.Vector3(-1, 0, 0), -3.25, H(40, RAIL.top3v3), WIRE.orange);
-  fromBack(dsPin.G, new THREE.Vector3(-1, 0, 0), -3.5, H(41, RAIL.topGnd), WIRE.black);
+  own("p5", () => {
+    fromBack(ntcPin.S, new THREE.Vector3(0, 0, 1), -3.0, H(21, "a"), WIRE.gray);
+    fromBack(ntcPin["+"], new THREE.Vector3(0, 0, 1), -3.25, H(21, RAIL.top3v3), WIRE.orange);
+    fromBack(ntcPin["-"], new THREE.Vector3(0, 0, 1), -3.5, H(19, RAIL.topGnd), WIRE.black);
+  });
+  own("p4sig", () => fromBack(dsPin.Y, new THREE.Vector3(-1, 0, 0), -3.0, H(33, "a"), WIRE.white));
+  own("p4", () => {
+    fromBack(dsPin.R, new THREE.Vector3(-1, 0, 0), -3.25, H(40, RAIL.top3v3), WIRE.orange);
+    fromBack(dsPin.G, new THREE.Vector3(-1, 0, 0), -3.5, H(41, RAIL.topGnd), WIRE.black);
+  });
   // 릴레이
   const relayIn = (tip: THREE.Vector3, h: THREE.Vector3, color: number, air: number) => {
     const pts = [tip, tip.clone().add(new THREE.Vector3(0, 0, 0.35)), new THREE.Vector3(tip.x, air, tip.z + 0.6), new THREE.Vector3(h.x + 0.4, air, h.z), h.clone().setY(BB_TOP + 0.45), h.clone().setY(BB_TOP + 0.02)];
     ends(h);
     return route(pts, color);
   };
-  relayIn(relPin["+"], H(61, RAIL.bot5v), WIRE.red, BB_TOP + 0.7);
-  relayIn(relPin["-"], H(60, RAIL.botGnd), WIRE.black, BB_TOP + 0.5);
+  own("p2", () => {
+    relayIn(relPin["+"], H(61, RAIL.bot5v), WIRE.red, BB_TOP + 0.7);
+    relayIn(relPin["-"], H(60, RAIL.botGnd), WIRE.black, BB_TOP + 0.5);
+  });
   const termOut = (tip: THREE.Vector3, h: THREE.Vector3, color: number, air: number) => {
     const pts = [tip, tip.clone().add(new THREE.Vector3(-0.35, 0, 0)), new THREE.Vector3(tip.x - 0.6, air, tip.z), new THREE.Vector3(h.x + 0.5, air, h.z), h.clone().setY(BB_TOP + 0.45), h.clone().setY(BB_TOP + 0.02)];
     ends(h);
     return route(pts, color);
   };
-  const wCom = termOut(relPin.COM, H(58, RAIL.bot5v), WIRE.red, BB_TOP + 0.9);
-  const wNo = termOut(relPin.NO, H(44, "e"), WIRE.yellow, BB_TOP + 1.2);
+  const wCom = own("p2", () => termOut(relPin.COM, H(58, RAIL.bot5v), WIRE.red, BB_TOP + 0.9));
+  const wNo = own("p2", () => termOut(relPin.NO, H(44, "e"), WIRE.yellow, BB_TOP + 1.2));
   // GPIO22: ESP 바깥 줄 → ESP 뒤 통로 → 오른쪽 통로 → 릴레이 S
   {
     const p = espPin.R22,
       t = relPin.S;
     const y = 2.45;
     const pts = [p.clone().setY(p.y + 0.05), p.clone().setY(y), new THREE.Vector3(p.x, y, 3.5), new THREE.Vector3(t.x, y, 3.5), new THREE.Vector3(t.x, y, t.z + 0.9), new THREE.Vector3(t.x, 0.2, t.z + 0.55), t];
-    ends(p);
-    route(pts, WIRE.purple, 0.35);
+    own("p2", () => {
+      ends(p);
+      route(pts, WIRE.purple, 0.35);
+    });
   }
 
   /* ── 전류 흐름: 5V → 레일 → 릴레이 COM → NO → 220 Ω → A → 22 Ω → GND ── */
@@ -625,6 +662,10 @@ export function createRig(canvas: HTMLCanvasElement): RigHandle {
   /* ── 상태 ── */
   let flowOn = true;
   let level: 0 | 1 | 2 | 3 = 0;
+  let heatK: number | null = null;
+  let cut = false;
+  let ledOv: { color: number | null; blink: "none" | "fast" | "slow" } | null = null;
+  let ledOn = true;
   let hi: number | null = null;
   const baseEmissive = new Map<THREE.MeshStandardMaterial, { c: THREE.Color; i: number }>();
   const setHighlight = (n: number | null) => {
@@ -711,13 +752,22 @@ export function createRig(canvas: HTMLCanvasElement): RigHandle {
   function animate(t: number) {
     drawFlow(t);
     const hm = heaterBody.material as THREE.MeshStandardMaterial;
-    const k = flowOn ? 0.55 + 0.25 * Math.sin(t * 2.2) * (reduce ? 0 : 1) : 0;
     hm.emissive.set(0xff7a1a);
-    hm.emissiveIntensity = k;
-    glowMat.opacity = flowOn ? 0.55 + 0.25 * k : 0;
-    const blink = level === 3 && !reduce ? Math.floor(t / 0.15) % 2 === 0 : true;
-    ledMat.emissiveIntensity = blink ? 1.6 : 0.05;
-    ledLight.intensity = blink ? 2.2 : 0;
+    if (heatK === null) {
+      const k = flowOn ? 0.55 + 0.25 * Math.sin(t * 2.2) * (reduce ? 0 : 1) : 0;
+      hm.emissiveIntensity = k;
+      glowMat.opacity = flowOn ? 0.55 + 0.25 * k : 0;
+    } else {
+      hm.emissiveIntensity = heatK * 1.1;
+      glowMat.opacity = Math.min(1, heatK * 1.15);
+      glow.scale.set(2.4 + heatK * 1.6, 1.4 + heatK * 0.9, 1);
+    }
+    const mode = ledOv ? ledOv.blink : level === 3 ? "fast" : "none";
+    const blink = reduce || mode === "none" ? true : mode === "fast" ? Math.floor(t / 0.15) % 2 === 0 : Math.floor(t / 0.5) % 2 === 0;
+    const lit = ledOn && blink && !(ledOv && ledOv.color === null);
+    ledMat.emissiveIntensity = lit ? 1.6 : 0.02;
+    ledMat.opacity = lit ? 0.92 : 0.55;
+    ledLight.intensity = lit ? 2.2 : 0;
     wifi.children.forEach((c) => {
       const ring = c.userData.ring as number | undefined;
       if (ring === undefined) return;
@@ -757,9 +807,36 @@ export function createRig(canvas: HTMLCanvasElement): RigHandle {
     },
     setLevel(lv) {
       level = lv;
+      if (ledOv) return;
       ledMat.color.set(LED[lv]);
       ledMat.emissive.set(LED[lv]);
       ledLight.color.set(LED[lv]);
+    },
+    setPresent(n, on) {
+      const p = parts.get(n);
+      if (p) p.group.visible = on;
+      const w = wireGroups.get(`p${n}`);
+      if (w) w.visible = on;
+      if (n === 4) {
+        const s = wireGroups.get("p4sig");
+        if (s) s.visible = on && !cut;
+      }
+      if (n === 8) ledOn = on;
+    },
+    setCut(on) {
+      cut = on;
+      const s = wireGroups.get("p4sig");
+      if (s) s.visible = !on && (parts.get(4)?.group.visible ?? true);
+    },
+    setHeat(k) {
+      heatK = k === null ? null : Math.max(0, Math.min(1, k));
+    },
+    setLed(st) {
+      ledOv = st;
+      const c = st ? (st.color ?? 0x3a3d44) : LED[level];
+      ledMat.color.set(c);
+      ledMat.emissive.set(c);
+      ledLight.color.set(c);
     },
     reset() {
       camera.position.copy(HOME.pos);
