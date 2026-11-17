@@ -4,6 +4,8 @@ import { Fragment, useEffect, useMemo, useReducer, useRef, useState } from "reac
 import { LV_NAME } from "../useWidth";
 import { ADC1, ADC2, CARDS, ENVS, EXPECT_LABEL, FLASH, GPIOS, INPUT_ONLY, PARTS, LATER, defaultCards, defaultParams, defaultPins, type CardId, type EnvId, type PartId, type PinIssue } from "./catalog";
 import { SEED, Sim, defaultPresent, allParts, type Config, type Score } from "./engine";
+import { PcPanel } from "./PcPanel";
+import { SimTests } from "./SimTests";
 import { genCode } from "./codegen";
 import { SimStage } from "./SimStage";
 import { SimChart } from "./SimChart";
@@ -62,6 +64,53 @@ export function SimLab() {
     reset(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cfg]);
+
+  /* ── 설정 공유 링크: 기본과 다른 것만 주소(#c=…)에 담는다 ── */
+  const [fromLink, setFromLink] = useState(false);
+  const [copied, setCopied] = useState<"" | "ok" | "manual">("");
+  const loaded = useRef(false);
+  useEffect(() => {
+    const d = decodeCfg(window.location.hash);
+    if (d) {
+      if (d.env) setEnv(d.env);
+      if (d.variant) setVariant(d.variant);
+      if (d.present) setPresent(d.present);
+      if (d.pins) setPins((c) => ({ ...c, ...d.pins }));
+      if (d.cards) setCards((c) => ({ ...c, ...d.cards }));
+      if (d.params) setParams((c) => ({ ...c, ...d.params }));
+      setFromLink(true);
+    }
+    loaded.current = true;
+  }, []);
+  useEffect(() => {
+    if (!loaded.current) return;
+    const code = encodeCfg(cfg);
+    const url = window.location.pathname + window.location.search + (code ? `#c=${code}` : "");
+    try {
+      window.history.replaceState(window.history.state, "", url);
+    } catch {
+      /* 주소를 못 바꿔도 실험대는 그대로 */
+    }
+  }, [cfg]);
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied("ok");
+    } catch {
+      setCopied("manual");
+    }
+    setTimeout(() => setCopied(""), 4000);
+  };
+  const resetAll = () => {
+    setEnv("heat");
+    setVariant("cut");
+    setPresent(defaultPresent());
+    setPins(defaultPins());
+    setCards(defaultCards());
+    setParams(defaultParams());
+    setFromLink(false);
+  };
+  const isDefault = encodeCfg(cfg) === "";
 
   const record = () => {
     if (recorded.current) return;
@@ -248,6 +297,16 @@ export function SimLab() {
             {tab === "rules" && <RulesPane present={present} cards={cards} setCards={setCards} params={params} setParams={setParams} />}
             {tab === "code" && <CodePane present={present} pins={pins} cards={cards} params={params} />}
           </div>
+          <div className="sim-side-foot">
+            {fromLink && <span className="sim-from-link">공유받은 설정으로 열었어요</span>}
+            {copied === "manual" && <input className="sim-link-box" readOnly value={typeof window === "undefined" ? "" : window.location.href} onFocus={(e) => e.currentTarget.select()} autoFocus aria-label="이 설정의 주소 — 직접 복사하세요" />}
+            <button type="button" className="lab-btn sm" onClick={copyLink}>
+              {copied === "ok" ? "복사했어요" : "설정 링크 복사"}
+            </button>
+            <button type="button" className="lab-btn sm" onClick={resetAll} disabled={isDefault}>
+              기본 설정으로
+            </button>
+          </div>
         </div>
       </div>
 
@@ -260,6 +319,8 @@ export function SimLab() {
         </figure>
         <Serial lines={s.log} />
       </div>
+
+      <PcPanel s={s} />
 
       <section className="sim-result" aria-labelledby="sim-result-h">
         <h3 id="sim-result-h" className="sr-only">
@@ -284,8 +345,60 @@ export function SimLab() {
         )}
         {runs.length > 0 && <Compare runs={runs} clear={() => setRuns([])} />}
       </section>
+
+      <SimTests cfg={cfg} />
     </div>
   );
+}
+
+/* ── 설정 ↔ 주소 ── */
+type Shared = { env?: EnvId; variant?: string; present?: PartId[]; pins?: Record<string, number>; cards?: Partial<Record<CardId, boolean>>; params?: Record<string, number> };
+function encodeCfg(cfg: Config) {
+  const d: Record<string, unknown> = {};
+  if (cfg.env !== "heat") d.e = cfg.env;
+  if (cfg.env === "sensor" && cfg.variant !== "cut") d.v = cfg.variant;
+  const dp = defaultPresent();
+  if (cfg.present.length !== dp.length || cfg.present.some((p) => !dp.includes(p))) d.p = PARTS.filter((p) => cfg.present.includes(p.id)).map((p) => p.id);
+  const pins0 = defaultPins(),
+    cards0 = defaultCards(),
+    par0 = defaultParams();
+  const pin = Object.fromEntries(Object.entries(cfg.pins).filter(([k, v]) => v !== pins0[k]));
+  const c = Object.fromEntries(Object.entries(cfg.cards).filter(([k, v]) => v !== cards0[k as CardId]).map(([k, v]) => [k, v ? 1 : 0]));
+  const q = Object.fromEntries(Object.entries(cfg.params).filter(([k, v]) => Math.abs(v - par0[k]) > 1e-9));
+  if (Object.keys(pin).length) d.g = pin;
+  if (Object.keys(c).length) d.c = c;
+  if (Object.keys(q).length) d.q = q;
+  if (!Object.keys(d).length) return "";
+  const b = btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+  return b.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function decodeCfg(hash: string): Shared | null {
+  const m = /^#c=([A-Za-z0-9_-]+)$/.exec(hash);
+  if (!m) return null;
+  try {
+    const raw = JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g, "+").replace(/_/g, "/")))));
+    const out: Shared = {};
+    if (ENVS.some((e) => e.id === raw.e)) out.env = raw.e;
+    if (raw.v === "cut" || raw.v === "contact") out.variant = raw.v;
+    if (Array.isArray(raw.p)) out.present = PARTS.filter((p) => raw.p.includes(p.id)).map((p) => p.id);
+    const pins0 = defaultPins(),
+      par0 = defaultParams();
+    if (raw.g && typeof raw.g === "object") out.pins = Object.fromEntries(Object.entries(raw.g).filter(([k, v]) => k in pins0 && GPIOS.includes(Number(v))).map(([k, v]) => [k, Number(v)]));
+    if (raw.c && typeof raw.c === "object") out.cards = Object.fromEntries(Object.entries(raw.c).filter(([k]) => CARDS.some((c) => c.id === k)).map(([k, v]) => [k, !!v]));
+    if (raw.q && typeof raw.q === "object")
+      out.params = Object.fromEntries(
+        Object.entries(raw.q)
+          .filter(([k, v]) => k in par0 && Number.isFinite(Number(v)))
+          .map(([k, v]) => {
+            const [cid, pk] = k.split(".");
+            const pd = CARDS.find((c) => c.id === cid)!.params.find((p) => p.key === pk)!;
+            return [k, Math.min(pd.max, Math.max(pd.min, Number(v)))];
+          })
+      );
+    return out;
+  } catch {
+    return null;
+  }
 }
 
 /* ── 설정 요약 (비교표용) ── */
@@ -318,7 +431,7 @@ function EnvPane({ env, setEnv, variant, setVariant }: { env: EnvId; setEnv: (e:
       <p className="sim-hint">어떤 상황에서 시험할지 고르세요. 바꾸면 처음부터 다시 시작해요.</p>
       {ENVS.map((e, i) => (
         <Fragment key={e.id}>
-        {(i === 0 || ENVS[i - 1].group !== e.group) && <p className="sim-group-h">{e.group === "temp" ? "온도 — LAB 01 실측 부품으로" : "현장 — 키트 부품이 필요해요"}</p>}
+        {(i === 0 || ENVS[i - 1].group !== e.group) && <p className="sim-group-h">{{ temp: "온도 — LAB 01 실측 부품으로", site: "현장 — 키트 부품이 필요해요", comm: "관제 통신 — LAB 01 통신 실험 기반" }[e.group]}</p>}
         <div className={`sim-env${env === e.id ? " on" : ""}`}>
           <button type="button" className="sim-env-btn" aria-pressed={env === e.id} onClick={() => setEnv(e.id)}>
             <span className="sim-env-h">
@@ -494,7 +607,7 @@ function RulesPane({
         const changed = c.params.some((p) => Math.abs(params[`${c.id}.${p.key}`] - dpar[`${c.id}.${p.key}`]) > 1e-9);
         return (
           <Fragment key={c.id}>
-          {(idx === 0 || CARDS[idx - 1].group !== c.group) && <p className="sim-group-h">{{ temp: "온도", elec: "전기", site: "현장 (키트 부품)" }[c.group]}</p>}
+          {(idx === 0 || CARDS[idx - 1].group !== c.group) && <p className="sim-group-h">{{ temp: "온도", elec: "전기", site: "현장 (키트 부품)", comm: "관제 통신" }[c.group]}</p>}
           <div className={`sim-card${on ? " on" : ""}${usable ? "" : " na"}${c.combo ? " combo" : ""}`}>
             <div className="sim-card-h">
               <button type="button" className="sim-switch" role="switch" aria-checked={on} aria-label={`${c.name} 켜기`} disabled={!usable} onClick={() => setCards((cur) => ({ ...cur, [c.id]: !cur[c.id] }))}>
@@ -686,6 +799,12 @@ function ScoreCard({ score, expect, fromHeater, lab01, eventLabel }: { score: Sc
         <div>
           <dt>잘못된 경보</dt>
           <dd>{score.falseAlarms}번</dd>
+        </div>
+        <div>
+          <dt>PC 기록 도착</dt>
+          <dd>
+            {score.comm.recv} / {score.comm.made}
+          </dd>
         </div>
         <div>
           <dt>부품 · 핀</dt>

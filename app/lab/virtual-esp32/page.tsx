@@ -42,7 +42,7 @@ export default function VirtualEspPage() {
                 <span className="rc-chip">
                   <b>LAB 02</b> 모의실험
                 </span>
-                <span className="rc-meta-sub">1차 공개 · 부품 16종 · 환경 7가지 · 규칙 카드 15장</span>
+                <span className="rc-meta-sub">부품 16종 · 환경 8가지 · 규칙 카드 16장 · 시험 도구</span>
               </p>
               <h1>가상 ESP32 실험대</h1>
               <p className="rc-tag">부품을 바꿔 꽂고, 환경을 바꾸고, 판정을 직접 돌려 본다</p>
@@ -96,6 +96,13 @@ export default function VirtualEspPage() {
               <li>
                 <b>가상 펌웨어</b>
                 <span>LAB 01 펌웨어의 판정 부분을 그대로 옮겼어요. 0.5초마다 측정 → 평활 → ΔT · 기울기 · 예측 → 4단계 판정 → LED · 릴레이. 시리얼 모니터의 글도 같은 형식이에요.</span>
+              </li>
+              <li>
+                <b>관제 통신</b>
+                <span>
+                  1초마다 PC로 기록을 보내고, 끊기면 버퍼에 쌓았다가 0.1초마다 5개씩 다시 보내요(LAB 01 펌웨어). 지연은 LAB 01 통신 실험의 왕복 지연 7~87 ms에서 뽑아요. 실측에서 밀린 기록 131개가 2.6초 만에 모두 도착했는데, 같은
+                  속도(초당 50개)예요.
+                </span>
               </li>
             </ol>
             <div className="sim-evkey">

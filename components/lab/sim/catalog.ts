@@ -285,11 +285,11 @@ export function checkPins(present: Set<PartId>, pins: Record<string, number>): P
 }
 
 /* ── 환경 ── */
-export type Expect = "trip" | "quiet" | "cause" | "fast" | "stop";
-export type EnvId = "heat" | "room" | "sensor" | "fan" | "short" | "shock" | "door";
+export type Expect = "trip" | "quiet" | "cause" | "fast" | "stop" | "keep";
+export type EnvId = "heat" | "room" | "sensor" | "fan" | "short" | "shock" | "door" | "wifi";
 export type Env = {
   id: EnvId;
-  group: "temp" | "site";
+  group: "temp" | "site" | "comm";
   name: string;
   tag: string;
   story: string;
@@ -405,19 +405,35 @@ export const ENVS: Env[] = [
     event: 70,
     eventLabel: "문 열림",
   },
+  {
+    id: "wifi",
+    group: "comm",
+    name: "Wi-Fi 끊김",
+    tag: "관제 통신 시험 · 실측 기반",
+    story: "셀이 기본 환경처럼 데워지는 중에 40초부터 63초 동안 공유기가 꺼집니다. 위험 판정은 Wi-Fi가 끊긴 사이에 와요. 통신 값은 LAB 01 통신 실험에서 잰 것이에요.",
+    expect: "keep",
+    expectText: "Wi-Fi가 끊겨도 스스로 차단하고, PC로 보낼 기록은 하나도 잃지 않아야 함",
+    duration: 200,
+    heaterAt: 12,
+    load: 1,
+    event: 40,
+    eventLabel: "Wi-Fi 끊김",
+  },
 ];
+/** Wi-Fi 끊김 환경에서 공유기가 꺼져 있는 구간 */
+export const AP_DOWN: [number, number] = [40, 103];
 
-export const EXPECT_LABEL: Record<Expect, string> = { trip: "차단해야 함", quiet: "아무것도 하면 안 됨", cause: "원인 알림 + 정지", fast: "5초 안 차단", stop: "5초 안 충전 정지" };
+export const EXPECT_LABEL: Record<Expect, string> = { trip: "차단해야 함", quiet: "아무것도 하면 안 됨", cause: "원인 알림 + 정지", fast: "5초 안 차단", stop: "5초 안 충전 정지", keep: "차단 + 기록 보존" };
 
 /* ── 규칙 카드 ── */
 export type Param = { key: string; label: string; unit: string; min: number; max: number; step: number; def: number };
-export type CardId = "dt" | "slope" | "eta" | "cur" | "volt" | "fault" | "heatcheck" | "dtsw" | "shock" | "tiltA" | "tiltSw" | "vib" | "door" | "person" | "fan";
+export type CardId = "dt" | "slope" | "eta" | "cur" | "volt" | "fault" | "heatcheck" | "dtsw" | "shock" | "tiltA" | "tiltSw" | "vib" | "door" | "person" | "fan" | "buffer";
 export type Card = {
   id: CardId;
   name: string;
   needs: PartId[];
   combo?: boolean;
-  group: "temp" | "elec" | "site";
+  group: "temp" | "elec" | "site" | "comm";
   /** 처음에 켜져 있나 */
   on: boolean;
   out: string;
@@ -594,6 +610,19 @@ export const CARDS: Card[] = [
     out: "주의(정비) + 충전 정지",
     text: "사람이 감지되면 정비 모드. 센서가 켠 직후 헛신호를 내므로 처음 몇 초는 무시해요.",
     params: [{ key: "i", label: "켠 뒤 무시", unit: "초", min: 0, max: 90, step: 5, def: 45 }],
+  },
+  {
+    id: "buffer",
+    name: "끊김 대비 버퍼 · 재전송",
+    needs: [],
+    group: "comm",
+    on: true,
+    out: "기록 보존",
+    text: "1초마다 PC로 보내는 기록을, Wi-Fi가 끊긴 동안 메모리에 쌓아 두었다가 다시 연결되면 0.1초마다 정한 개수씩 보내요. 가득 차면 가장 오래된 것부터 버려요. 끄면 끊긴 동안의 기록은 사라져요.",
+    params: [
+      { key: "n", label: "버퍼", unit: "개", min: 10, max: 600, step: 10, def: 600 },
+      { key: "b", label: "재전송", unit: "개/0.1초", min: 1, max: 20, step: 1, def: 5 },
+    ],
   },
 ];
 

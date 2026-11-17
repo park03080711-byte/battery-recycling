@@ -137,6 +137,12 @@ export function genCode(present: PartId[], pins: Record<string, number>, cards: 
     add("if (halt) setHeater(false);  // 정비 · 충격 · 팬: 충전만 멈춤 (잠그지는 않음)", false, false);
   }
   else add("// 릴레이 없음 → 위험을 알아도 히터를 끊을 방법이 없음", true, true);
+  add("");
+  add("// ── 관제 전송 (1초마다 PC로) ──", false, true);
+  if (cards.buffer) {
+    add(`constexpr uint16_t RING_N = ${P("buffer.n")};  // 끊긴 동안 쌓아 둘 기록 수 (1초에 1개 → ${Math.round(P("buffer.n") / 6) / 10}분)`, ch("buffer.n"));
+    add(`// 다시 연결되면 0.1초마다 ${P("buffer.b")}개씩 재전송 (초당 ${P("buffer.b") * 10}개)`, ch("buffer.b"), true);
+  } else add("// 버퍼 없음 → Wi-Fi가 끊긴 동안 만든 기록은 그대로 버려짐", true, true);
   if (has("buzz")) add("digitalWrite(PIN_BUZZER, st.level >= LV_WARNING && blinkPhase(st.level));  // 경고 느리게 · 위험 빠르게", true);
   if (has("btn")) add("if (pressed(PIN_BUTTON)) handleLine(\"x\");  // 현장 버튼 = 시리얼 x", true);
   return L;

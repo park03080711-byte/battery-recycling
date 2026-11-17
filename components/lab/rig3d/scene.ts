@@ -19,6 +19,8 @@ export type RigHandle = {
   setLed: (s: { color: number | null; blink: "none" | "fast" | "slow" } | null) => void;
   /** 모의실험용: 키트 부품 상태 (kit 장면에서만) */
   setKit: (k: KitState) => void;
+  /** 모의실험용: Wi-Fi 연결 (끊기면 물결이 회색으로 멈춤) */
+  setWifi: (on: boolean) => void;
   reset: () => void;
   /** 번호 표식의 화면 위치(0~1) */
   marks: () => { n: number; x: number; y: number; hidden: boolean }[];
@@ -900,6 +902,7 @@ export function createRig(canvas: HTMLCanvasElement, opts: { kit?: boolean } = {
   scene.children.filter((o) => !(o instanceof THREE.Light) && o !== ground).forEach((o) => root.add(o));
   scene.add(root);
   let kitSt: KitState | null = null;
+  let wifiOn = true;
 
   /* ── 상태 ── */
   let flowOn = true;
@@ -1011,10 +1014,12 @@ export function createRig(canvas: HTMLCanvasElement, opts: { kit?: boolean } = {
     ledMat.opacity = lit ? 0.92 : 0.55;
     ledLight.intensity = lit ? 2.2 : 0;
     wifi.children.forEach((c) => {
+      const m = (c as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      m.color.set(wifiOn ? 0x1a9e90 : 0xa3aab6);
+      m.opacity = wifiOn ? 0.85 : 0.5;
       const ring = c.userData.ring as number | undefined;
       if (ring === undefined) return;
-      ((c as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.85;
-      c.visible = reduce ? true : (Math.floor(t * 2.5) % 4) >= ring;
+      c.visible = !wifiOn ? ring === 0 : reduce ? true : Math.floor(t * 2.5) % 4 >= ring;
     });
     wifi.lookAt(camera.position.x, wifi.position.y, camera.position.z);
     if (kitSt) {
@@ -1131,6 +1136,9 @@ export function createRig(canvas: HTMLCanvasElement, opts: { kit?: boolean } = {
     },
     setKit(k) {
       kitSt = k;
+    },
+    setWifi(on) {
+      wifiOn = on;
     },
     onFrame(cb) {
       frameCb = cb;
