@@ -5,7 +5,11 @@
    셀 발열은 LAB 01 판정 실험 2회차 기록에 맞춘 1차 모델: 최종 상승 K = 6.5 °C, 가열 시간상수 66 s.
    (펌웨어의 지수 평활까지 거친 값이 기록과 맞도록 맞춤. 잡음 40가지로 돌린 평균이 주의 13.8 · 경고 26.4 · 위험 64.7초, 실측은 11 · 27 · 65초)
    냉각 시간상수 220 s는 발열 실험 1 · 3회 평균. 키트 부품 값은 데이터시트 기반. */
-import { CARDS, ENVS, PARTS, checkPins, type CardId, type EnvId, type PartId, type PinIssue } from "./catalog";
+import { AP_DOWN, CARDS, ENVS, PARTS, checkPins, type CardId, type EnvId, type PartId, type PinIssue } from "./catalog";
+import { comm as commRows } from "../../../data/lab/essData";
+
+/** LAB 01 통신 실험에서 잰 왕복 지연 (ms) — 여기서 하나씩 뽑아 쓴다 */
+const RTT = commRows.filter((r) => r[4] > 0).map((r) => r[4]);
 
 export const MODEL = {
   K: 6.5,
@@ -57,6 +61,10 @@ export type Sample = {
 export type Led = { color: "g" | "y" | "r" | "b" | "off"; blink: "none" | "fast" | "slow" };
 export type SimEvent = { t: number; kind: "level" | "cut" | "fault" | "heater" | "boot" | "cmd"; text: string; level?: number; bogus?: boolean };
 
+/** PC로 보내는 기록 한 줄 (1초마다) */
+export type Packet = { seq: number; t: number; level: number; dT: number | null; heat: boolean; sent: number | null; arrive: number | null; late: boolean; lost: boolean };
+export type CommState = { ap: boolean; link: boolean; backlog: number; made: number; recv: number; lost: number; pending: number; pc: Packet | null; catchUp: number | null; rttMed: number | null };
+
 export type Score = {
   verdict: "pass" | "partial" | "late" | "miss" | "false" | "boot" | "idle";
   title: string;
@@ -69,6 +77,7 @@ export type Score = {
   falseAlarms: number;
   parts: number;
   pinsUsed: number;
+  comm: { made: number; recv: number; lost: number; catchUp: number | null };
 };
 
 /** 3D · 화면에 보여 줄 현장 상태 */
@@ -84,6 +93,7 @@ export type Site = {
   dhtRH: number | null;
   beep: "none" | "slow" | "fast";
   maint: boolean;
+  wifi: boolean;
 };
 
 /** 받침에 맞는 조사: 로/으로, 을/를 */
@@ -112,6 +122,8 @@ export class Sim {
   readonly has: (p: PartId) => boolean;
   readonly ok: (p: PartId) => boolean;
   private rand: () => number;
+  /** 통신용 난수는 따로 — 센서 잡음 순서를 바꾸지 않도록 */
+  private rand2: () => number;
   private gauss = () => {
     const u = Math.max(1e-9, this.rand()),
       v = this.rand();
@@ -195,6 +207,16 @@ export class Sim {
   private tiltSince = 0;
   private shockPeak = 0;
 
+  /* ── 관제 통신 (LAB 01 ess_stage3 그대로: 1초마다 기록 · 끊기면 링버퍼 · 0.1초마다 b개 재전송 · 10초마다 재연결) ── */
+  readonly packets: Packet[] = [];
+  private ring: Packet[] = [];
+  ap = true;
+  link = true;
+  private lastTry = 0;
+  private reconnectAt = 0;
+  private backlogStart = 0;
+  catchUp: number | null = null;
+
   readonly samples: Sample[] = [];
   readonly events: SimEvent[] = [];
   readonly log: string[] = [];
@@ -210,6 +232,7 @@ export class Sim {
     this.ok = (p) => present.has(p) && !broken.has(p);
     this.bootFail = this.issues.some((i) => i.bootFail);
     this.rand = rng(cfg.seed ?? SEED);
+    this.rand2 = rng((cfg.seed ?? SEED) * 7919 + 1);
     this.boot();
   }
 
@@ -603,7 +626,71 @@ export class Sim {
       dhtRH: this.ok("dht") && !isNaN(this.dhtRH) ? this.dhtRH : null,
       beep,
       maint: this.maint,
+      wifi: this.link && !this.bootFail,
     };
+  }
+
+  private send(p: Packet, at: number, late: boolean) {
+    p.sent = at;
+    p.arrive = at + RTT[Math.floor(this.rand2() * RTT.length)] / 2000;
+    p.late = late;
+  }
+  private commTick() {
+    const [a, b] = AP_DOWN;
+    this.ap = !(this.env.id === "wifi" && this.t >= a && this.t < b);
+    if (!this.ap && this.link) {
+      this.link = false;
+      this.lastTry = this.t;
+      this.say(`# Wi-Fi 끊김 (밀린 패킷은 버퍼에 저장 중: ${this.ring.length}개)`);
+    } else if (!this.link && this.t - this.lastTry >= 10 - 1e-6) {
+      this.lastTry = this.t;
+      if (this.ap) {
+        this.link = true;
+        this.reconnectAt = this.t;
+        this.backlogStart = this.ring.length;
+        this.say(`# Wi-Fi 연결: IP 192.168.0.23, 신호 -58 dBm (끊긴 지 ${(this.t - a).toFixed(0)}초, 밀린 기록 ${this.ring.length}개)`);
+      }
+    }
+    const buf = this.card("buffer");
+    // 1초마다 기록 한 줄
+    if (this.t >= 9 && Math.abs(this.t - Math.round(this.t)) < 1e-6) {
+      const pk: Packet = { seq: this.packets.length, t: this.t, level: this.level, dT: this.has("ds") && this.calibrated ? this.dT : null, heat: this.power, sent: null, arrive: null, late: false, lost: false };
+      this.packets.push(pk);
+      if (this.link) this.send(pk, this.t, false);
+      else if (buf) {
+        this.ring.push(pk);
+        if (this.ring.length > this.P("buffer.n")) {
+          this.ring.shift()!.lost = true;
+        }
+      } else pk.lost = true;
+    }
+    // 밀린 것 재전송: 0.1초마다 b개
+    if (this.link && this.ring.length) {
+      const per = this.P("buffer.b");
+      const k = Math.min(per * 5, this.ring.length);
+      for (let i = 0; i < k; i++) this.send(this.ring.shift()!, this.t + Math.floor(i / per) * 0.1, true);
+      if (!this.ring.length) {
+        const last = this.packets.filter((p) => p.late).reduce((m, p) => Math.max(m, p.arrive ?? 0), 0);
+        this.catchUp = last - this.reconnectAt;
+        this.say(`# 밀린 패킷 전송 완료 (${this.backlogStart}개, 다시 연결 뒤 ${this.catchUp.toFixed(1)}초)`);
+      }
+    }
+  }
+
+  get comm(): CommState {
+    let recv = 0,
+      lost = 0,
+      pending = 0;
+    let pc: Packet | null = null;
+    for (const p of this.packets) {
+      if (p.lost) lost++;
+      else if (p.arrive !== null && p.arrive <= this.t) {
+        recv++;
+        if (!pc || p.t > pc.t) pc = p;
+      } else pending++;
+    }
+    const r = this.packets.filter((p) => p.arrive !== null && !p.late).map((p) => (p.arrive! - p.sent!) * 2000).sort((x, y) => x - y);
+    return { ap: this.ap, link: this.link, backlog: this.ring.length, made: this.packets.length, recv, lost, pending, pc, catchUp: this.catchUp, rttMed: r.length ? r[Math.floor(r.length / 2)] : null };
   }
 
   /** 0.5초 진행 */
@@ -614,7 +701,10 @@ export class Sim {
     }
     if (this.env.heaterAt !== null && Math.abs(this.t - this.env.heaterAt) < 1e-6) this.command("h");
     if (this.env.event !== undefined && Math.abs(this.t - this.env.event) < 1e-6) this.ev("heater", `사건: ${this.env.eventLabel}`);
-    if (!this.bootFail) this.tick();
+    if (!this.bootFail) {
+      this.tick();
+      this.commTick();
+    }
     const s: Sample = {
       t: this.t,
       dT: this.has("ds") && this.calibrated && !this.bootFail ? this.dT : null,
@@ -670,7 +760,10 @@ export class Sim {
     const cut = cutAbs === null ? null : cutAbs - h0;
     const afterAbs = E === undefined ? null : offAt(E);
     const react = afterAbs === null || E === undefined ? null : afterAbs - E;
-    const base = { parts, pinsUsed, firstAlarm, cut, react, peakTruth: peak, falseAlarms: 0 };
+    const cm = this.comm;
+    // 끝나는 순간 보내는 중인 것은 도착한 것으로 (보내지도 못한 것만 잃음)
+    const unsent = this.packets.filter((p) => !p.lost && p.sent === null).length;
+    const base = { parts, pinsUsed, firstAlarm, cut, react, peakTruth: peak, falseAlarms: 0, comm: { made: cm.made, recv: cm.made - cm.lost - unsent, lost: cm.lost + unsent, catchUp: cm.catchUp } };
     const S = (verdict: Score["verdict"], title: string, detail: string, extra: Partial<Score> = {}): Score => ({ ...base, verdict, title, detail, ...extra });
 
     if (this.bootFail) return S("boot", "부팅 실패", "ESP32가 켜지지 않아 아무것도 측정하지 못했어요. 릴레이도 켜지지 않아 히터는 돌지 않았지만, 실제 장치였다면 감시가 전혀 없는 상태예요.", { firstAlarm: null, cut: null });
@@ -690,6 +783,15 @@ export class Sim {
       const cutAny = this.events.some((e) => e.kind === "cut");
       if (!n && !cutAny) return S("pass", "통과 — 조용히 지켜봄", "셀은 정상이었고, 경보를 한 번도 내지 않았어요.", { firstAlarm: null, cut: null });
       return S("false", `잘못된 경보 ${n}번`, `셀은 정상인데 ${alarms[0]?.t.toFixed(0)}초에 ‘${alarms[0]?.text}’ 경보를 냈어요.${cutAny ? " 히터 차단까지 했어요." : ""}`, { firstAlarm: alarms[0]?.t ?? null, cut: null, falseAlarms: n });
+    }
+    if (ex === "keep") {
+      const gone = cm.lost + unsent;
+      if (cut === null) return S("miss", "놓침 — 끝까지 데워짐", `셀이 주변보다 ${peak.toFixed(1)} °C까지 데워졌는데 히터를 끊지 못했어요.`);
+      if (peak >= 4.6) return S("late", "늦은 차단", `${cut.toFixed(1)}초에 끊었지만 실제 셀은 이미 +${peak.toFixed(2)} °C였어요.`);
+      const offline = cutAbs !== null && cutAbs >= AP_DOWN[0] && cutAbs < AP_DOWN[1];
+      if (gone > 0)
+        return S("partial", `차단은 됐지만 기록 ${gone}개를 잃음`, `${offline ? "Wi-Fi가 끊긴 사이에도 " : ""}${cut.toFixed(1)}초에 스스로 끊었어요. 하지만 PC는 그동안의 기록 ${gone}개를 끝내 받지 못해, 관제실은 언제 왜 멈췄는지 기록으로 확인할 수 없어요.`);
+      return S("pass", "통과 — 끊겨도 스스로 차단, 기록도 모두 도착", `${offline ? "Wi-Fi가 끊긴 사이 " : ""}${cut.toFixed(1)}초에 스스로 끊었고, 쌓아 둔 기록은 다시 연결되고 ${cm.catchUp?.toFixed(1) ?? "—"}초 만에 모두 PC에 도착했어요 (${cm.made}/${cm.made}).`);
     }
     if (ex === "trip") {
       if (cut === null) return S("miss", "놓침 — 끝까지 데워짐", `셀이 주변보다 ${peak.toFixed(1)} °C까지 데워졌는데 히터를 끊지 못했어요.`);

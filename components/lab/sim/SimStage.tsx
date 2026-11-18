@@ -37,6 +37,7 @@ export function SimStage({ state, children }: { state: StageState; children?: Re
     h.setFlow(s.flow);
     h.setLevel(Math.min(3, Math.max(0, s.level)) as 0 | 1 | 2 | 3);
     h.setLed({ color: LED_HEX[s.led.color], blink: s.led.blink });
+    h.setWifi(s.site.wifi);
     h.setKit({ fanOn: s.site.fanOn, door: s.site.door, tilt: s.site.tilt, shock: s.site.shock, beep: s.site.beep, dtmodOn: s.site.dtmodOn, pirOut: s.site.pirOut });
   };
 

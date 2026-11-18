@@ -85,7 +85,7 @@ export default function LabHub() {
                 <span className="lab-hub-no">LAB 02</span>
                 <span className="lab-tag">
                   <i aria-hidden="true" />
-                  모의실험 · 1차 공개
+                  모의실험 · 실측으로 맞춤
                 </span>
                 <b>가상 ESP32 실험대</b>
                 <span>LAB 01 실측으로 맞춘 가상 장치예요. 부품을 빼고, 핀을 바꾸고, 방을 데우고, 센서를 고장 내 보며 판정을 직접 돌려 볼 수 있어요.</span>
@@ -96,11 +96,11 @@ export default function LabHub() {
                   </div>
                   <div>
                     <dt>환경</dt>
-                    <dd>7가지</dd>
+                    <dd>8가지</dd>
                   </div>
                   <div>
                     <dt>규칙 카드</dt>
-                    <dd>15장</dd>
+                    <dd>16장</dd>
                   </div>
                 </dl>
                 <span className="go" aria-hidden="true">
