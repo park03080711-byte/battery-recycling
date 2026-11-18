@@ -17,7 +17,7 @@ export function topicNav(slug: string) {
   return { t, layer: layerById(t.layer), prev: topics[(idx - 1 + topics.length) % topics.length], next: topics[(idx + 1) % topics.length] };
 }
 
-export function TopicHead({ slug, sub, lead, papers, kpis }: { slug: string; sub: string; lead: ReactNode; papers: number; kpis: Kpi[] }) {
+export function TopicHead({ slug, sub, lead, papers, kpis, asOf = "2026년 9월" }: { slug: string; sub: string; lead: ReactNode; papers: number; kpis: Kpi[]; asOf?: string }) {
   const { t, layer, prev, next } = topicNav(slug);
   return (
     <header className="rc-head">
@@ -71,7 +71,7 @@ export function TopicHead({ slug, sub, lead, papers, kpis }: { slug: string; sub
               </div>
               <div>
                 <dt>기준 시점</dt>
-                <dd>2026년 9월</dd>
+                <dd>{asOf}</dd>
               </div>
             </dl>
           </div>

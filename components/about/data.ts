@@ -3,7 +3,7 @@
  * 문헌 수는 data/references.ts에서 바로 세므로 여기 적지 않는다.
  */
 
-/** 2026년 9월 개편한 주제 페이지 (지도 · 공정 재생 · 보강 문헌) */
+/** 2026년 9~11월 개편한 주제 페이지 (지도 · 공정 재생 · 보강 문헌) */
 export const revamped: { slug: string; thumb: string; scene: string; added?: [number, number] }[] = [
   { slug: "remanufacturing", thumb: "rm", scene: "재제조 작업장", added: [36, 41] },
   { slug: "reuse", thumb: "rs", scene: "재사용 야드", added: [42, 44] },
@@ -13,6 +13,7 @@ export const revamped: { slug: string; thumb: string; scene: string; added?: [nu
   { slug: "safety", thumb: "sf", scene: "안전 동선", added: [55, 61] },
   { slug: "automated-disassembly", thumb: "ad", scene: "로봇 해체 셀", added: [62, 68] },
   { slug: "byproduct-recovery", thumb: "bp", scene: "부산물 회수 라인", added: [69, 72] },
+  { slug: "traceability", thumb: "tr", scene: "기록이 모이는 길", added: [73, 80] },
 ];
 
 /** 사이트 읽는 법 — 세 단계 */

@@ -19,7 +19,7 @@ export default function AboutPage() {
   const kpis = [
     { icon: <IconBooks />, v: `${refTotal}`, u: "편", h: "하나씩 확인한 학술 문헌", d: refBreakdown() },
     { icon: <IconLayers4 />, v: "14", u: "주제", h: "네 층위로 나눈 활용방안", d: "처리 경로 · 지원 기술 · 평가 · 설계" },
-    { icon: <IconGrid done={done} total={topics.length} />, v: `${done}`, u: `/ ${topics.length}`, h: "새로 만든 주제 페이지", d: "지도 · 공정 재생 · 보강 문헌 (2026년 9월)" },
+    { icon: <IconGrid done={done} total={topics.length} />, v: `${done}`, u: `/ ${topics.length}`, h: "새로 만든 주제 페이지", d: "지도 · 공정 재생 · 보강 문헌 (2026년 9~11월)" },
   ];
   return (
     <div style={{ ["--layer" as string]: "#0b3f8c", ["--layer-soft" as string]: "#e6eefa" }}>

@@ -432,12 +432,12 @@ export const topics: Topic[] = [
     title: "이력관리",
     en: "Battery Passport · Traceability",
     tagline: "제조부터 재활용까지 한 줄로",
-    lead: "배터리의 제조부터 운행, 회수, 재활용까지 정보를 추적하는 제도입니다. EU의 배터리 여권과 국내의 전주기 이력관리 시스템이 대표적이며, 조성별 분류의 제도적 기반이 됩니다.",
+    lead: "배터리의 제조부터 운행, 회수, 재활용까지 생긴 기록을 식별번호 하나에 묶어 따라다니게 하는 장치입니다. EU는 2027년 2월부터 배터리 여권을 의무화하고, 한국은 2025년 2월부터 배터리 식별번호를 자동차등록원부에 올리고 있습니다.",
     coverage: "확장 후보",
     facts: [
-      { value: "2028", label: "EU 재생원료 사용 비중 보고 시작", note: "사업장별 배터리 모델 단위" },
-      { value: "전주기", label: "국내 이력관리 범위", note: "제조 · 운행 · 회수 · 재활용" },
-      { value: "NCM622", label: "→ NCM622", note: "직접재생은 같은 조성끼리만" },
+      { value: "2027.2", label: "EU 배터리 여권 의무", note: "전기차 · 2 kWh 초과 산업용 배터리" },
+      { value: "3번", label: "남겨야 할 SOH 기록", note: "남은 수명을 내다보려면" },
+      { value: "2.24%p", label: "검사 기록으로 예측한 SOH 오차", note: "국내 연구" },
     ],
     sections: [
       {
@@ -471,7 +471,7 @@ export const topics: Topic[] = [
         ],
       },
     ],
-    refs: [35],
+    refs: [23, 35, 73, 74, 75, 76, 77, 78, 79, 80],
     related: ["certification", "design-for-disassembly", "soh-diagnosis"],
   },
   {
