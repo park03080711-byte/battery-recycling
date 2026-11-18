@@ -107,7 +107,7 @@ function AllTable({ rows, parts, pins }: { rows: Row[]; parts: number; pins: num
           ))}
         </div>
       </div>
-      <div className="rc-table-wrap">
+      <div className="rc-table-wrap" tabIndex={0} role="region" aria-label="모든 환경 시험 결과표">
         <table className="rc-table">
           <thead>
             <tr>

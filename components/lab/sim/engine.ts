@@ -9,7 +9,8 @@ import { AP_DOWN, CARDS, ENVS, PARTS, checkPins, type CardId, type EnvId, type P
 import { comm as commRows } from "../../../data/lab/essData";
 
 /** LAB 01 통신 실험에서 잰 왕복 지연 (ms) — 여기서 하나씩 뽑아 쓴다 */
-const RTT = commRows.filter((r) => r[4] > 0).map((r) => r[4]);
+/** 왕복 지연: LAB 01에서 연결이 이어져 있던 동안 잰 435개 (LAB 01 그림 8과 같은 기준 — 끊긴 뒤 몰아 보낸 기록은 버퍼 모형이 따로 다룬다) */
+const RTT = commRows.filter((r) => r[1] <= 2 && r[4] > 0).map((r) => r[4]);
 
 export const MODEL = {
   K: 6.5,

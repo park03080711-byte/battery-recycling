@@ -422,7 +422,7 @@ export default function EssMonitoringPage() {
                   있습니다. 위 단추로 회차를 끄고 켤 수 있습니다.
                 </figcaption>
               </figure>
-              <div className="rc-table-wrap rc-panel">
+              <div className="rc-table-wrap rc-panel" tabIndex={0} role="region" aria-label="표 3. 회차별 발열 결과">
                 <table className="rc-table">
                   <caption className="lab-tcap">표 3. 회차별 발열 결과</caption>
                   <thead>

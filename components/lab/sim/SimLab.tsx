@@ -828,7 +828,7 @@ function Compare({ runs, clear }: { runs: RunRec[]; clear: () => void }) {
           지우기
         </button>
       </div>
-      <div className="rc-table-wrap">
+      <div className="rc-table-wrap" tabIndex={0} role="region" aria-label="최근 실행 비교표">
         <table className="rc-table">
           <thead>
             <tr>

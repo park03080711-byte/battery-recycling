@@ -175,6 +175,7 @@ export default function Header({ refTotal }: { refTotal: number }) {
           ))}
           <h3>실험실</h3>
           <Link href="/lab/ess-monitoring"><em>01</em>ESS 상태진단 실험</Link>
+          <Link href="/lab/virtual-esp32"><em>02</em>가상 ESP32 실험대</Link>
           <h3>자료</h3>
           <Link href="/references"><em>—</em>참고문헌 {refTotal}편</Link>
         </nav>
