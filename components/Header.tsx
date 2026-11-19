@@ -67,7 +67,7 @@ export default function Header({ refTotal }: { refTotal: number }) {
   }, [isHome]);
 
   // 밝은 머리를 쓰는 개편 페이지에서는 투명(흰 글씨) 헤더를 쓰지 않는다
-  const lightTop = ["/topics/recycling", "/topics/remanufacturing", "/topics/reuse", "/topics/upcycling", "/topics/soh-diagnosis", "/topics/safety", "/topics/automated-disassembly", "/topics/byproduct-recovery", "/topics/traceability"].includes(pathname) || pathname.startsWith("/lab");
+  const lightTop = ["/topics/recycling", "/topics/remanufacturing", "/topics/reuse", "/topics/upcycling", "/topics/soh-diagnosis", "/topics/safety", "/topics/automated-disassembly", "/topics/byproduct-recovery", "/topics/traceability", "/topics/certification"].includes(pathname) || pathname.startsWith("/lab");
   const overlay = atTop && !megaOpen && !mobileOpen && !lightTop;
   const hidden = isHome && onHero && !mobileOpen;
   const cls = ["header", overlay ? "is-overlay" : "", megaOpen || mobileOpen ? "is-open" : "", hidden ? "is-hidden" : ""].join(" ");

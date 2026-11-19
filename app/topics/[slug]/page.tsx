@@ -18,6 +18,7 @@ import SafetyPage from "@/components/sf/SafetyPage";
 import DisassemblyPage from "@/components/ad/DisassemblyPage";
 import ByproductPage from "@/components/bp/ByproductPage";
 import TraceabilityPage from "@/components/tr/TraceabilityPage";
+import CertificationPage from "@/components/ce/CertificationPage";
 import RecyclingPage from "@/components/rc/RecyclingPage";
 
 type Params = { slug: string };
@@ -110,6 +111,7 @@ export default async function TopicPage({ params }: { params: Promise<Params> })
   if (slug === "automated-disassembly") return <DisassemblyPage />;
   if (slug === "byproduct-recovery") return <ByproductPage />;
   if (slug === "traceability") return <TraceabilityPage />;
+  if (slug === "certification") return <CertificationPage />;
 
   const layer = layerById(t.layer);
   const idx = topics.findIndex((x) => x.slug === t.slug);

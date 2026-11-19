@@ -481,12 +481,12 @@ export const topics: Topic[] = [
     title: "재생원료 인증",
     en: "Recycled Content Certification",
     tagline: "얼마나 되살렸는지 증명하는 일",
-    lead: "재생원료의 생산과 사용을 공식적으로 인증하는 제도입니다. 기업 자체 발표에 의존하던 회수 성능이 검증 가능한 데이터로 바뀌고, EU의 재생원료 의무 사용 비율에 대응하는 근거가 됩니다.",
+    lead: "재생원료의 생산과 사용을 제3자가 확인해 주는 제도입니다. 재생원료는 광물 원료와 화학적으로 같아 기록으로 증명해야 하므로, 국내 인증은 공장의 투입량 대비 생산량을 공정 단위로 확인합니다. EU의 재생원료 최소 비율에 대응하는 근거가 됩니다.",
     coverage: "확장 후보",
     facts: [
-      { value: "2027.5", label: "국내 재생원료 인증제 도입 예정" },
-      { value: "6곳", label: "2026년 6월 시범사업 참여 기업", note: "한국환경공단과 협약" },
-      { value: "Co 16%", label: "EU 2031 코발트 재생원료 의무", note: "2036년 26%로 상향" },
+      { value: "8종", label: "국내 재생원료 생산 인증 시범 대상", note: "2026.6 시범사업, 2027.5 시행" },
+      { value: "12개월", label: "EU 초안의 질량수지 기간 상한", note: "공장 단위 · 확정 전" },
+      { value: "69/108", label: "2036 코발트 목표에 재생 코발트가 모자란 시나리오", note: "Zhou 외, 2024" },
     ],
     sections: [
       {
@@ -520,7 +520,7 @@ export const topics: Topic[] = [
         ],
       },
     ],
-    refs: [35],
+    refs: [15, 79, 81, 82, 83, 84, 85],
     related: ["traceability", "supply-chain", "recycling"],
   },
 
