@@ -6,7 +6,7 @@ export type Evidence = "실측" | "데이터시트" | "가정";
 export type PinKind = "adc" | "onewire" | "io" | "in" | "out";
 
 export type PinRole = { key: string; label: string; kind: PinKind; def: number };
-export type PartId = "ds" | "ntc" | "shunt" | "div" | "relay" | "rgb" | "dtmod" | "dht" | "accel" | "tilt" | "vib" | "reed" | "pir" | "photo" | "btn" | "buzz";
+export type PartId = "ds" | "ntc" | "shunt" | "div" | "relay" | "rgb" | "dtmod" | "dht" | "accel" | "tilt" | "vib" | "reed" | "pir" | "sonar" | "btn" | "buzz" | "tft";
 
 export type Part = {
   id: PartId;
@@ -16,7 +16,8 @@ export type Part = {
   kit: string;
   role: string;
   evidence: Evidence;
-  group: "core" | "kit";
+  /** core: LAB 01 실측 부품 · kit: 센서 키트 · screen: LAB 01 점검 1에서 쓴 화면 */
+  group: "core" | "kit" | "screen";
   pins: PinRole[];
   /** 끌어올림 저항이 달린 모듈인가 (GPIO12에 꽂으면 부팅 실패) */
   pullup?: boolean;
@@ -55,7 +56,7 @@ export const PARTS: Part[] = [
     id: "shunt",
     rig: 6,
     name: "22 Ω 션트",
-    kit: "저항 (키트 밖)",
+    kit: "저항 (실습 부품)",
     role: "히터 전류",
     evidence: "실측",
     group: "core",
@@ -67,7 +68,7 @@ export const PARTS: Part[] = [
     id: "div",
     rig: 7,
     name: "10 kΩ + 10 kΩ",
-    kit: "저항 (키트 밖)",
+    kit: "저항 (실습 부품)",
     role: "5 V 버스 전압",
     evidence: "실측",
     group: "core",
@@ -127,8 +128,8 @@ export const PARTS: Part[] = [
     group: "kit",
     pins: [{ key: "DATA", label: "데이터", kind: "io", def: 4 }],
     pullup: true,
-    note: "1초에 한 번, 1 °C 단위(±2 °C). NTC가 없으면 주변 온도로 대신 써요. 습도는 2차의 결로 환경에서 써요.",
-    off: "함체 공기 온습도를 몰라요.",
+    note: "1초에 한 번, 온도 1 °C · 습도 1 % 단위(±2 °C · ±5 %). 온도와 습도로 이슬점을 계산해요. NTC가 없으면 주변 온도로 대신 써요.",
+    off: "함체 공기 온습도를 몰라 결로를 미리 알 수 없어요.",
   },
   {
     id: "accel",
@@ -198,17 +199,19 @@ export const PARTS: Part[] = [
     off: "사람이 다가와도 몰라요.",
   },
   {
-    id: "photo",
+    id: "sonar",
     rig: 17,
-    name: "포토인터럽트",
-    kit: "포토인터럽트",
-    role: "냉각팬 회전",
+    name: "초음파 HC-SR04",
+    kit: "초음파 거리 센서",
+    role: "바닥 물 높이",
     evidence: "데이터시트",
     group: "kit",
-    pins: [{ key: "S", label: "신호", kind: "in", def: 21 }],
-    pullup: true,
-    note: "틈 사이를 팬 날개가 지나갈 때마다 펄스. 펄스가 끊기면 팬이 멈춘 것.",
-    off: "팬이 멈춰도 온도가 오를 때까지 몰라요.",
+    pins: [
+      { key: "TRIG", label: "Trig 출력", kind: "out", def: 5 },
+      { key: "ECHO", label: "Echo 입력", kind: "in", def: 21 },
+    ],
+    note: "바닥 물받이 15 cm 위에서 아래로 소리를 쏴 거리를 재요. 켤 때 잰 거리보다 가까워진 만큼이 물 높이. 소리 속도는 1 °C에 약 0.6 m/s 바뀌어요. 한 번에 5번 재서 가운데값을 써요(약 0.3초).",
+    off: "바닥에 물이 고여도 몰라요.",
   },
   {
     id: "btn",
@@ -235,11 +238,29 @@ export const PARTS: Part[] = [
     note: "켜면 바로 소리 나는 버저. 경고에서 짧게, 위험에서 빠르게 울려요. 깨끗한 핀이 모자라 기본 핀이 GPIO2(부팅 설정 핀)예요.",
     off: "현장에서 소리로 알 수 없어요.",
   },
+  {
+    id: "tft",
+    rig: 20,
+    name: "3.5인치 TFT 화면",
+    kit: "SPI 화면 (LAB 01 점검 1에서 사용)",
+    role: "현장 상태 화면",
+    evidence: "데이터시트",
+    group: "screen",
+    pins: [
+      { key: "MOSI", label: "MOSI (데이터)", kind: "out", def: 23 },
+      { key: "SCLK", label: "SCLK (클럭)", kind: "out", def: 18 },
+      { key: "CS", label: "CS", kind: "out", def: 15 },
+      { key: "DC", label: "DC", kind: "out", def: 2 },
+      { key: "RST", label: "RST", kind: "out", def: 4 },
+    ],
+    note: "ST7796 480×320, 실험 때 쓴 User_Setup.h 그대로(백라이트는 3.3 V 직결). MOSI 23 · SCLK 18은 ESP32의 SPI 전용 핀이라 그대로 두는 게 빨라요. 출력 부품이라 판정에는 영향이 없어요.",
+    off: "현장에서는 LED 색만 보여요. 이유와 숫자는 PC로만 봐요.",
+  },
 ];
 export const CORE: PartId[] = ["ds", "ntc", "shunt", "div", "relay", "rgb"];
 
 /** 2차에서 더할 것 */
-export const LATER = ["결로 환경 (DHT11 습도)", "화재 마지막 단계 (불꽃 감지)", "바닥 누수 (초음파)", "가스 배출 (키트에 없음 · 가정)"];
+export const LATER = ["화재 마지막 단계 (불꽃 감지 · 문헌 값은 가정으로 표시)", "사건 크기 · 시각 직접 바꾸기"];
 
 /* ── ESP32 DevKit 38핀 GPIO ── */
 export const GPIOS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33, 34, 35, 36, 39];
@@ -250,18 +271,27 @@ export const FLASH = [6, 7, 8, 9, 10, 11];
 
 export type PinIssue = { part: PartId; pin: string; gpio: number; sev: "err" | "warn" | "info"; msg: string; breaks: boolean; bootFail?: boolean };
 
+/** 켜고 끄는 배선 선택 (기본값) */
+export type Flags = { echoDiv: boolean };
+export const defaultFlags = (): Flags => ({ echoDiv: true });
+
 /** 핀 배정 검사 — 실제 ESP32 제약 그대로. breaks=true면 그 부품은 모의실험에서 동작하지 않는다. */
-export function checkPins(present: Set<PartId>, pins: Record<string, number>): PinIssue[] {
+export function checkPins(present: Set<PartId>, pins: Record<string, number>, flags: Flags = defaultFlags()): PinIssue[] {
   const out: PinIssue[] = [];
-  const used = new Map<number, string>();
+  const used = new Map<number, { part: PartId; pin: string; name: string }>();
+  const nm = (p: Part, r: PinRole) => `${p.name}${p.pins.length > 1 ? ` ${r.label}` : ""}`;
   for (const p of PARTS) {
     if (!present.has(p.id)) continue;
     for (const r of p.pins) {
       const g = pins[`${p.id}.${r.key}`] ?? r.def;
       const add = (sev: PinIssue["sev"], msg: string, breaks: boolean, bootFail = false) => out.push({ part: p.id, pin: r.key, gpio: g, sev, msg, breaks, bootFail });
       const other = used.get(g);
-      if (other) add("err", `GPIO${g}을 ${other}와 같이 쓰고 있어요. 한 핀에는 한 부품만.`, true);
-      used.set(g, `${p.name}${p.pins.length > 1 ? ` ${r.label}` : ""}`);
+      if (other) {
+        // 한 핀에 두 부품이면 둘 다 망가진다 (LAB 01: 화면이 GPIO13을 쓰자 화면도 안 켜지고 DS18B20도 nan)
+        add("err", `GPIO${g}을 ${other.name}와 같이 쓰고 있어요. 한 핀에는 한 부품만.`, true);
+        if (!out.some((o) => o.part === other.part && o.pin === other.pin && o.msg.startsWith(`GPIO${g}을 `)))
+          out.push({ part: other.part, pin: other.pin, gpio: g, sev: "err", msg: `GPIO${g}을 ${nm(p, r)}와 같이 쓰고 있어요. 한 핀에는 한 부품만.`, breaks: true });
+      } else used.set(g, { part: p.id, pin: r.key, name: nm(p, r) });
       if (FLASH.includes(g)) {
         add("err", `GPIO${g}는 보드 안 플래시 메모리에 연결돼 있어 쓸 수 없어요.`, true);
         continue;
@@ -279,14 +309,58 @@ export function checkPins(present: Set<PartId>, pins: Record<string, number>): P
       if (g === 0 || g === 2 || g === 5 || g === 15) add("warn", `GPIO${g}는 켤 때 상태를 보는 부팅 설정 핀이에요. 동작은 하지만 피하는 게 좋아요.${g === 2 ? " 보드의 파란 LED도 같이 켜져요." : ""}`, false);
       if (g === 1 || g === 3) add("warn", `GPIO${g}는 USB 시리얼(${g === 1 ? "TX" : "RX"})과 겹쳐 시리얼 모니터가 깨져요.`, false);
       if (g === 13 && p.id === "ds") add("info", "실험 때 화면 라이브러리 기본 설정이 GPIO13을 화면 데이터선으로 써서 이 센서가 nan을 냈어요. 화면을 함께 쓰면 설정을 꼭 바꾸세요.", false);
+      if (p.id === "sonar" && r.key === "ECHO" && !flags.echoDiv)
+        add("warn", "Echo는 5 V로 나와요. 분압 없이 꽂으면 ESP32 입력 한계(3.6 V)를 넘어, 당장은 읽혀도 핀이 상할 수 있어요. 10 kΩ 세 개로 10 k : 20 k 분압(약 3.3 V)을 만드세요.", false);
+      if (p.id === "tft" && (r.key === "MOSI" || r.key === "SCLK") && g !== (r.key === "MOSI" ? 23 : 18))
+        add("info", `화면 ${r.key}를 SPI 전용 핀(${r.key === "MOSI" ? 23 : 18})이 아닌 곳에 두면 신호가 핀 연결망을 거쳐 SPI가 느려져요(약 26 MHz 이하).`, false);
     }
   }
   return out;
 }
 
+/* ── 빈 핀으로 자동 배정: 맞는 핀은 그대로 두고, 문제 있는 핀만 제약에 맞는 빈 핀으로 ── */
+const CLEAN = [4, 13, 14, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27];
+export type AutoResult = { pins: Record<string, number>; moved: { part: PartId; pin: string; from: number; to: number }[]; short: { part: PartId; pin: string }[] };
+export function autoPins(present: Set<PartId>, pins: Record<string, number>): AutoResult {
+  const roles = PARTS.filter((p) => present.has(p.id)).flatMap((p) => p.pins.map((r) => ({ p, r, k: `${p.id}.${r.key}` })));
+  // 먼저 자리를 지킬 순서: 실측 부품 → 화면(SPI 전용 핀) → 키트 부품
+  const rank = (p: Part) => (p.group === "core" ? 0 : p.group === "screen" ? 1 : 2);
+  const fits = (p: Part, r: PinRole, g: number) => {
+    if (FLASH.includes(g)) return false;
+    if (r.kind === "adc") return ADC1.includes(g);
+    if (r.kind !== "in" && INPUT_ONLY.includes(g)) return false;
+    if (g === 12 && p.pullup) return false;
+    return true;
+  };
+  const taken = new Set<number>();
+  const out = { ...pins };
+  const todo: typeof roles = [];
+  for (const x of [...roles].sort((a, b) => rank(a.p) - rank(b.p))) {
+    const g = pins[x.k];
+    if (!taken.has(g) && fits(x.p, x.r, g)) taken.add(g);
+    else todo.push(x);
+  }
+  const res: AutoResult = { pins: out, moved: [], short: [] };
+  // 아날로그 먼저 (ADC1 6개뿐)
+  todo.sort((a, b) => (a.r.kind === "adc" ? 0 : 1) - (b.r.kind === "adc" ? 0 : 1));
+  for (const x of todo) {
+    const cands =
+      x.r.kind === "adc" ? ADC1 : [...CLEAN, ...(x.r.kind === "in" ? INPUT_ONLY : []), 32, 33, 5, 15, 2, 0, 12]; // TX · RX(1 · 3)는 시리얼 모니터용이라 쓰지 않음
+    const g = cands.find((c) => !taken.has(c) && fits(x.p, x.r, c));
+    if (g === undefined) {
+      res.short.push({ part: x.p.id, pin: x.r.key });
+      continue;
+    }
+    taken.add(g);
+    if (g !== pins[x.k]) res.moved.push({ part: x.p.id, pin: x.r.key, from: pins[x.k], to: g });
+    out[x.k] = g;
+  }
+  return res;
+}
+
 /* ── 환경 ── */
-export type Expect = "trip" | "quiet" | "cause" | "fast" | "stop" | "keep";
-export type EnvId = "heat" | "room" | "sensor" | "fan" | "short" | "shock" | "door" | "wifi";
+export type Expect = "trip" | "quiet" | "fast" | "stop" | "keep" | "dew" | "leak";
+export type EnvId = "heat" | "room" | "sensor" | "short" | "condense" | "leak" | "shock" | "door" | "wifi";
 export type Env = {
   id: EnvId;
   group: "temp" | "site" | "comm";
@@ -350,20 +424,6 @@ export const ENVS: Env[] = [
     ],
   },
   {
-    id: "fan",
-    group: "site",
-    name: "냉각팬 멈춤",
-    tag: "원인 찾기 시험",
-    story: "가벼운 충전 중이라 냉각팬이 돌면 셀이 +1.8 °C에서 버팁니다. 80초에 팬이 멈춰요.",
-    expect: "cause",
-    expectText: "팬이 멈춘 걸 바로 알아채고, 셀이 뜨거워지기 전에 충전을 멈춰야 함",
-    duration: 300,
-    heaterAt: 12,
-    load: 0.28,
-    event: 80,
-    eventLabel: "팬 멈춤",
-  },
-  {
     id: "short",
     group: "site",
     name: "과전류 (부분 단락)",
@@ -376,6 +436,34 @@ export const ENVS: Env[] = [
     load: 1,
     event: 40,
     eventLabel: "단락",
+  },
+  {
+    id: "condense",
+    group: "site",
+    name: "결로 (습한 바깥 공기)",
+    tag: "이슬점 시험",
+    story: "가벼운 충전 중 60초에 문틈 · 환기구로 바깥의 덥고 습한 공기(31 °C · 80 %)가 냉방된 함체(23 °C · 50 %)로 들어옵니다. 공기는 금방 바뀌지만 셀은 천천히 데워져, 셀 표면이 이슬점(약 27 °C)보다 차가운 채로 남아 물이 맺혀요.",
+    expect: "dew",
+    expectText: "물이 맺히기 20초 전에 알리고 충전을 멈춰야 함 (물이 단자 사이로 전기를 흘릴 수 있음)",
+    duration: 220,
+    heaterAt: 12,
+    load: 0.28,
+    event: 60,
+    eventLabel: "습한 공기",
+  },
+  {
+    id: "leak",
+    group: "site",
+    name: "바닥 누수",
+    tag: "물 높이 시험",
+    story: "가벼운 충전 중 60초부터 함체 바닥 물받이에 물이 고이기 시작합니다(배관 누수 상황). 2분 동안 20 mm까지 차올라요. 방 온도 변화 환경에서는 같은 센서가 물이 없는데도 잘못 울리지 않아야 해요.",
+    expect: "leak",
+    expectText: "물이 5 mm 되기 전에 알리고 충전을 멈춰야 함",
+    duration: 200,
+    heaterAt: 12,
+    load: 0.28,
+    event: 60,
+    eventLabel: "누수",
   },
   {
     id: "shock",
@@ -423,15 +511,17 @@ export const ENVS: Env[] = [
 /** Wi-Fi 끊김 환경에서 공유기가 꺼져 있는 구간 */
 export const AP_DOWN: [number, number] = [40, 103];
 
-export const EXPECT_LABEL: Record<Expect, string> = { trip: "차단해야 함", quiet: "아무것도 하면 안 됨", cause: "원인 알림 + 정지", fast: "5초 안 차단", stop: "5초 안 충전 정지", keep: "차단 + 기록 보존" };
+export const EXPECT_LABEL: Record<Expect, string> = { trip: "차단해야 함", quiet: "아무것도 하면 안 됨", fast: "5초 안 차단", stop: "5초 안 충전 정지", keep: "차단 + 기록 보존", dew: "물 맺히기 20초 전 정지", leak: "물 5 mm 전 정지" };
 
 /* ── 규칙 카드 ── */
 export type Param = { key: string; label: string; unit: string; min: number; max: number; step: number; def: number };
-export type CardId = "dt" | "slope" | "eta" | "cur" | "volt" | "fault" | "heatcheck" | "dtsw" | "shock" | "tiltA" | "tiltSw" | "vib" | "door" | "person" | "fan" | "buffer";
+export type CardId = "dt" | "slope" | "eta" | "cur" | "volt" | "fault" | "heatcheck" | "dtsw" | "dew" | "rh" | "leak" | "sos" | "shock" | "tiltA" | "tiltSw" | "vib" | "door" | "person" | "buffer";
 export type Card = {
   id: CardId;
   name: string;
   needs: PartId[];
+  /** 이 중 하나는 있어야 함 */
+  any?: PartId[];
   combo?: boolean;
   group: "temp" | "elec" | "site" | "comm";
   /** 처음에 켜져 있나 */
@@ -542,14 +632,47 @@ export const CARDS: Card[] = [
     ],
   },
   {
-    id: "fan",
-    name: "냉각팬 멈춤",
-    needs: ["photo"],
+    id: "dew",
+    name: "결로 여유",
+    needs: ["ds", "dht"],
+    combo: true,
     group: "site",
     on: true,
     out: "경고 + 충전 정지",
-    text: "팬 날개 펄스가 정한 시간 동안 안 들어오면.",
-    params: [{ key: "s", label: "펄스 없음", unit: "초", min: 0.5, max: 10, step: 0.5, def: 2 }],
+    text: "셀 표면 온도(DS18B20)가 공기의 이슬점(DHT11 온도 · 습도로 계산)보다 정한 값만큼 높지 않으면. DHT11은 약 10초 늦게 따라오고 오차(±2 °C · ±5 %)가 이슬점을 약 ±2 °C 흔들어서, 여유를 좁히면 물이 맺히기 직전에야 멈춰요.",
+    params: [{ key: "m", label: "여유", unit: "°C", min: 0, max: 8, step: 0.5, def: 4 }],
+  },
+  {
+    id: "rh",
+    name: "습도 높음",
+    needs: ["dht"],
+    group: "site",
+    on: true,
+    out: "주의",
+    text: "공기 습도가 정한 값을 넘으면. 셀 온도를 모르니 물이 맺히는지는 알 수 없어요.",
+    params: [{ key: "h", label: "습도", unit: "%", min: 50, max: 95, step: 1, def: 85 }],
+  },
+  {
+    id: "leak",
+    name: "바닥 물 감지",
+    needs: ["sonar"],
+    group: "site",
+    on: true,
+    out: "경고 + 충전 정지",
+    text: "켤 때 잰 바닥까지 거리보다 정한 높이만큼 가까워지면(5번 잰 가운데값). 기준을 낮추면 일찍 잡지만, 방이 더워지면 소리가 빨라져 물이 없어도 가까워 보여요.",
+    params: [{ key: "h", label: "물 높이", unit: "mm", min: 0.5, max: 10, step: 0.5, def: 3 }],
+  },
+  {
+    id: "sos",
+    name: "소리 속도 온도 보정",
+    needs: ["sonar"],
+    any: ["ntc", "dht"],
+    combo: true,
+    group: "site",
+    on: false,
+    out: "거리 보정",
+    text: "주변 온도(NTC, 없으면 DHT11)로 소리 속도를 고쳐 계산해요(331.3 + 0.606 × 온도 m/s). 15 cm에서 4.5 °C 오르면 약 1.2 mm 차이 — 물 높이 기준을 2 mm 아래로 낮출 때 필요해요.",
+    params: [],
   },
   {
     id: "shock",
@@ -629,3 +752,5 @@ export const CARDS: Card[] = [
 export const defaultParams = () => Object.fromEntries(CARDS.flatMap((c) => c.params.map((p) => [`${c.id}.${p.key}`, p.def]))) as Record<string, number>;
 export const defaultPins = () => Object.fromEntries(PARTS.flatMap((p) => p.pins.map((r) => [`${p.id}.${r.key}`, r.def]))) as Record<string, number>;
 export const defaultCards = () => Object.fromEntries(CARDS.map((c) => [c.id, c.on])) as Record<CardId, boolean>;
+/** 이 카드를 쓸 수 있나 (필요한 부품이 다 있고, 고를 부품 중 하나는 있음) */
+export const cardUsable = (c: Card, has: (p: PartId) => boolean) => c.needs.every(has) && (!c.any || c.any.some(has));

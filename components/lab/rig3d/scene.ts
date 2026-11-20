@@ -21,6 +21,8 @@ export type RigHandle = {
   setKit: (k: KitState) => void;
   /** 모의실험용: Wi-Fi 연결 (끊기면 물결이 회색으로 멈춤) */
   setWifi: (on: boolean) => void;
+  /** 모의실험용: TFT 화면 내용 (null이면 화면 부품 없음) */
+  setTft: (v: TftState | null) => void;
   reset: () => void;
   /** 번호 표식의 화면 위치(0~1) */
   marks: () => { n: number; x: number; y: number; hidden: boolean }[];
@@ -39,7 +41,31 @@ const WIRE = { red: 0xe53935, black: 0x2b2f36, orange: 0xfb8c00, yellow: 0xfdd83
 const BAND: Record<string, number> = { black: 0x141414, brown: 0x6d3b1f, red: 0xd32f2f, orange: 0xf07c12, gold: 0xc9a23a };
 const LED = [0x2fdc5a, 0xffd23a, 0xff3b30, 0xff3b30];
 
-export type KitState = { fanOn: boolean; door: boolean; tilt: number; shock: number; beep: "none" | "slow" | "fast"; dtmodOn: boolean; pirOut: boolean };
+export type KitState = { door: boolean; tilt: number; shock: number; beep: "none" | "slow" | "fast"; dtmodOn: boolean; pirOut: boolean; water: number; wet: number; ping: boolean };
+export type TftState = { ok: boolean; level: number; dT: number | null; fault: boolean; reason: string; maint: boolean; cur: number | null; volt: number | null; heat: boolean; tripped: boolean; wifi: boolean; t: number };
+
+/** 화면 글꼴은 영문만 (TFT_eSPI 기본 글꼴) — 이유를 짧은 영문으로 */
+const REASON_EN: [RegExp, string][] = [
+  [/위험 예측/, "DANGER IN < 30 s"],
+  [/온도차 위험/, "dT OVER DANGER"],
+  [/온도차 경고/, "dT OVER WARNING"],
+  [/온도차 주의/, "dT OVER CAUTION"],
+  [/상승률/, "dT RISING FAST"],
+  [/과전류/, "OVERCURRENT"],
+  [/전압/, "BUS VOLTAGE"],
+  [/접촉/, "SENSOR CONTACT?"],
+  [/센서 고장/, "SENSOR FAULT"],
+  [/온도 스위치/, "TEMP SWITCH"],
+  [/충격/, "SHOCK"],
+  [/기울/, "TILTED"],
+  [/진동/, "VIBRATION"],
+  [/결로/, "CONDENSATION RISK"],
+  [/누수/, "FLOOR LEAK"],
+  [/문 열림/, "DOOR OPEN"],
+  [/사람/, "PERSON NEAR"],
+  [/습도/, "HIGH HUMIDITY"],
+];
+const reasonEn = (r: string) => REASON_EN.find(([re]) => re.test(r))?.[1] ?? "";
 
 /** opts.kit: 모의실험의 키트 부품 10종(10~19번)을 앞쪽 오른편에 함께 놓는다 */
 export function createRig(canvas: HTMLCanvasElement, opts: { kit?: boolean } = {}): RigHandle {
@@ -53,7 +79,7 @@ export function createRig(canvas: HTMLCanvasElement, opts: { kit?: boolean } = {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(30, 16 / 10, 0.5, 200);
-  const HOME = opts.kit ? { pos: new THREE.Vector3(7.6, 22.5, 24.5), target: new THREE.Vector3(4.2, 0, 3.9) } : { pos: new THREE.Vector3(6.0, 17.8, 19.4), target: new THREE.Vector3(2.9, 0, 1.9) };
+  const HOME = opts.kit ? { pos: new THREE.Vector3(5.4, 29.5, 28.0), target: new THREE.Vector3(2.2, 0, 1.0) } : { pos: new THREE.Vector3(6.0, 17.8, 19.4), target: new THREE.Vector3(2.9, 0, 1.9) };
   camera.position.copy(HOME.pos);
 
   const controls = new OrbitControls(camera, canvas);
@@ -669,7 +695,11 @@ export function createRig(canvas: HTMLCanvasElement, opts: { kit?: boolean } = {
 
   /* ── 키트 부품 10종 (모의실험) — 앞쪽 오른편 탁자 위, 핀 헤더가 ESP 쪽 통로를 향함 ── */
   const kit = {
-    fan: null as THREE.Group | null,
+    water: null as THREE.Mesh | null,
+    beam: null as THREE.Mesh | null,
+    beamTop: 0,
+    drops: [] as THREE.Mesh[],
+    tft: null as { canvas: HTMLCanvasElement; tex: THREE.CanvasTexture; key: string } | null,
     door: null as THREE.Object3D | null,
     doorHome: new THREE.Vector3(),
     doLed: null as THREE.MeshStandardMaterial | null,
@@ -821,46 +851,90 @@ export function createRig(canvas: HTMLCanvasElement, opts: { kit?: boolean } = {
       g.add(frame, dome);
       kitWire("p16", tips[0], false, espPin.R19, WIRE.yellow, 2);
     }
-    // 17 포토인터럽트 + 냉각팬
+    // 17 초음파 HC-SR04: 앞줄 가운데 물받이 위에서 아래를 봄 (3D는 높이를 줄여 그림 — 계산은 15 cm)
     {
-      const { g, tips } = ky(17, 7.85, FZ, 1.5, 1.2, black, false);
-      const slotM = mat(0x111214, { roughness: 0.4 });
-      for (const dx of [-0.2, 0.2]) {
-        const b = box(0.22, 0.55, 0.42, slotM);
-        at(b, dx, 0.42, -0.15);
-        g.add(b);
-      }
-      const fanG = new THREE.Group();
-      const frameM = mat(0x202226, { roughness: 0.5 });
-      const ring = mesh(new THREE.TorusGeometry(0.72, 0.1, 8, 32), frameM);
-      const hub = cyl(0.26, 0.26, 0.42, mat(0x2b2d33), 20);
-      hub.rotation.x = Math.PI / 2;
-      const blades = new THREE.Group();
-      const bladeM = mat(0x2b2d33, { roughness: 0.45, side: THREE.DoubleSide });
-      for (let i = 0; i < 7; i++) {
-        const b = box(0.5, 0.05, 0.22, bladeM);
-        b.position.set(0.45, 0, 0);
-        b.rotation.x = 0.5;
-        const holder = new THREE.Group();
-        holder.add(b);
-        holder.rotation.z = (i / 7) * Math.PI * 2;
-        blades.add(holder);
-      }
-      for (const [cx, cy] of [
-        [-0.75, -0.75],
-        [0.75, -0.75],
-        [-0.75, 0.75],
-        [0.75, 0.75],
+      const SX = 7.85,
+        SZ = 8.2,
+        TW = 2.3,
+        TD = 3.6,
+        TH = 2.3,
+        SY = TH + 1.4;
+      const g = part(17, new THREE.Vector3(SX, SY + 0.6, SZ));
+      // 물받이 (투명 아크릴)
+      const acr = mat(0xdfe8f2, { transparent: true, opacity: 0.35, roughness: 0.08, metalness: 0 });
+      const tb = box(TW, 0.1, TD, mat(0xc9d1db, { roughness: 0.5 }));
+      at(tb, SX, 0.05, SZ);
+      g.add(tb);
+      for (const [w, d, x, z] of [
+        [TW, 0.08, 0, -TD / 2 + 0.04],
+        [TW, 0.08, 0, TD / 2 - 0.04],
+        [0.08, TD, -TW / 2 + 0.04, 0],
+        [0.08, TD, TW / 2 - 0.04, 0],
       ]) {
-        const post = box(0.2, 0.2, 0.4, frameM);
-        at(post, cx, cy, 0);
-        fanG.add(post);
+        const wall = box(w, TH, d, acr);
+        wall.castShadow = false;
+        at(wall, SX + x, TH / 2 + 0.05, SZ + z);
+        g.add(wall);
       }
-      fanG.add(ring, hub, blades);
-      at(fanG, 7.85, 0.95, FZ - 1.25);
-      g.parent!.add(fanG);
-      kit.fan = blades;
-      kitWire("p17", tips[0], false, espPin.R21, WIRE.green, 3);
+      const waterM = mat(0x2f86e0, { transparent: true, opacity: 0.6, roughness: 0.05, metalness: 0.05, emissive: 0x0b3c80, emissiveIntensity: 0.25 });
+      const water = box(TW - 0.16, 1, TD - 0.16, waterM);
+      water.castShadow = false;
+      at(water, SX, 0.1, SZ);
+      water.scale.y = 0.001;
+      g.add(water);
+      kit.water = water;
+      // 받침: 물받이 오른쪽 벽에 세운 기둥 + 팔
+      const standM = mat(0x3a3f47, { roughness: 0.45, metalness: 0.4 });
+      const post = box(0.2, SY + 0.25, 0.2, standM);
+      at(post, SX + TW / 2 + 0.12, (SY + 0.25) / 2, SZ);
+      const arm = box(TW / 2 + 0.2, 0.14, 0.2, standM);
+      at(arm, SX + TW / 4 + 0.06, SY + 0.2, SZ);
+      g.add(post, arm);
+      // 센서 기판 (긴 쪽을 앞뒤로, 아래를 봄)
+      const sens = new THREE.Group();
+      sens.add(box(2.0, 0.14, 4.5, mat(0x1f4fbf, { roughness: 0.5 })));
+      const can = mat(0xc9ccd1, { metalness: 0.85, roughness: 0.3 });
+      const grill = mat(0x2a2d33, { roughness: 0.9 });
+      for (const dz of [-1.3, 1.3]) {
+        const c = cyl(0.8, 0.8, 1.1, can, 28);
+        at(c, 0, -0.62, dz);
+        const m = cyl(0.66, 0.66, 0.02, grill, 24);
+        at(m, 0, -1.18, dz);
+        sens.add(c, m);
+      }
+      const xtal = box(0.22, 0.16, 0.5, can);
+      at(xtal, 0.5, -0.15, 0);
+      sens.add(xtal);
+      // 핀 헤더: 긴 변 가운데, 왼쪽(−x)을 향함 — VCC · Trig · Echo · GND
+      const gold = mat(0xd4b04c, { metalness: 0.8, roughness: 0.3 });
+      const tips: THREE.Vector3[] = [];
+      for (let i = 0; i < 4; i++) {
+        const z = (i - 1.5) * P;
+        const pin = box(0.5, 0.06, 0.06, gold);
+        at(pin, -1.2, 0.04, z);
+        sens.add(pin);
+        tips.push(new THREE.Vector3(SX - 1.45, SY + 0.04, SZ + z));
+      }
+      at(sens, SX, SY, SZ);
+      g.add(sens);
+      // 소리 (물 위로 퍼지는 원뿔)
+      const beamM = new THREE.MeshBasicMaterial({ color: 0x7cc4ff, transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide });
+      mats.push(beamM);
+      const beam = mesh(new THREE.ConeGeometry(1.0, 1, 24, 1, true), beamM, false);
+      beam.position.set(SX, 0, SZ - 1.3);
+      g.add(beam);
+      kit.beam = beam;
+      kit.beamTop = SY - 1.18;
+      // Trig → GPIO5, Echo → GPIO21: 왼쪽으로 내려 앞 통로를 따라 ESP로
+      const sw = (tip: THREE.Vector3, pin: THREE.Vector3, color: number, k: number) =>
+        own("p17", () => {
+          const lane = 10.0 + k * 0.14,
+            h = 1.5 + k * 0.08;
+          ends(pin);
+          return route([tip, new THREE.Vector3(tip.x - 0.35, tip.y, tip.z), new THREE.Vector3(tip.x - 0.45, 0.2, tip.z), new THREE.Vector3(tip.x - 0.45, 0.2, lane), new THREE.Vector3(pin.x, 0.2, lane), new THREE.Vector3(pin.x, h, pin.z + 0.55), new THREE.Vector3(pin.x, pin.y + 0.06, pin.z)], color, 0.26, 0.05);
+        });
+      sw(tips[1], espPin.R5, WIRE.orange, 6);
+      sw(tips[2], espPin.R21, WIRE.green, 7);
     }
     // 18 푸시 버튼
     {
@@ -895,6 +969,116 @@ export function createRig(canvas: HTMLCanvasElement, opts: { kit?: boolean } = {
       kit.rings = rings;
       kitWire("p19", tips[0], false, espPin.R2, WIRE.red, 5);
     }
+    // 결로: 셀(220 Ω 저항)과 DS18B20 머리에 맺히는 물방울
+    {
+      const dropM = mat(0xcfeaff, { transparent: true, opacity: 0.82, roughness: 0.04, metalness: 0.1, emissive: 0x5aa8e8, emissiveIntensity: 0.18 });
+      const dg = new THREE.SphereGeometry(1, 12, 8);
+      geos.push(dg);
+      const hx = (col(44) + col(50)) / 2,
+        hy = BB_TOP + 0.42,
+        hz = ROW.c;
+      const spots: [number, number, number, number][] = [];
+      // 실제 물방울(약 1 mm)보다 크게 그림 — 보이도록
+      for (let i = 0; i < 16; i++) {
+        const a = -1.2 + (2.4 * ((i * 7) % 16)) / 15;
+        const dx = -0.38 + (0.76 * ((i * 5) % 16)) / 15;
+        const r = 0.18;
+        spots.push([hx + dx, hy + r * Math.cos(a), hz + r * Math.sin(a), 0.085 + (0.05 * ((i * 3) % 4)) / 3]);
+      }
+      for (const [dx, dy, dz] of [
+        [-0.12, 0.2, 0.05],
+        [0.1, 0.18, -0.1],
+        [0.02, 0.26, -0.02],
+        [0.15, 0.08, 0.12],
+      ])
+        spots.push([hx + dx, BB_TOP + 0.62 + dy, ROW.c - 0.46 + dz, 0.09]);
+      for (const [x, y, z, r] of spots) {
+        const d = new THREE.Mesh(dg, dropM);
+        d.position.set(x, y, z);
+        d.scale.setScalar(r);
+        d.scale.y *= 0.8;
+        d.userData.r = r;
+        d.visible = false;
+        scene.add(d);
+        kit.drops.push(d);
+      }
+    }
+    // 20 3.5인치 TFT (ST7796 480×320): 앞 왼쪽에 비스듬히 세움 · 화면은 실시간으로 다시 그림
+    {
+      const TX = -6.2,
+        TZ = -8.1,
+        LEAN = (52 * Math.PI) / 180;
+      const g = part(20, new THREE.Vector3(TX, 5.2, TZ));
+      const panel = new THREE.Group();
+      const brd = box(9.8, 5.8, 0.16, mat(0xb3261e, { roughness: 0.55 }));
+      panel.add(brd);
+      const glass = box(8.4, 5.5, 0.1, mat(0x0b0d10, { roughness: 0.2, metalness: 0.2 }));
+      at(glass, -0.4, 0, 0.12);
+      panel.add(glass);
+      const scr = document.createElement("canvas");
+      scr.width = 480;
+      scr.height = 320;
+      const tex = new THREE.CanvasTexture(scr);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      texs.push(tex);
+      const scrM = new THREE.MeshBasicMaterial({ map: tex, toneMapped: false });
+      mats.push(scrM);
+      const face = mesh(new THREE.PlaneGeometry(7.37, 4.92), scrM, false);
+      at(face, -0.4, 0, 0.18);
+      panel.add(face);
+      // 오른쪽 짧은 변의 핀 헤더 (14핀 중 화면용 9핀)
+      const gold = mat(0xd4b04c, { metalness: 0.8, roughness: 0.3 });
+      const plastic = mat(0x1d1f23);
+      const tipsLocal: THREE.Vector3[] = [];
+      for (let i = 0; i < 9; i++) {
+        const y = 2.0 - i * P;
+        const b = box(0.25, P * 0.9, P * 0.9, plastic);
+        at(b, 4.75, y, -0.15);
+        const pin = box(0.6, 0.06, 0.06, gold);
+        at(pin, 5.1, y, -0.15);
+        panel.add(b, pin);
+        tipsLocal.push(new THREE.Vector3(5.42, y, -0.15));
+      }
+      const stand = box(6, 0.25, 2.6, mat(0x2a2d33, { roughness: 0.6 }));
+      at(stand, TX, 0.125, TZ + 1.2);
+      g.add(stand);
+      const leg = box(5, 3.4, 0.25, mat(0x2a2d33, { roughness: 0.6 }));
+      leg.rotation.x = -0.45;
+      at(leg, TX, 1.6, TZ - 0.9);
+      g.add(leg);
+      panel.rotation.x = -LEAN;
+      at(panel, TX, 2.9 * Math.cos(LEAN) + 0.12, TZ);
+      g.add(panel);
+      panel.updateMatrixWorld(true);
+      // VCC GND CS RST DC MOSI SCK LED MISO — 화면용 5선만 GPIO로
+      const sig: [number, string, number][] = [
+        [2, "R15", WIRE.purple],
+        [3, "R4", WIRE.gray],
+        [4, "R2", WIRE.white],
+        [5, "R23", WIRE.blue],
+        [6, "R18", WIRE.yellow],
+      ];
+      // 선은 화면 오른쪽 핀 → 탁자로 내려 브레드보드 왼쪽 가장자리를 따라 앞으로 → ESP 바깥 줄
+      sig.forEach(([idx, pinName, color], k) =>
+        own("p20", () => {
+          const tip = panel.localToWorld(tipsLocal[idx].clone());
+          const pin = espPin[pinName];
+          const back = TZ + 2.3 + k * 0.12,
+            side = -9.0 - k * 0.12,
+            front = 8.9 + k * 0.12,
+            h = 1.2 + k * 0.08;
+          ends(pin);
+          return route(
+            [tip, tip.clone().add(new THREE.Vector3(0.3, 0, 0)), new THREE.Vector3(tip.x + 0.5, 0.2, back), new THREE.Vector3(side, 0.2, back), new THREE.Vector3(side, 0.2, front), new THREE.Vector3(pin.x, 0.2, front), new THREE.Vector3(pin.x, h, pin.z + 0.5), new THREE.Vector3(pin.x, pin.y + 0.06, pin.z)],
+            color,
+            0.26,
+            0.05
+          );
+        })
+      );
+      kit.tft = { canvas: scr, tex, key: "" };
+    }
   }
 
   /* 기울임 · 흔들림용으로 장치 전체를 한 묶음에 */
@@ -902,6 +1086,7 @@ export function createRig(canvas: HTMLCanvasElement, opts: { kit?: boolean } = {
   scene.children.filter((o) => !(o instanceof THREE.Light) && o !== ground).forEach((o) => root.add(o));
   scene.add(root);
   let kitSt: KitState | null = null;
+  let tftSt: TftState | null = null;
   let wifiOn = true;
 
   /* ── 상태 ── */
@@ -1023,7 +1208,26 @@ export function createRig(canvas: HTMLCanvasElement, opts: { kit?: boolean } = {
     });
     wifi.lookAt(camera.position.x, wifi.position.y, camera.position.z);
     if (kitSt) {
-      if (kit.fan && kitSt.fanOn && !reduce) kit.fan.rotation.z = -t * 14;
+      if (kit.water) {
+        const h = Math.max(0.001, kitSt.water / 10);
+        kit.water.scale.y = h;
+        kit.water.position.y = 0.12 + h / 2;
+      }
+      if (kit.beam) {
+        const surf = 0.12 + Math.max(0, kitSt.water / 10);
+        const len = kit.beamTop - surf;
+        kit.beam.visible = kitSt.ping;
+        kit.beam.scale.set(len * 0.32, len, len * 0.32);
+        kit.beam.position.y = surf + len / 2;
+        (kit.beam.material as THREE.MeshBasicMaterial).opacity = reduce ? 0.12 : 0.06 + 0.08 * ((t * 3) % 1);
+      }
+      const wet = kitSt.wet;
+      const nd = Math.round(wet * kit.drops.length);
+      kit.drops.forEach((d, i) => {
+        d.visible = i < nd;
+        const k = 0.55 + 0.45 * Math.min(1, wet * 1.4);
+        d.scale.setScalar(k * (d.userData.r as number));
+      });
       if (kit.doLed) kit.doLed.emissiveIntensity = kitSt.dtmodOn ? 1.6 : 0;
       if (kit.door) {
         kit.door.position.copy(kit.doorHome);
@@ -1043,11 +1247,67 @@ export function createRig(canvas: HTMLCanvasElement, opts: { kit?: boolean } = {
       root.position.set(sh * 0.25 * Math.sin(t * 70), 0, sh * 0.18 * Math.cos(t * 53));
     }
   }
+  /** 화면: 내용이 바뀔 때만 다시 그림 (실제 펌웨어처럼) */
+  function drawTft() {
+    const k = kit.tft;
+    if (!k) return;
+    const v = tftSt;
+    const dt = v?.dT === null || v?.dT === undefined ? "--" : `${v.dT >= 0 ? "+" : ""}${v.dT.toFixed(2)}`;
+    const key = !v ? "none" : !v.ok ? "blank" : [v.level, dt, v.fault, v.maint, v.tripped, v.reason, v.cur?.toFixed(1), v.volt?.toFixed(2), v.heat, v.wifi].join("|");
+    if (key === k.key) return;
+    k.key = key;
+    const c = k.canvas.getContext("2d")!;
+    const W = 480,
+      Hh = 320;
+    if (!v || !v.ok) {
+      // 설정이 틀리면 백라이트만 켜진 하얀 화면 (LAB 01 점검 1)
+      c.fillStyle = "#eef1f5";
+      c.fillRect(0, 0, W, Hh);
+      k.tex.needsUpdate = true;
+      return;
+    }
+    const banner = v.fault ? ["#2b6fe0", "SENSOR FAULT"] : v.maint && v.level <= 1 ? ["#d9a400", "MAINTENANCE"] : [["#1f9d55", "NORMAL"], ["#d9a400", "CAUTION"], ["#e0532d", "WARNING"], ["#c81e1e", v.tripped ? "DANGER - TRIPPED" : "DANGER"]][Math.min(3, v.level)];
+    c.fillStyle = "#0b0f14";
+    c.fillRect(0, 0, W, Hh);
+    c.fillStyle = banner[0];
+    c.fillRect(0, 0, W, 70);
+    c.fillStyle = "#ffffff";
+    c.font = "bold 34px monospace";
+    c.textBaseline = "middle";
+    c.fillText(banner[1], 18, 36);
+    c.font = "bold 22px monospace";
+    c.fillStyle = "#c9d3df";
+    c.fillText(reasonEn(v.reason) || (v.heat ? "CHARGING (HEATER ON)" : "IDLE"), 18, 98);
+    c.fillStyle = "#7fd3ff";
+    c.font = "bold 26px monospace";
+    c.fillText("dT", 18, 158);
+    c.fillStyle = "#ffffff";
+    c.font = "bold 72px monospace";
+    c.fillText(dt, 70, 160);
+    const wDt = c.measureText(dt).width;
+    c.font = "bold 28px monospace";
+    c.fillText("C", 70 + wDt + 10, 146);
+    c.fillStyle = "#2a323d";
+    c.fillRect(0, 214, W, 2);
+    c.font = "22px monospace";
+    c.fillStyle = "#c9d3df";
+    c.fillText(`I ${v.cur === null ? "--" : v.cur.toFixed(1)} mA`, 18, 246);
+    c.fillText(`V ${v.volt === null ? "--" : v.volt.toFixed(2)} V`, 190, 246);
+    c.fillText(v.heat ? "HEAT ON" : "HEAT OFF", 350, 246);
+    c.fillStyle = v.wifi ? "#2fdc5a" : "#ff6b5a";
+    c.beginPath();
+    c.arc(26, 290, 7, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "#c9d3df";
+    c.fillText(v.wifi ? "Wi-Fi OK" : "Wi-Fi LOST - BUFFERING", 42, 291);
+    k.tex.needsUpdate = true;
+  }
   function loop() {
     raf = 0;
     if (!visible) return;
     controls.update();
     animate(clock.getElapsedTime());
+    drawTft();
     renderer.render(scene, camera);
     frameCb?.();
     raf = requestAnimationFrame(loop);
@@ -1139,6 +1399,9 @@ export function createRig(canvas: HTMLCanvasElement, opts: { kit?: boolean } = {
     },
     setWifi(on) {
       wifiOn = on;
+    },
+    setTft(v) {
+      tftSt = v;
     },
     onFrame(cb) {
       frameCb = cb;

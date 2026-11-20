@@ -18,9 +18,11 @@ const VERDICT_KO: Record<Score["verdict"], string> = { pass: "통과", partial: 
 function keyTime(env: Env, sc: Score): { label: string; v: number | null; unit: string } {
   if (env.expect === "quiet") return { label: "잘못된 경보", v: sc.falseAlarms, unit: "번" };
   if (env.expect === "trip" || env.expect === "keep") return { label: "히터 켠 뒤 차단", v: sc.cut, unit: "s" };
+  if (env.expect === "dew") return { label: "물 맺히기 전 정지", v: sc.dewLead, unit: "s 전" };
+  if (env.expect === "leak") return { label: "멈출 때 물 높이", v: sc.waterAt, unit: "mm" };
   return { label: `${env.eventLabel} 뒤 정지`, v: sc.react, unit: "s" };
 }
-const fmtKey = (k: ReturnType<typeof keyTime>) => (k.v === null ? "없음" : k.unit === "번" ? `${k.v}번` : `${k.v.toFixed(1)} s`);
+const fmtKey = (k: ReturnType<typeof keyTime>) => (k.v === null ? "없음" : k.unit === "번" ? `${k.v}번` : `${k.v.toFixed(1)} ${k.unit}`);
 
 export function SimTests({ cfg }: { cfg: Config }) {
   const [all, setAll] = useState<{ key: string; rows: Row[] } | null>(null);
@@ -191,7 +193,7 @@ function RepeatView({ env, variant, scores }: { env: Env; variant?: string; scor
           {vals.length ? (
             <span>
               {" "}
-              {unit === "번" ? `${lo}~${hi}번` : `${lo.toFixed(1)}~${hi.toFixed(1)} s`} · 가운데값 {unit === "번" ? `${med(vals)}번` : `${med(vals)!.toFixed(1)} s`}
+              {unit === "번" ? `${lo}~${hi}번` : `${lo.toFixed(1)}~${hi.toFixed(1)} ${unit}`} · 가운데값 {unit === "번" ? `${med(vals)}번` : `${med(vals)!.toFixed(1)} ${unit}`}
               {vals.length < n && ` · ${n - vals.length}번은 없음`}
             </span>
           ) : (
@@ -202,7 +204,7 @@ function RepeatView({ env, variant, scores }: { env: Env; variant?: string; scor
         {vals.length > 0 && (
           <div className="sim-rep-axis">
             <span>{unit === "번" ? x0 : x0.toFixed(0)}</span>
-            <span>{unit === "번" ? `${x1}번` : `${x1.toFixed(0)} s`}</span>
+            <span>{unit === "번" ? `${x1}번` : `${x1.toFixed(0)} ${unit}`}</span>
           </div>
         )}
         {fa.length > 0 && env.expect !== "quiet" && (

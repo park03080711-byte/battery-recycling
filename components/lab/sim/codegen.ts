@@ -1,6 +1,6 @@
 /* 설정(부품 · 핀 · 규칙 카드)에 맞춰 바뀌는 판정 코드 — 읽기용 뼈대.
    LAB 01 ess_stage3.ino의 judge() 구조를 그대로 따른다. 업로드용 전체 스케치는 아님. */
-import { CARDS, PARTS, type CardId, type PartId } from "./catalog";
+import { CARDS, PARTS, cardUsable, type CardId, type PartId } from "./catalog";
 
 export type CodeLine = { text: string; changed?: boolean; dim?: boolean };
 
@@ -11,7 +11,7 @@ const f = (v: number) => {
 
 export function genCode(present: PartId[], pins: Record<string, number>, cards: Record<CardId, boolean>, params: Record<string, number>): CodeLine[] {
   const has = (p: PartId) => present.includes(p);
-  const on = (id: CardId) => cards[id] && CARDS.find((c) => c.id === id)!.needs.every(has);
+  const on = (id: CardId) => cards[id] && cardUsable(CARDS.find((c) => c.id === id)!, has);
   const def = (k: string) => {
     const [cid, pk] = k.split(".");
     return CARDS.find((c) => c.id === cid)!.params.find((p) => p.key === pk)!.def;
@@ -40,16 +40,22 @@ export function genCode(present: PartId[], pins: Record<string, number>, cards: 
     "vib.S": "PIN_VIB",
     "reed.S": "PIN_DOOR",
     "pir.OUT": "PIN_PIR",
-    "photo.S": "PIN_FAN_PULSE",
+    "sonar.TRIG": "PIN_US_TRIG",
+    "sonar.ECHO": "PIN_US_ECHO",
     "btn.S": "PIN_BUTTON",
     "buzz.S": "PIN_BUZZER",
   };
   for (const p of PARTS) {
-    if (!has(p.id)) continue;
+    if (!has(p.id) || p.id === "tft") continue;
     for (const r of p.pins) {
       const k = `${p.id}.${r.key}`;
       add(`constexpr uint8_t ${names[k].padEnd(13)} = ${pins[k]};`, pins[k] !== r.def);
     }
+  }
+  if (has("tft")) {
+    add("// 화면 핀은 라이브러리 설정 파일(User_Setup.h)에서 정함", false, true);
+    const tp = PARTS.find((p) => p.id === "tft")!;
+    for (const r of tp.pins) add(`#define TFT_${r.key.padEnd(4)} ${pins[`tft.${r.key}`]}${r.key === "MOSI" && pins["tft.MOSI"] === 13 ? "   // ← 라이브러리 처음 설정: DS18B20(GPIO13)과 충돌" : ""}`, pins[`tft.${r.key}`] !== r.def);
   }
   const missing = PARTS.filter((p) => !has(p.id));
   if (missing.length) add(`// 빠진 부품: ${missing.map((p) => p.name).join(", ")}`, true, true);
@@ -63,7 +69,9 @@ export function genCode(present: PartId[], pins: Record<string, number>, cards: 
   if (on("cur")) add(`constexpr float I_CAUTION = ${f(P("cur.c"))}, I_WARNING = ${f(P("cur.w"))}, I_DANGER = ${f(P("cur.d"))};  // mA`, ch("cur.c", "cur.w", "cur.d"));
   if (on("volt")) add(`constexpr float V_CAUTION_LOW = ${Math.round(P("volt.c") * 1000)}, V_WARNING_LOW = ${Math.round(P("volt.w") * 1000)}, V_WARNING_HIGH = ${Math.round(P("volt.h") * 1000)};  // mV`, ch("volt.c", "volt.w", "volt.h"));
   if (on("dtsw")) add(`// 온도 스위치 동작 온도 ${P("dtsw.t")} °C — 코드가 아니라 모듈의 가변저항으로 맞춤`, ch("dtsw.t"), true);
-  if (on("fan")) add(`constexpr uint32_t FAN_TIMEOUT_MS = ${Math.round(P("fan.s") * 1000)};  // 펄스가 이만큼 없으면 팬 멈춤`, ch("fan.s"));
+  if (on("dew")) add(`constexpr float DEW_MARGIN_C = ${f(P("dew.m"))};  // 셀 − 이슬점이 이보다 작으면 결로 위험`, ch("dew.m"));
+  if (on("rh")) add(`constexpr uint8_t RH_HIGH = ${P("rh.h")};  // %`, ch("rh.h"));
+  if (on("leak")) add(`constexpr float WATER_MM = ${f(P("leak.h"))};  // 바닥이 이만큼 가까워지면 누수`, ch("leak.h"));
   if (on("shock")) add(`constexpr float SHOCK_G = ${f(P("shock.g"))};`, ch("shock.g"));
   if (on("tiltA")) add(`constexpr float TILT_DEG = ${f(P("tiltA.a"))};`, ch("tiltA.a"));
   if (on("person")) add(`constexpr uint32_t PIR_IGNORE_MS = ${Math.round(P("person.i") * 1000)};  // 켠 뒤 헛신호 무시`, ch("person.i"));
@@ -118,16 +126,26 @@ export function genCode(present: PartId[], pins: Record<string, number>, cards: 
     add('  else if (st.busMv < V_CAUTION_LOW) raise(LV_CAUTION, "저전압 주의");');
   }
   if (on("dtsw")) add('  if (digitalRead(PIN_TEMP_SW) == LOW) raise(LV_DANGER, "온도 스위치 동작");  // 비교기 출력: 넘으면 LOW', true);
-  const site = (["fan", "shock", "tiltA", "tiltSw", "door", "person"] as CardId[]).filter(on);
+  const site = (["shock", "tiltA", "tiltSw", "dew", "leak", "door", "person"] as CardId[]).filter(on);
   if (site.length || on("vib")) add("  // 현장 카드: 충전을 멈출 이유 (halt)", true, true);
-  if (on("fan")) add('  if (now - lastFanPulse > FAN_TIMEOUT_MS) halt = "냉각팬 멈춤";  // 펄스는 인터럽트로 셈', true);
   if (on("shock")) add('  if (fabsf(accMagG() - 1.0f) >= SHOCK_G) shockUntil = now + 30000;\n  if (now < shockUntil) halt = "충격 감지";', true);
   if (on("tiltA")) add('  if (tiltDeg() >= TILT_DEG) halt = "기울어짐";  // atan2(√(x²+y²), z)', true);
   if (on("tiltSw")) add('  if (heldFor(PIN_TILT, 1000)) halt = "기울기 스위치";', true);
+  if (on("dew")) {
+    add("  // 조합 카드: 이슬점(Magnus) = 243.12·γ/(17.62−γ), γ = ln(RH/100) + 17.62·T/(243.12+T)", true, true);
+    add("  float td = dewPoint(st.dhtC, st.dhtRH);", true);
+    add('  if (twice(st.dsC - td < DEW_MARGIN_C)) halt = "결로 위험";  // 두 번 연속', true);
+  }
+  if (on("leak")) {
+    add(`  float c = ${on("sos") ? `331.3f + 0.606f * ${has("ntc") ? "st.ntcC" : "st.dhtC"};  // 조합 카드: 소리 속도 온도 보정 (m/s)` : "343.4f;  // 소리 속도를 20 °C 값으로 고정 (보정 없음)"}`, true);
+    add("  float d = median5(pulseIn(PIN_US_ECHO, HIGH, 30000)) * c / 2000.0f;  // µs → mm, 5번 가운데값", true);
+    add('  if (twice(floorBaseMm - d >= WATER_MM)) halt = "바닥 누수";', true);
+  }
   if (on("door")) add('  if (digitalRead(PIN_DOOR) == HIGH) { halt = "정비 중 — 문 열림"; maint = true; }  // 자석이 멀어지면 열림', true);
   if (on("person")) add('  if (now > PIR_IGNORE_MS && digitalRead(PIN_PIR) == HIGH) { if (!halt) halt = "정비 중 — 사람 접근"; maint = true; }', true);
   if (site.length) add("  if (halt) raise(maint ? LV_CAUTION : LV_WARNING, halt);", true);
   if (on("vib")) add('  if (now < vibUntil) raise(LV_CAUTION, "진동 감지");  // 세기를 몰라 주의만', true);
+  if (on("rh")) add('  if (st.dhtRH >= RH_HIGH) raise(LV_CAUTION, "습도 높음");', true);
   add("  return cand;");
   add("}");
   add("");
@@ -145,5 +163,12 @@ export function genCode(present: PartId[], pins: Record<string, number>, cards: 
   } else add("// 버퍼 없음 → Wi-Fi가 끊긴 동안 만든 기록은 그대로 버려짐", true, true);
   if (has("buzz")) add("digitalWrite(PIN_BUZZER, st.level >= LV_WARNING && blinkPhase(st.level));  // 경고 느리게 · 위험 빠르게", true);
   if (has("btn")) add("if (pressed(PIN_BUTTON)) handleLine(\"x\");  // 현장 버튼 = 시리얼 x", true);
+  if (has("tft")) {
+    add("");
+    add("// ── 화면: 바뀐 칸만 다시 그림 ──", true, true);
+    add("// 전체를 다시 그리면 480×320×16비트 ÷ 27 MHz ≈ 91 ms — 그동안 판정이 멈춤", true, true);
+    add("if (st.level != shownLevel) drawBanner(st.level, st.reason);   // 단계가 바뀔 때만", true);
+    add("if (fabsf(st.dT - shownDT) >= 0.05f) drawNumber(ROW_DT, st.dT); // 숫자는 배경색 글자로 덮어쓰기", true);
+  }
   return L;
 }

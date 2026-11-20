@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { LV_NAME } from "../useWidth";
-import { ADC1, ADC2, CARDS, ENVS, EXPECT_LABEL, FLASH, GPIOS, INPUT_ONLY, PARTS, LATER, defaultCards, defaultParams, defaultPins, type CardId, type EnvId, type PartId, type PinIssue } from "./catalog";
+import { ADC1, ADC2, CARDS, ENVS, EXPECT_LABEL, FLASH, GPIOS, INPUT_ONLY, PARTS, LATER, autoPins, cardUsable, defaultCards, defaultFlags, defaultParams, defaultPins, type CardId, type EnvId, type Flags, type PartId, type PinIssue } from "./catalog";
 import { SEED, Sim, defaultPresent, allParts, type Config, type Score } from "./engine";
 import { PcPanel } from "./PcPanel";
 import { SimTests } from "./SimTests";
@@ -41,13 +41,14 @@ export function SimLab() {
   const [pins, setPins] = useState<Record<string, number>>(defaultPins);
   const [cards, setCards] = useState<Record<CardId, boolean>>(defaultCards);
   const [params, setParams] = useState<Record<string, number>>(defaultParams);
+  const [flags, setFlags] = useState<Flags>(defaultFlags);
   const [speed, setSpeed] = useState(5);
   const [playing, setPlaying] = useState(false);
   const [tab, setTab] = useState<Tab>("env");
   const [runs, setRuns] = useState<RunRec[]>([]);
   const [, bump] = useReducer((x: number) => x + 1, 0);
 
-  const cfg: Config = useMemo(() => ({ env, variant, present, pins, cards, params, seed: SEED }), [env, variant, present, pins, cards, params]);
+  const cfg: Config = useMemo(() => ({ env, variant, present, pins, cards, params, flags, seed: SEED }), [env, variant, present, pins, cards, params, flags]);
   const sim = useRef<Sim>(null as unknown as Sim);
   const recorded = useRef(false);
   const runId = useRef(0);
@@ -78,6 +79,7 @@ export function SimLab() {
       if (d.pins) setPins((c) => ({ ...c, ...d.pins }));
       if (d.cards) setCards((c) => ({ ...c, ...d.cards }));
       if (d.params) setParams((c) => ({ ...c, ...d.params }));
+      if (d.flags) setFlags((c) => ({ ...c, ...d.flags }));
       setFromLink(true);
     }
     loaded.current = true;
@@ -108,6 +110,7 @@ export function SimLab() {
     setPins(defaultPins());
     setCards(defaultCards());
     setParams(defaultParams());
+    setFlags(defaultFlags());
     setFromLink(false);
   };
   const isDefault = encodeCfg(cfg) === "";
@@ -185,6 +188,22 @@ export function SimLab() {
     cut: env === "sensor" && variant === "cut" && s.t >= 45,
     site: s.site,
     ok: present.filter((p) => s.ok(p)),
+    tft: has("tft")
+      ? {
+          ok: s.ok("tft") && !s.bootFail,
+          level: s.level,
+          dT: has("ds") && !s.fault && cur?.dT !== null && cur?.dT !== undefined ? cur.dT : null,
+          fault: s.fault || s.suspect,
+          reason: s.halt ?? (s.level > 0 ? s.reason : ""),
+          maint: s.maint,
+          cur: has("shunt") ? s.curMa : null,
+          volt: has("div") ? s.busV : null,
+          heat: s.power,
+          tripped: s.tripped,
+          wifi: s.site.wifi,
+          t: s.t,
+        }
+      : null,
   };
 
   return (
@@ -293,7 +312,7 @@ export function SimLab() {
           </div>
           <div className="sim-pane" role="tabpanel" id={`sim-pane-${tab}`} aria-labelledby={`sim-tab-${tab}`}>
             {tab === "env" && <EnvPane env={env} setEnv={setEnv} variant={variant} setVariant={setVariant} />}
-            {tab === "parts" && <PartsPane present={present} setPresent={setPresent} pins={pins} setPins={setPins} issues={s.issues} />}
+            {tab === "parts" && <PartsPane present={present} setPresent={setPresent} pins={pins} setPins={setPins} issues={s.issues} flags={flags} setFlags={setFlags} />}
             {tab === "rules" && <RulesPane present={present} cards={cards} setCards={setCards} params={params} setParams={setParams} />}
             {tab === "code" && <CodePane present={present} pins={pins} cards={cards} params={params} />}
           </div>
@@ -327,7 +346,7 @@ export function SimLab() {
           성적표
         </h3>
         {score ? (
-          <ScoreCard score={score} expect={EXPECT_LABEL[envObj.expect]} fromHeater={envObj.heaterAt !== null} lab01={env === "heat" || env === "sensor"} eventLabel={envObj.event !== undefined && envObj.heaterAt !== null ? envObj.eventLabel ?? "사건" : null} />
+          <ScoreCard score={score} expect={EXPECT_LABEL[envObj.expect]} kind={envObj.expect} fromHeater={envObj.heaterAt !== null} lab01={env === "heat" || env === "sensor"} eventLabel={envObj.event !== undefined && envObj.heaterAt !== null ? envObj.eventLabel ?? "사건" : null} />
         ) : (
           <div className="rc-panel sim-score pending">
             <p className="sim-verdict">
@@ -352,7 +371,7 @@ export function SimLab() {
 }
 
 /* ── 설정 ↔ 주소 ── */
-type Shared = { env?: EnvId; variant?: string; present?: PartId[]; pins?: Record<string, number>; cards?: Partial<Record<CardId, boolean>>; params?: Record<string, number> };
+type Shared = { env?: EnvId; variant?: string; present?: PartId[]; pins?: Record<string, number>; cards?: Partial<Record<CardId, boolean>>; params?: Record<string, number>; flags?: Partial<Flags> };
 function encodeCfg(cfg: Config) {
   const d: Record<string, unknown> = {};
   if (cfg.env !== "heat") d.e = cfg.env;
@@ -368,6 +387,9 @@ function encodeCfg(cfg: Config) {
   if (Object.keys(pin).length) d.g = pin;
   if (Object.keys(c).length) d.c = c;
   if (Object.keys(q).length) d.q = q;
+  const f0 = defaultFlags();
+  const fl = Object.fromEntries(Object.entries(cfg.flags ?? f0).filter(([k, v]) => v !== f0[k as keyof Flags]).map(([k, v]) => [k, v ? 1 : 0]));
+  if (Object.keys(fl).length) d.f = fl;
   if (!Object.keys(d).length) return "";
   const b = btoa(unescape(encodeURIComponent(JSON.stringify(d))));
   return b.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -395,6 +417,7 @@ function decodeCfg(hash: string): Shared | null {
             return [k, Math.min(pd.max, Math.max(pd.min, Number(v)))];
           })
       );
+    if (raw.f && typeof raw.f === "object") out.flags = Object.fromEntries(Object.entries(raw.f).filter(([k]) => k in defaultFlags()).map(([k, v]) => [k, !!v]));
     return out;
   } catch {
     return null;
@@ -408,7 +431,7 @@ function describe(cfg: Config) {
     dc = defaultCards(),
     dpar = defaultParams();
   for (const p of PARTS) if (p.group === "core" && !cfg.present.includes(p.id)) out.push(`${p.name} 뺌`);
-  const kit = PARTS.filter((p) => p.group === "kit" && cfg.present.includes(p.id));
+  const kit = PARTS.filter((p) => p.group !== "core" && cfg.present.includes(p.id));
   if (kit.length >= 4) out.push(`+키트 ${kit.length}종`);
   else kit.forEach((p) => out.push(`+${p.name}`));
   for (const [k, v] of Object.entries(cfg.pins)) {
@@ -421,6 +444,7 @@ function describe(cfg: Config) {
       const k = `${c.id}.${p.key}`;
       if (Math.abs(cfg.params[k] - dpar[k]) > 1e-9 && cfg.cards[c.id]) out.push(`${c.name} ${p.label} ${dpar[k]}→${cfg.params[k]} ${p.unit}`);
     }
+  if (cfg.flags && !cfg.flags.echoDiv && cfg.present.includes("sonar")) out.push("Echo 분압 없음");
   return out.length ? out.join(", ") : "기본 설정";
 }
 
@@ -475,13 +499,26 @@ function PartsPane({
   pins,
   setPins,
   issues,
+  flags,
+  setFlags,
 }: {
   present: PartId[];
   setPresent: (f: (p: PartId[]) => PartId[]) => void;
   pins: Record<string, number>;
   setPins: (f: (p: Record<string, number>) => Record<string, number>) => void;
   issues: PinIssue[];
+  flags: Flags;
+  setFlags: (f: (p: Flags) => Flags) => void;
 }) {
+  const [auto, setAuto] = useState<{ text: string; short: boolean } | null>(null);
+  const name = (id: PartId) => PARTS.find((p) => p.id === id)!.name;
+  const runAuto = () => {
+    const r = autoPins(new Set(present), pins);
+    setPins(() => r.pins);
+    const moved = r.moved.map((m) => `${name(m.part)}${PARTS.find((p) => p.id === m.part)!.pins.length > 1 ? ` ${m.pin}` : ""} ${m.from}→${m.to}`);
+    const text = !r.moved.length && !r.short.length ? "옮길 핀이 없어요. 지금 배정에 겹치거나 맞지 않는 핀이 없어요." : `${moved.length ? `핀 ${moved.length}개를 옮겼어요: ${moved.join(", ")}.` : ""}${r.short.length ? ` 핀이 ${r.short.length}개 모자라요 (${[...new Set(r.short.map((x) => name(x.part)))].join(", ")}). 부품을 빼거나, 시리얼 모니터를 포기하고 TX · RX(1 · 3)를 직접 고르세요.` : ""}`;
+    setAuto({ text: text.trim(), short: r.short.length > 0 });
+  };
   const adcUsed = new Map<number, string>();
   for (const p of PARTS) if (present.includes(p.id)) for (const r of p.pins) if (r.kind === "adc") adcUsed.set(pins[`${p.id}.${r.key}`], p.name);
   const CLEAN = GPIOS.filter((g) => !FLASH.includes(g) && ![0, 1, 2, 3, 5, 12, 15].includes(g));
@@ -495,7 +532,10 @@ function PartsPane({
           실측 6종만
         </button>
         <button type="button" className="lab-btn sm" onClick={() => setPresent(() => allParts())}>
-          16종 모두
+          {PARTS.length}종 모두
+        </button>
+        <button type="button" className="lab-btn sm" onClick={runAuto}>
+          빈 핀으로 자동 배정
         </button>
         <span className="sim-pinbudget">
           <span>
@@ -504,6 +544,14 @@ function PartsPane({
           <small>부팅 · 플래시 · 시리얼 핀 제외</small>
         </span>
       </div>
+      {auto && (
+        <p className={`sim-auto${auto.short ? " short" : ""}`} role="status">
+          {auto.text}
+          <button type="button" className="sim-link" onClick={() => setAuto(null)}>
+            닫기
+          </button>
+        </p>
+      )}
       <div className="sim-adc" aria-label="Wi-Fi를 켠 채 쓸 수 있는 아날로그 핀 (ADC1)">
         <span className="sim-adc-h">
           아날로그 핀 (ADC1) <b>{[...adcUsed.keys()].filter((g) => ADC1.includes(g)).length} / 6</b>
@@ -523,7 +571,7 @@ function PartsPane({
           const mine = issues.filter((i) => i.part === p.id);
           return (
             <Fragment key={p.id}>
-            {(idx === 0 || PARTS[idx - 1].group !== p.group) && <li className="sim-group-h">{p.group === "core" ? "LAB 01 실측 부품" : "키트 부품 — 빵빵한 아두이노 센서 키트에서"}</li>}
+            {(idx === 0 || PARTS[idx - 1].group !== p.group) && <li className="sim-group-h">{{ core: "LAB 01 실측 부품", kit: "키트 부품 — 빵빵한 아두이노 센서 키트에서", screen: "화면 — LAB 01 점검 1에서 쓴 3.5인치 TFT" }[p.group]}</li>}
             <li className={on ? "on" : ""}>
               <div className="sim-prow">
                 <button
@@ -564,6 +612,23 @@ function PartsPane({
                   })}
                 </div>
               )}
+              {on && p.id === "sonar" && (
+                <label className="sim-flag">
+                  <input type="checkbox" checked={flags.echoDiv} onChange={(e) => setFlags((f) => ({ ...f, echoDiv: e.target.checked }))} />
+                  <span>Echo 분압 (10 kΩ : 20 kΩ — 5 V → 약 3.3 V)</span>
+                </label>
+              )}
+              {on && p.id === "tft" && (
+                <div className="sim-preset" role="group" aria-label="화면 설정 파일">
+                  <span>설정 파일</span>
+                  <button type="button" aria-pressed={pins["tft.MOSI"] === 13} onClick={() => setPins((c) => ({ ...c, "tft.MOSI": 13 }))}>
+                    고치기 전 <small>MOSI → GPIO13 (LAB 01 점검 1)</small>
+                  </button>
+                  <button type="button" aria-pressed={pins["tft.MOSI"] === 23} onClick={() => setPins((c) => ({ ...c, "tft.MOSI": 23 }))}>
+                    고친 뒤 <small>MOSI → GPIO23</small>
+                  </button>
+                </div>
+              )}
               {on &&
                 mine.map((i, n) => (
                   <p key={n} className={`sim-issue ${i.sev}`}>
@@ -577,7 +642,7 @@ function PartsPane({
           );
         })}
       </ul>
-      <p className="sim-pnote">키트에서 뺀 것: 조이스틱 · 불꽃 감지(LAB 01에서 3165 mV에 고정돼 뺌), 심박 · 레이저 · 트래킹 등 ESS 감시와 관계없는 부품.</p>
+      <p className="sim-pnote">키트에서 뺀 것: 조이스틱 · 불꽃 감지(LAB 01에서 3165 mV에 고정돼 뺌), 포토인터럽트(돌릴 냉각팬이 실습키트에 없음), 심박 · 레이저 · 트래킹 등 ESS 감시와 관계없는 부품.</p>
     </div>
   );
 }
@@ -602,7 +667,9 @@ function RulesPane({
       <p className="sim-hint">꽂은 부품에 맞는 카드만 쓸 수 있어요. 켜고 끄거나 기준값을 바꿔 보세요.</p>
       {CARDS.map((c, idx) => {
         const missing = c.needs.filter((n) => !present.includes(n));
-        const usable = missing.length === 0;
+        const has = (n: PartId) => present.includes(n);
+        const usable = cardUsable(c, has);
+        const anyMissing = c.any && !c.any.some(has) ? c.any : null;
         const on = cards[c.id] && usable;
         const changed = c.params.some((p) => Math.abs(params[`${c.id}.${p.key}`] - dpar[`${c.id}.${p.key}`]) > 1e-9);
         return (
@@ -618,7 +685,11 @@ function RulesPane({
               <span className="sim-out">→ {c.out}</span>
             </div>
             <p className="sim-card-t">{c.text}</p>
-            {!usable && <p className="sim-card-need">필요한 부품: {missing.map((n) => PARTS.find((p) => p.id === n)!.name).join(", ")}</p>}
+            {!usable && (
+              <p className="sim-card-need">
+                필요한 부품: {[...missing.map((n) => PARTS.find((p) => p.id === n)!.name), ...(anyMissing ? [anyMissing.map((n) => PARTS.find((p) => p.id === n)!.name).join(" 또는 ")] : [])].join(", ")}
+              </p>
+            )}
             {usable && c.params.length > 0 && (
               <div className="sim-params">
                 {c.params.map((p) => {
@@ -660,7 +731,7 @@ function RulesPane({
           <li>위험이면 히터 차단 · 잠금 — 사람이 확인하고 <kbd>x</kbd>로 풀기 전까지 다시 켜지 않음</li>
           <li>단계는 두 번 연속(1초)이면 올리고, 열 번 연속(5초)이면 내림 · 내릴 때 0.3 °C 여유</li>
           <li>셀 60 °C 초과 또는 히터 10분 연속이면 무조건 정지</li>
-          <li>현장 카드(팬 · 충격 · 기울기 · 정비)는 충전만 멈추고 잠그지 않음 — 원인이 풀리면 <kbd>h</kbd>로 다시 켬</li>
+          <li>현장 카드(충격 · 기울기 · 결로 · 누수 · 정비)는 충전만 멈추고 잠그지 않음 — 원인이 풀리면 <kbd>h</kbd>로 다시 켬</li>
           <li>버저가 있으면 경고에서 느리게, 위험에서 빠르게 울림 · 버튼이 있으면 현장에서 <kbd>x</kbd>와 같은 차단 해제</li>
         </ul>
       </div>
@@ -693,17 +764,18 @@ function KitStrip({ s, has }: { s: Sim; has: (p: PartId) => boolean }) {
   const st = s.site;
   const items: { id: PartId; label: string; val: string; alert: boolean }[] = [];
   const add = (id: PartId, label: string, val: string, alert: boolean) => {
-    if (has(id)) items.push({ id, label, val: s.ok(id) ? val : "핀 오류", alert: s.ok(id) ? alert : true });
+    if (has(id)) items.push({ id, label, val: s.ok(id) ? val : id === "tft" ? "안 켜짐 (핀 오류)" : "핀 오류", alert: s.ok(id) ? alert : true });
   };
-  add("photo", "냉각팬", st.fanOn ? "회전 펄스 있음" : "펄스 없음", !st.fanOn);
   add("dtmod", "온도 스위치", st.dtmodOn ? "동작" : "꺼짐", st.dtmodOn);
-  add("dht", "DHT11", st.dhtT === null ? "읽는 중" : `${st.dhtT} °C · ${st.dhtRH} %`, false);
+  add("dht", "DHT11", st.dhtT === null ? "읽는 중" : `${st.dhtT} °C · ${st.dhtRH} % · 이슬점 ${st.dew?.toFixed(1) ?? "—"} °C`, s.halt === "결로 위험");
+  add("sonar", "바닥 물 (초음파)", st.floorMm === null ? "재는 중" : `${Math.max(0, st.floorMm).toFixed(1)} mm`, s.halt === "바닥 누수");
   add("accel", "가속도", `${st.tilt.toFixed(0)}° · 충격 ${st.shock.toFixed(1)} g`, st.tilt >= 5 || st.shock >= 0.3);
   add("tilt", "기울기 스위치", st.tilt > 25 ? "기울어짐" : "수평", st.tilt > 25);
   add("vib", "진동 스위치", st.shock > 0.5 ? "흔들림" : "조용", st.shock > 0.5);
   add("reed", "함체 문", st.door ? "열림" : "닫힘", st.door);
   add("pir", "인체감지", st.pirOut ? "감지" : "없음", st.pirOut);
   add("buzz", "버저", st.beep === "none" ? "조용" : st.beep === "fast" ? "삐삐삐" : "삐—", st.beep !== "none");
+  add("tft", "화면", s.bootFail ? "꺼짐" : "표시 중", false);
   if (!items.length) return null;
   return (
     <ul className="sim-kit" aria-label="키트 부품 신호">
@@ -760,7 +832,7 @@ function Serial({ lines }: { lines: string[] }) {
 /* ── 성적표 ── */
 const alarmText = (v: number | null, none: string) => (v === null ? none : v < 0 ? `켜기 ${(-v).toFixed(1)} s 전` : `${v.toFixed(1)} s`);
 const VMARK: Record<Score["verdict"], string> = { pass: "✓", partial: "◐", late: "!", miss: "✕", false: "!", boot: "✕", idle: "–" };
-function ScoreCard({ score, expect, fromHeater, lab01, eventLabel }: { score: Score; expect: string; fromHeater: boolean; lab01: boolean; eventLabel: string | null }) {
+function ScoreCard({ score, expect, kind, fromHeater, lab01, eventLabel }: { score: Score; expect: string; kind: string; fromHeater: boolean; lab01: boolean; eventLabel: string | null }) {
   return (
     <div className={`rc-panel sim-score v-${score.verdict}`}>
       <p className="sim-verdict">
@@ -792,10 +864,24 @@ function ScoreCard({ score, expect, fromHeater, lab01, eventLabel }: { score: Sc
             <dd>{score.cut === null ? "없음" : `${score.cut.toFixed(1)} s`}</dd>
           </div>
         )}
-        <div>
-          <dt>실제 셀 최고</dt>
-          <dd>+{score.peakTruth.toFixed(2)} °C</dd>
-        </div>
+        {kind === "dew" && (
+          <div>
+            <dt>물 맺히기 전</dt>
+            <dd>{score.dewLead === null ? "—" : score.dewLead >= 0 ? `${score.dewLead.toFixed(0)} s 전` : `${(-score.dewLead).toFixed(0)} s 늦음`}</dd>
+          </div>
+        )}
+        {kind === "leak" && (
+          <div>
+            <dt>멈출 때 물</dt>
+            <dd>{score.waterAt === null ? "—" : `${score.waterAt.toFixed(1)} mm`}</dd>
+          </div>
+        )}
+        {kind !== "dew" && kind !== "leak" && (
+          <div>
+            <dt>실제 셀 최고</dt>
+            <dd>+{score.peakTruth.toFixed(2)} °C</dd>
+          </div>
+        )}
         <div>
           <dt>잘못된 경보</dt>
           <dd>{score.falseAlarms}번</dd>
