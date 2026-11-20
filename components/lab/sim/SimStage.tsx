@@ -7,7 +7,8 @@ import type { Led, Site } from "./engine";
 
 /* 가상 실험대의 3D 장면 — LAB 01과 같은 장면에, 고른 부품만 보이고
    히터 달아오름 · LED · 전류 흐름이 계산 결과를 따라간다. */
-export type StageState = { present: PartId[]; level: number; led: Led; heat: number; flow: boolean; cut: boolean; site: Site };
+export type TftView = { ok: boolean; level: number; dT: number | null; fault: boolean; reason: string; maint: boolean; cur: number | null; volt: number | null; heat: boolean; tripped: boolean; wifi: boolean; t: number };
+export type StageState = { present: PartId[]; level: number; led: Led; heat: number; flow: boolean; cut: boolean; site: Site; tft: TftView | null };
 
 const LED_HEX: Record<Led["color"], number | null> = { g: 0x2fdc5a, y: 0xffd23a, r: 0xff3b30, b: 0x3b82ff, off: null };
 const LED_CSS: Record<Led["color"], string> = { g: "#2fdc5a", y: "#ffd23a", r: "#ff3b30", b: "#3b82ff", off: "transparent" };
@@ -38,7 +39,8 @@ export function SimStage({ state, children }: { state: StageState; children?: Re
     h.setLevel(Math.min(3, Math.max(0, s.level)) as 0 | 1 | 2 | 3);
     h.setLed({ color: LED_HEX[s.led.color], blink: s.led.blink });
     h.setWifi(s.site.wifi);
-    h.setKit({ fanOn: s.site.fanOn, door: s.site.door, tilt: s.site.tilt, shock: s.site.shock, beep: s.site.beep, dtmodOn: s.site.dtmodOn, pirOut: s.site.pirOut });
+    h.setKit({ door: s.site.door, tilt: s.site.tilt, shock: s.site.shock, beep: s.site.beep, dtmodOn: s.site.dtmodOn, pirOut: s.site.pirOut, water: s.site.water, wet: s.site.wet, ping: s.site.floorMm !== null });
+    h.setTft(s.tft);
   };
 
   const start = async () => {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Footer from "@/components/Footer";
+import { CARDS, ENVS, PARTS } from "@/components/lab/sim/catalog";
 import "./lab.css";
 
 export const metadata: Metadata = {
@@ -92,15 +93,15 @@ export default function LabHub() {
                 <dl className="lab-hub-nums">
                   <div>
                     <dt>부품</dt>
-                    <dd>16종</dd>
+                    <dd>{PARTS.length}종</dd>
                   </div>
                   <div>
                     <dt>환경</dt>
-                    <dd>8가지</dd>
+                    <dd>{ENVS.length}가지</dd>
                   </div>
                   <div>
                     <dt>규칙 카드</dt>
-                    <dd>16장</dd>
+                    <dd>{CARDS.length}장</dd>
                   </div>
                 </dl>
                 <span className="go" aria-hidden="true">

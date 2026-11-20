@@ -1,11 +1,11 @@
 /* 가상 ESP32 실험대 — 계산 모듈 (화면과 분리).
-   ① 환경 모델: 방 온도 · 셀 온도 · 전류 · 전압 · 팬 · 문 · 충격의 '실제 값'
+   ① 환경 모델: 방 온도 · 습도 · 셀 온도 · 전류 · 전압 · 바닥 물 · 문 · 충격의 '실제 값'
    ② 센서 모델: 센서마다 다르게 읽음 (반응 속도 · 잡음 · 해상도 · 고장)
    ③ 가상 펌웨어: LAB 01의 ess_stage3.ino 판정 부분을 그대로 옮기고, 키트 부품 규칙을 같은 방식으로 더함 (0.5초마다)
    셀 발열은 LAB 01 판정 실험 2회차 기록에 맞춘 1차 모델: 최종 상승 K = 6.5 °C, 가열 시간상수 66 s.
    (펌웨어의 지수 평활까지 거친 값이 기록과 맞도록 맞춤. 잡음 40가지로 돌린 평균이 주의 13.8 · 경고 26.4 · 위험 64.7초, 실측은 11 · 27 · 65초)
    냉각 시간상수 220 s는 발열 실험 1 · 3회 평균. 키트 부품 값은 데이터시트 기반. */
-import { AP_DOWN, CARDS, ENVS, PARTS, checkPins, type CardId, type EnvId, type PartId, type PinIssue } from "./catalog";
+import { AP_DOWN, CARDS, ENVS, PARTS, cardUsable, checkPins, defaultFlags, type CardId, type EnvId, type Flags, type PartId, type PinIssue } from "./catalog";
 import { comm as commRows } from "../../../data/lab/essData";
 
 /** LAB 01 통신 실험에서 잰 왕복 지연 (ms) — 여기서 하나씩 뽑아 쓴다 */
@@ -23,14 +23,35 @@ export const MODEL = {
   contactTau: 25,
   Ta0: 23,
   ntcBias: -0.55,
-  /** 팬이 멈추면 같은 열에 셀이 몇 배 더 데워지나 (가정) */
-  fanLoss: 2.6,
   Rheat: 211,
   Rshort: 100,
   tauMod: 8,
   tauDht: 10,
   dhtBias: 1.0,
+  /** 함체 공기: 평소 23 °C · 50 % */
+  rh0: 0.5,
+  /** 결로 환경의 바깥 공기 (여름철 가정) · 섞이는 시간상수 */
+  outT: 31,
+  outRH: 0.8,
+  tauAir: 30,
+  /** 초음파: 물받이 바닥까지 15 cm · 한 번 잴 때 잡음 1 mm (데이터시트 분해능 3 mm 안쪽) */
+  sonarH: 150,
+  sonarNoise: 1.0,
+  /** 누수: 60초부터 2분 동안 20 mm (가정) */
+  leakMm: 20,
+  leakDur: 120,
 };
+/** 포화 수증기압 (hPa, Magnus) */
+export const esat = (T: number) => 6.112 * Math.exp((17.62 * T) / (243.12 + T));
+/** 이슬점 (°C): 수증기압으로 */
+export const dewFromE = (e: number) => {
+  const g = Math.log(e / 6.112);
+  return (243.12 * g) / (17.62 - g);
+};
+/** 이슬점 (°C): 온도 · 상대습도로 (펌웨어가 DHT11 값으로 계산하는 식) */
+export const dewPoint = (T: number, rh: number) => dewFromE((Math.max(1, rh) / 100) * esat(T));
+const E0 = MODEL.rh0 * esat(MODEL.Ta0);
+const EOUT = MODEL.outRH * esat(MODEL.outT);
 const TICK = 0.5;
 /** 기본 잡음: 40가지 중 평균에 가장 가까운 것 (주의 13.5 · 경고 26 · 위험 64.5초) */
 export const SEED = 18;
@@ -44,6 +65,7 @@ export type Config = {
   pins: Record<string, number>;
   cards: Record<CardId, boolean>;
   params: Record<string, number>;
+  flags?: Flags;
   seed?: number;
 };
 
@@ -79,11 +101,14 @@ export type Score = {
   parts: number;
   pinsUsed: number;
   comm: { made: number; recv: number; lost: number; catchUp: number | null };
+  /** 결로: 물이 맺히기 몇 초 전에 멈췄나 (음수면 맺힌 뒤) */
+  dewLead: number | null;
+  /** 누수: 멈출 때 실제 물 높이 (mm) */
+  waterAt: number | null;
 };
 
 /** 3D · 화면에 보여 줄 현장 상태 */
 export type Site = {
-  fanOn: boolean;
   door: boolean;
   person: boolean;
   pirOut: boolean;
@@ -95,6 +120,14 @@ export type Site = {
   beep: "none" | "slow" | "fast";
   maint: boolean;
   wifi: boolean;
+  /** 실제 바닥 물 (mm) · 초음파로 잰 물 높이 */
+  water: number;
+  floorMm: number | null;
+  /** 셀에 맺힌 물 0~1 · 펌웨어가 계산한 이슬점 */
+  wet: number;
+  dew: number | null;
+  /** 실제 공기 습도 (%) */
+  rhTrue: number;
 };
 
 /** 받침에 맞는 조사: 로/으로, 을/를 */
@@ -131,7 +164,7 @@ export class Sim {
     return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
   };
   private P = (k: string) => this.cfg.params[k];
-  readonly card = (id: CardId) => !!this.cfg.cards[id] && CARDS.find((c) => c.id === id)!.needs.every((n) => this.has(n));
+  readonly card = (id: CardId) => !!this.cfg.cards[id] && cardUsable(CARDS.find((c) => c.id === id)!, this.has);
 
   /* ── 세계 ── */
   t = 0;
@@ -143,8 +176,15 @@ export class Sim {
   Tmod = MODEL.Ta0;
   Tdht = MODEL.Ta0;
   loadOn = false;
-  fanOn = true;
   door = false;
+  /** 함체 공기 수증기압 (hPa) · DHT11이 느끼는 값 */
+  vap = E0;
+  vapDht = E0;
+  /** 셀에 맺힌 물 0~1 · 처음 맺힌 시각 */
+  wet = 0;
+  tCond: number | null = null;
+  /** 바닥 물 (mm) */
+  water = 0;
   person = false;
   tilt = 0;
   shock = 0;
@@ -177,7 +217,7 @@ export class Sim {
   curMa = 0;
   fault = false;
   suspect = false;
-  /** 충전을 멈춰야 하는 현장 이유 (정비 · 충격 · 팬) */
+  /** 충전을 멈춰야 하는 현장 이유 (정비 · 충격 · 결로 · 누수) */
   halt: string | null = null;
   maint = false;
   private haltBogus = false;
@@ -202,7 +242,13 @@ export class Sim {
   private ticks = 0;
   private dtmodOn = false;
   private pirHoldUntil = -1;
-  private pulseLast = 0;
+  /** 초음파: 켤 때 잰 바닥까지 거리 · 지금 물 높이 */
+  private sonarBase: number[] = [];
+  private floorBase = NaN;
+  floorMm: number | null = null;
+  private leakN = 0;
+  private dewN = 0;
+  dewEst: number | null = null;
   private shockUntil = -1;
   private vibUntil = -1;
   private tiltSince = 0;
@@ -228,7 +274,7 @@ export class Sim {
     this.env = ENVS.find((e) => e.id === cfg.env)!;
     const present = new Set(cfg.present);
     this.has = (p) => present.has(p);
-    this.issues = checkPins(present, cfg.pins);
+    this.issues = checkPins(present, cfg.pins, cfg.flags ?? defaultFlags());
     const broken = new Set(this.issues.filter((i) => i.breaks).map((i) => i.part));
     this.ok = (p) => present.has(p) && !broken.has(p);
     this.bootFail = this.issues.some((i) => i.bootFail);
@@ -303,7 +349,12 @@ export class Sim {
       t = this.t,
       E = this.env.event ?? Infinity;
     if (e === "room") this.Ta = MODEL.Ta0 + 4.5 * Math.min(1, Math.max(0, (t - 15) / 90));
-    this.fanOn = !(e === "fan" && t >= E);
+    if (e === "condense" && t >= E) {
+      const m = 1 - Math.exp(-(t - E) / MODEL.tauAir);
+      this.Ta = MODEL.Ta0 + (MODEL.outT - MODEL.Ta0) * m;
+      this.vap = E0 + (EOUT - E0) * m;
+    }
+    if (e === "leak") this.water = MODEL.leakMm * Math.min(1, Math.max(0, (t - E) / MODEL.leakDur));
     this.door = e === "door" && t >= E && t < 130;
     this.person = e === "door" && t >= E + 2 && t < 125;
     if (e === "shock") {
@@ -313,11 +364,11 @@ export class Sim {
     }
     this.Tca += (dt * (this.Ta - this.Tca)) / MODEL.tauCellAmb;
     const pw = this.power;
-    // 같은 셀에 들어가는 열: 평소 전력 대비 비율 (단락이면 커짐) × 충전 세기 × 팬이 멈추면 더 데워짐
+    // 같은 셀에 들어가는 열: 평소 전력 대비 비율 (단락이면 커짐) × 충전 세기
     const i = 4.56 / (this.Rh + 22),
       i0 = 4.56 / (MODEL.Rheat + 22);
     const pf = (i * i * this.Rh) / (i0 * i0 * MODEL.Rheat);
-    const K = MODEL.K * pf * this.env.load * (this.fanOn ? 1 : MODEL.fanLoss);
+    const K = MODEL.K * pf * this.env.load;
     this.x += (dt * ((pw ? K : 0) - this.x)) / (pw ? MODEL.tauHeat : MODEL.tauCool);
     this.Tn += (dt * (this.Ta - this.Tn)) / MODEL.tauNtc;
     const contact = e === "sensor" && this.cfg.variant === "contact";
@@ -325,6 +376,11 @@ export class Sim {
     this.Ts += (dt * (target - this.Ts)) / (contact ? MODEL.contactTau : MODEL.tauDs);
     this.Tmod += (dt * (this.Tca + this.x - this.Tmod)) / MODEL.tauMod;
     this.Tdht += (dt * (this.Ta - this.Tdht)) / MODEL.tauDht;
+    this.vapDht += (dt * (this.vap - this.vapDht)) / MODEL.tauDht;
+    // 결로: 셀 표면이 공기 이슬점보다 차가우면 물이 맺힘
+    const cond = this.Tca + this.x < dewFromE(this.vap);
+    if (cond && this.tCond === null) this.tCond = this.t;
+    this.wet = Math.min(1, Math.max(0, this.wet + dt * (cond ? 1 / 30 : -1 / 90)));
   }
 
   /* ── 센서 ── */
@@ -353,11 +409,11 @@ export class Sim {
   }
 
   /* ── 키트 부품 읽기 ── */
-  private readKit() {
+  private readKit(src: "ntc" | "dht" | null) {
     // DHT11: 1초에 한 번, 1 °C 단위
     if (this.ok("dht") && this.ticks % 2 === 0) {
       this.dhtRaw = Math.round(this.Tdht + MODEL.dhtBias + 0.3 * this.gauss());
-      this.dhtRH = Math.round(45 + (this.door ? 8 : 0) + 1.5 * this.gauss());
+      this.dhtRH = Math.min(95, Math.max(20, Math.round((100 * this.vapDht) / esat(this.Tdht) + 1.5 * this.gauss())));
     } else if (!this.ok("dht")) {
       this.dhtRaw = NaN;
       this.dhtRH = NaN;
@@ -373,8 +429,20 @@ export class Sim {
     // 인체감지: 켠 뒤 30~60초는 헛신호 (6~9초, 22~25초)
     const warm = (this.t >= 6 && this.t < 9) || (this.t >= 22 && this.t < 25);
     if (this.ok("pir") && (this.person || warm)) this.pirHoldUntil = this.t + 2.5;
-    // 팬 펄스
-    if (this.ok("photo") && this.fanOn) this.pulseLast = this.t;
+    // 초음파: 5번 재서 가운데값 (가끔 엉뚱한 메아리)
+    if (this.ok("sonar")) {
+      const cTrue = 331.3 + 0.606 * this.Ta;
+      const tm = src === "ntc" ? this.emaAmb : this.dhtRaw;
+      const cUse = this.card("sos") && !isNaN(tm) ? 331.3 + 0.606 * tm : 343.4;
+      const d = (MODEL.sonarH - this.water) * (cUse / cTrue);
+      const pings = Array.from({ length: 5 }, () => (this.rand() < 0.03 ? d + 5 + 40 * this.rand() : Math.round((d + MODEL.sonarNoise * this.gauss()) / 0.17) * 0.17)).sort((a, b) => a - b);
+      const med = pings[2];
+      if (this.t <= 8) this.sonarBase.push(med);
+      else {
+        if (isNaN(this.floorBase) && this.sonarBase.length) this.floorBase = [...this.sonarBase].sort((a, b) => a - b)[Math.floor(this.sonarBase.length / 2)];
+        if (!isNaN(this.floorBase)) this.floorMm = this.floorBase - med;
+      }
+    } else this.floorMm = null;
     // 진동 스위치
     if (this.ok("vib") && this.shock > 0.5) this.vibUntil = this.t + 10;
   }
@@ -392,8 +460,8 @@ export class Sim {
     };
     this.busV = avg(this.avgV, this.readBus());
     this.curMa = avg(this.avgI, this.readCur());
-    this.readKit();
     const src = this.ambSrc();
+    this.readKit(src);
     const amb = src === "ntc" ? this.readNtc() : src === "dht" ? this.dhtRaw : NaN;
     this.dsRaw = this.readDs();
     if (!isNaN(amb)) this.emaAmb = isNaN(this.emaAmb) ? amb : 0.3 * amb + 0.7 * this.emaAmb;
@@ -453,7 +521,6 @@ export class Sim {
     let halt: string | null = null,
       bogus = false,
       maint = false;
-    if (this.card("fan") && this.t - this.pulseLast >= this.P("fan.s") && this.t > 3) halt = "냉각팬 멈춤";
     if (this.card("shock") && Math.abs(this.shockPeak) >= this.P("shock.g")) this.shockUntil = this.t + 30;
     if (this.card("shock") && this.t < this.shockUntil) halt = "충격 감지";
     if (this.card("tiltA") && this.ok("accel") && this.tilt >= this.P("tiltA.a")) halt = "기울어짐 (가속도)";
@@ -461,6 +528,17 @@ export class Sim {
       if (!this.tiltSince) this.tiltSince = this.t;
       if (this.t - this.tiltSince >= 1) halt = "기울기 스위치";
     } else this.tiltSince = 0;
+    // 결로: 셀 표면(DS18B20) − 이슬점(DHT11) 이 여유보다 작으면 (두 번 연속)
+    this.dewEst = this.ok("dht") && !isNaN(this.dhtRaw) && !isNaN(this.dhtRH) ? dewPoint(this.dhtRaw, this.dhtRH) : null;
+    if (this.card("dew") && this.ok("ds") && this.dewEst !== null && !this.fault && this.calibrated && !isNaN(this.emaDs)) {
+      this.dewN = this.emaDs - this.dewEst < this.P("dew.m") ? this.dewN + 1 : 0;
+      if (this.dewN >= 2) halt = "결로 위험";
+    } else this.dewN = 0;
+    // 누수: 바닥이 기준만큼 가까워지면 (두 번 연속)
+    if (this.card("leak") && this.floorMm !== null) {
+      this.leakN = this.floorMm >= this.P("leak.h") ? this.leakN + 1 : 0;
+      if (this.leakN >= 2) halt = "바닥 누수";
+    } else this.leakN = 0;
     if (this.card("door") && this.ok("reed") && this.door) {
       halt = "정비 중 — 문 열림";
       maint = true;
@@ -579,6 +657,7 @@ export class Sim {
     }
     if (this.halt) raise(this.maint ? 1 : 2, this.halt);
     if (this.card("vib") && this.t < this.vibUntil) raise(1, "진동 감지");
+    if (this.card("rh") && this.ok("dht") && this.dhtRH >= this.P("rh.h")) raise(1, "습도 높음");
     return cand;
   }
 
@@ -616,7 +695,6 @@ export class Sim {
   get site(): Site {
     const beep = !this.ok("buzz") || this.bootFail ? "none" : this.level >= 3 ? "fast" : this.level >= 2 ? "slow" : "none";
     return {
-      fanOn: this.fanOn,
       door: this.door,
       person: this.person,
       pirOut: this.pirOut,
@@ -628,6 +706,11 @@ export class Sim {
       beep,
       maint: this.maint,
       wifi: this.link && !this.bootFail,
+      water: this.water,
+      floorMm: this.ok("sonar") && !this.bootFail ? this.floorMm : null,
+      wet: this.wet,
+      dew: this.dewEst,
+      rhTrue: (100 * this.vap) / esat(this.Ta),
     };
   }
 
@@ -728,7 +811,8 @@ export class Sim {
       if (this.has("div")) parts.push(`${this.busV.toFixed(2)} V`);
       if (this.ok("dht") && !isNaN(this.dhtRaw)) parts.push(`${this.dhtRaw} °C ${this.dhtRH}%`);
       if (this.ok("accel")) parts.push(`${this.tilt.toFixed(0)}°`);
-      if (this.ok("photo")) parts.push(this.fanOn ? "팬 회전" : "팬 정지");
+      if (this.dewEst !== null) parts.push(`이슬점 ${this.dewEst.toFixed(1)} °C`);
+      if (this.floorMm !== null) parts.push(`바닥 물 ${this.floorMm.toFixed(1)} mm`);
       parts.push(LEVEL_KO[this.level], this.power ? "ON" : "OFF");
       this.say(parts.join(" · "));
     }
@@ -764,12 +848,13 @@ export class Sim {
     const cm = this.comm;
     // 끝나는 순간 보내는 중인 것은 도착한 것으로 (보내지도 못한 것만 잃음)
     const unsent = this.packets.filter((p) => !p.lost && p.sent === null).length;
-    const base = { parts, pinsUsed, firstAlarm, cut, react, peakTruth: peak, falseAlarms: 0, comm: { made: cm.made, recv: cm.made - cm.lost - unsent, lost: cm.lost + unsent, catchUp: cm.catchUp } };
+    const base = { parts, pinsUsed, firstAlarm, cut, react, peakTruth: peak, falseAlarms: 0, comm: { made: cm.made, recv: cm.made - cm.lost - unsent, lost: cm.lost + unsent, catchUp: cm.catchUp }, dewLead: null, waterAt: null };
     const S = (verdict: Score["verdict"], title: string, detail: string, extra: Partial<Score> = {}): Score => ({ ...base, verdict, title, detail, ...extra });
 
     if (this.bootFail) return S("boot", "부팅 실패", "ESP32가 켜지지 않아 아무것도 측정하지 못했어요. 릴레이도 켜지지 않아 히터는 돌지 않았지만, 실제 장치였다면 감시가 전혀 없는 상태예요.", { firstAlarm: null, cut: null });
     if (this.env.heaterAt !== null && !this.samples.some((s) => s.heat)) {
-      const why = !this.has("relay") ? "" : !this.ok("relay") ? "릴레이 핀이 동작하지 않아 히터에 전기가 가지 않았어요." : this.fault ? "처음부터 센서 고장 상태라 펌웨어가 히터를 켜 주지 않았어요." : this.halt ? `‘${this.halt}’ 상태라 히터를 켜지 못했어요.` : "히터가 켜지지 않았어요.";
+      const dsClash = this.issues.find((i) => i.part === "ds" && i.breaks && i.msg.includes("같이 쓰고"));
+      const why = !this.has("relay") ? "" : !this.ok("relay") ? "릴레이 핀이 동작하지 않아 히터에 전기가 가지 않았어요." : this.fault && dsClash ? `DS18B20 핀(GPIO${dsClash.gpio})을 ${dsClash.msg.match(/을 (.+?)와 같이/)?.[1] ?? "다른 부품"}도 써서 온도가 nan이라, 펌웨어가 히터를 켜 주지 않았어요.${dsClash.msg.includes("화면") ? " LAB 01 점검 1과 같은 상황이에요(화면도 안 켜짐)." : ""}` : this.fault ? "처음부터 센서 고장 상태라 펌웨어가 히터를 켜 주지 않았어요." : this.halt ? `‘${this.halt}’ 상태라 히터를 켜지 못했어요.` : "히터가 켜지지 않았어요.";
       return S("idle", "시작 못 함", `${why} 셀은 안전했지만 장치가 제 일을 못 한 상태예요. 부품 · 핀 탭의 빨간 표시를 확인하세요.`, { cut: null });
     }
     const bogus = this.events.find((e) => e.kind === "cut" && e.bogus);
@@ -800,12 +885,26 @@ export class Sim {
       return S("late", "늦은 차단", `${cut.toFixed(1)}초에 끊었지만 그때 실제 셀은 이미 +${peak.toFixed(2)} °C였어요. 센서가 셀을 제대로 못 느꼈어요.`);
     }
     const after = alarms.filter((a) => E !== undefined && a.t >= E);
-    if (ex === "cause") {
-      const seen = this.events.some((e) => E !== undefined && e.t >= E && e.t <= E + 10 && e.text.includes("냉각팬"));
-      if (react !== null && seen && react <= 10) return S("pass", "통과 — 팬 고장을 바로 알아챔", `팬이 멈추고 ${react.toFixed(1)}초 만에 알리고 충전을 멈췄어요. 실제 셀은 최고 +${peak.toFixed(2)} °C.`);
-      if (react !== null && peak < 4.6) return S("partial", "부분 통과 — 원인은 몰랐어요", `셀 온도가 오르고 나서야 팬이 멈춘 지 ${react.toFixed(0)}초 뒤에 멈췄어요. 정비하는 사람은 왜 멈췄는지 몰라요.`);
-      if (react !== null) return S("late", "늦은 정지", `팬이 멈춘 지 ${react.toFixed(0)}초 뒤에야 멈췄고, 실제 셀은 +${peak.toFixed(2)} °C까지 올랐어요.`);
-      return S("miss", "놓침 — 팬이 멈춘 채 계속 충전", `셀이 주변보다 ${peak.toFixed(1)} °C까지 데워졌는데 멈추지 못했어요.`);
+    if (ex === "dew" || ex === "leak") {
+      // 사건 전에 멈추거나 울리면 잘못된 경보
+      // 사건 전에 결로 · 누수 · 습도 경보를 내거나 충전을 멈추면 잘못된 경보 (충전 초반의 온도 주의는 따로 셈하지 않음)
+      const early = this.events.filter((e) => E !== undefined && e.t < E && (e.kind === "cut" || (e.kind === "level" && /결로|누수|습도/.test(e.text) && e.text.indexOf("내려감") < 0)));
+      if (early.length) return S("false", "잘못된 경보 — 사건 전에 울림", `아직 ${ex === "dew" ? "습한 공기가 들어오지도" : "물이 고이지도"} 않았는데 ${early[0].t.toFixed(0)}초에 ‘${early[0].text}’${early[0].kind === "cut" ? "" : " 경보를 냈어요"}${early[0].kind === "cut" ? "가 일어났어요" : ""}.`, { falseAlarms: early.length });
+      const stopAt = afterAbs;
+      if (ex === "dew") {
+        const tc = this.tCond;
+        const lead = stopAt !== null && tc !== null ? tc - stopAt : null;
+        if (stopAt !== null && (lead === null || lead >= 20)) return S("pass", "통과 — 물 맺히기 전에 멈춤", lead === null ? "셀에 물이 맺히기 전에 충전을 멈췄어요." : `셀 표면에 물이 맺히기 ${lead.toFixed(0)}초 전에 결로 위험을 알리고 충전을 멈췄어요.`, { dewLead: lead });
+        if (stopAt !== null && lead !== null && lead >= 0) return S("partial", `빠듯함 — 물 맺히기 ${lead.toFixed(0)}초 전`, `멈추긴 했지만 정답(20초 전)보다 늦었어요. 이슬점 계산에 DHT11 오차가 섞여 여유를 넓혀야 해요.`, { dewLead: lead });
+        if (stopAt !== null && lead !== null) return S("late", `늦은 정지 — 물이 맺힌 뒤 ${(-lead).toFixed(0)}초`, `셀 표면에 이미 물이 맺힌 뒤에야 멈췄어요.`, { dewLead: lead });
+        if (after.length) return S("partial", "알렸지만 충전은 계속", `${eul(after[0].text.replace(/^[^—]*— /, ""))} 알렸지만 충전을 멈추지 않았어요. 습도만으로는 물이 맺히는지 알 수 없어요.`);
+        return S("miss", "몰랐어요 — 물이 맺힌 채 충전", tc !== null ? `${tc.toFixed(0)}초에 셀 표면이 이슬점 아래로 내려가 물이 맺혔는데 충전을 계속했어요. 셀 온도와 공기 습도를 함께 봐야 해요.` : "결로를 알아채지 못했어요.");
+      }
+      const wAt = stopAt === null ? null : MODEL.leakMm * Math.min(1, Math.max(0, (stopAt - (E ?? 0)) / MODEL.leakDur));
+      if (wAt !== null && wAt < 5) return S("pass", "통과 — 물이 차기 전에 멈춤", `물이 ${wAt.toFixed(1)} mm일 때(누수 ${react?.toFixed(0)}초 뒤) 알리고 충전을 멈췄어요.`, { waterAt: wAt });
+      if (wAt !== null) return S("late", `늦은 정지 — 물 ${wAt.toFixed(1)} mm`, `물이 이미 ${wAt.toFixed(1)} mm 고인 뒤에 멈췄어요. 물 높이 기준을 낮춰 보세요(방 온도 환경도 같이 시험).`, { waterAt: wAt });
+      if (after.length) return S("partial", "알렸지만 충전은 계속", `${eul(after[0].text.replace(/^[^—]*— /, ""))} 알렸지만 충전을 멈추지 않았어요.`);
+      return S("miss", "몰랐어요 — 물이 찬 채 충전", `바닥에 물이 ${MODEL.leakMm} mm까지 찼는데 충전을 계속했어요.`);
     }
     if (ex === "fast") {
       if (react !== null && react <= 5) return S("pass", "통과 — 단락을 바로 끊음", `단락 ${react.toFixed(1)}초 만에 히터를 끊었어요. 실제 셀은 최고 +${peak.toFixed(2)} °C.`);
