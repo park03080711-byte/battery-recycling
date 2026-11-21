@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import { SimLab } from "@/components/lab/sim/SimLab";
 import { SimValidation } from "@/components/lab/sim/SimValidation";
 import { MODEL } from "@/components/lab/sim/engine";
+import { CARDS, ENVS, PARTS } from "@/components/lab/sim/catalog";
 import "../lab.css";
 import "../sim.css";
 
@@ -42,7 +43,7 @@ export default function VirtualEspPage() {
                 <span className="rc-chip">
                   <b>LAB 02</b> 모의실험
                 </span>
-                <span className="rc-meta-sub">부품 16종 · 환경 8가지 · 규칙 카드 16장 · 시험 도구</span>
+                <span className="rc-meta-sub">부품 {PARTS.length}종 · 환경 {ENVS.length}가지 · 규칙 카드 {CARDS.length}장 · 시험 도구</span>
               </p>
               <h1>가상 ESP32 실험대</h1>
               <p className="rc-tag">부품을 바꿔 꽂고, 환경을 바꾸고, 판정을 직접 돌려 본다</p>
@@ -90,7 +91,7 @@ export default function VirtualEspPage() {
                 <b>센서 모델</b>
                 <span>
                   같은 실제 값을 센서마다 다르게 읽어요. DS18B20은 0.125 °C 단위, NTC는 아날로그 잡음, 션트는 0점 근처를 0으로. 접촉 불량이면 셀 온도를 {Math.round(MODEL.contactGain * 100)}
-                  %만, {MODEL.contactTau}초 늦게 느껴요(LAB 01 발열 2회와 비슷). 키트 부품은 데이터시트대로: DHT11은 1초에 한 번 1 °C 단위, 온도 스위치는 {MODEL.tauMod}초 늦게, 인체감지는 켠 직후 헛신호.
+                  %만, {MODEL.contactTau}초 늦게 느껴요(LAB 01 발열 2회와 비슷). 키트 부품은 데이터시트대로: DHT11은 1초에 한 번 1 °C · 1 % 단위로 약 {MODEL.tauDht}초 늦게, 온도 스위치는 {MODEL.tauMod}초 늦게, 인체감지는 켠 직후 헛신호, 초음파는 소리 속도가 공기 온도를 따라 바뀌고 가끔 엉뚱한 메아리를 받아요.
                 </span>
               </li>
               <li>
@@ -133,15 +134,21 @@ export default function VirtualEspPage() {
             <ul className="lab-limits">
               <li>
                 <b>축소 모형의 열</b>
-                <span>실제 리튬이온 셀이 아니라 220 Ω 저항이 6 °C쯤 데워지는 모형이에요. 열폭주처럼 급격한 변화는 담지 않았어요.</span>
+                <span>실제 리튬이온 셀이 아니라 5 V로 220 Ω 저항이 6 °C쯤 데워지는 모형이에요. 여기서 ‘충전’은 이 히터를 켜는 것을 뜻해요. 열폭주처럼 급격한 변화는 담지 않았어요.</span>
+              </li>
+              <li>
+                <b>실습키트 부품만</b>
+                <span>부품은 실습키트(센서 키트 40종 · 저항 · LAB 01의 화면)에 있는 것만 넣었어요. 그래서 키트에 없는 냉각팬과 가스 센서는 다루지 않아요.</span>
               </li>
               <li>
                 <b>환경은 단순화 · 일부 가정</b>
-                <span>사건은 정해진 시각에 일정하게 일어나요. 팬이 멈추면 셀이 {MODEL.fanLoss}배 더 데워진다는 값과 충격 · 단락의 크기는 실측이 아니라 가정이에요.</span>
+                <span>
+                  사건은 정해진 시각에 일정하게 일어나요. 충격 · 단락의 크기, 결로 때 바깥 공기({MODEL.outT} °C · {Math.round(MODEL.outRH * 100)} %)와 공기가 섞이는 빠르기, 물이 차오르는 빠르기({MODEL.leakDur}초에 {MODEL.leakMm} mm)는 실측이 아니라 가정이에요.
+                </span>
               </li>
               <li>
                 <b>3D 배선은 기본 핀</b>
-                <span>핀을 바꿔도 3D의 선은 기본 배선 그대로예요. 키트 부품은 신호선만 그렸고 전원선(3.3 V · GND)은 생략했어요. 바뀐 핀은 코드 탭과 검사 결과로 확인하세요.</span>
+                <span>핀을 바꿔도 3D의 선은 기본 배선 그대로예요. 키트 부품은 신호선만 그렸고 전원선(3.3 V · GND)은 생략했어요. 초음파 받침대는 보기 쉽게 낮춰 그렸어요(계산은 바닥에서 {MODEL.sonarH / 10} cm). 바뀐 핀은 코드 탭과 검사 결과로 확인하세요.</span>
               </li>
               <li>
                 <b>잡음은 고정</b>
