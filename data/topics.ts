@@ -532,12 +532,12 @@ export const topics: Topic[] = [
     title: "전과정평가",
     en: "Life Cycle Assessment",
     tagline: "환경에 정말 이로운가를 숫자로",
-    lead: "원료 채취부터 폐기까지 전 과정의 환경영향을 정량적으로 평가하는 방법론입니다. 어떤 재활용 방식이 '친환경적'인지는 느낌이 아니라 이 계산으로 판단합니다.",
+    lead: "원료 채취부터 폐기까지 전 과정의 환경영향을 더하는 방법론입니다. 실제 공장 자료로 비교하면 재활용 원료가 광산 원료보다 온실가스를 58% 이상 덜 내지만, 결과는 기준 단위 · 경계 · 전력 · 할당 방식에 따라 크게 달라지므로 전제와 함께 읽어야 합니다.",
     coverage: "심층 분석",
     facts: [
-      { value: "70%+", label: "채굴 대비 CO₂ 절감", note: "습식제련 기업 자체 발표" },
-      { value: "~20%", label: "용융염 방식 에너지 · CO₂ 절감", note: "Xiao 외, 2026" },
-      { value: "0", label: "직접재생의 결정 구조 해체 횟수", note: "구조 에너지를 보존" },
+      { value: "58%+", label: "재활용 원료의 온실가스 절감 (실제 공장 자료)", note: "Machala 외, 2025" },
+      { value: "5배", label: "전력원에 따른 재활용 온실가스 차이", note: "Machala 외, 2025" },
+      { value: "1/3", label: "재활용 이득을 두 번 셀 위험이 있는 연구 (25편 중 거의)", note: "Nordelöf 외, 2019" },
     ],
     sections: [
       {
@@ -564,7 +564,7 @@ export const topics: Topic[] = [
         ],
       },
     ],
-    refs: [3, 2, 24, 27],
+    refs: [3, 2, 24, 27, 44, 86, 87, 88, 89, 90, 91],
     related: ["techno-economic", "reuse", "recycling"],
   },
   {

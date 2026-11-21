@@ -15,6 +15,7 @@ export const revamped: { slug: string; thumb: string; scene: string; added?: [nu
   { slug: "byproduct-recovery", thumb: "bp", scene: "부산물 회수 라인", added: [69, 72] },
   { slug: "traceability", thumb: "tr", scene: "기록이 모이는 길", added: [73, 80] },
   { slug: "certification", thumb: "ce", scene: "인증서가 나오는 공장", added: [81, 85] },
+  { slug: "lca", thumb: "lc", scene: "두 갈래 공급망", added: [86, 91] },
 ];
 
 /** 사이트 읽는 법 — 세 단계 */
