@@ -16,6 +16,7 @@ export const revamped: { slug: string; thumb: string; scene: string; added?: [nu
   { slug: "traceability", thumb: "tr", scene: "기록이 모이는 길", added: [73, 80] },
   { slug: "certification", thumb: "ce", scene: "인증서가 나오는 공장", added: [81, 85] },
   { slug: "lca", thumb: "lc", scene: "두 갈래 공급망", added: [86, 91] },
+  { slug: "techno-economic", thumb: "te", scene: "돈이 오가는 공장", added: [92, 95] },
 ];
 
 /** 사이트 읽는 법 — 세 단계 */

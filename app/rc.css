@@ -1106,6 +1106,57 @@ a.rm-tier-row:hover { background: var(--ism-color-background); }
   .lc-gate .lb, .lc-gate .lb.strong { font-size: 15px; }
 }
 
+/* ───────── 12 기술경제성 분석 ───────── */
+.te-terms li > b { width: auto; min-width: 26px; padding: 0 8px; font-size: 11px; }
+.lc-btns.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.te-dest-fig, .te-be-fig, .te-st-fig { margin-top: 12px; }
+.te-bars { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--rc-line); }
+.te-bars-h { font-size: var(--fs-sm); }
+.te-bars-h b { color: var(--ism-color-foreground); }
+.te-bar-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 210px; align-items: center; gap: 12px; margin-top: 12px; }
+.te-bar-row .k { font-size: 13px; font-weight: 800; color: var(--ism-color-foreground); }
+.te-bar-row .track { display: block; height: 14px; border-radius: 7px; background: var(--ism-color-background); overflow: hidden; }
+.te-bar-row .fill { display: block; height: 100%; border-radius: 7px; transition: width 360ms cubic-bezier(.2, .8, .2, 1); }
+.te-bar-row .fill.ship { background: #5B7CFA; }
+.te-bar-row .fill.dis { background: #E0715A; }
+.te-bar-row .v { font-size: 13px; font-variant-numeric: tabular-nums; }
+.te-bar-row .v b { font-size: var(--fs-md); color: var(--ism-color-foreground); }
+.te-bar-row .v em { display: block; font-style: normal; font-size: 12px; color: var(--rc-sub); }
+.te-eb { margin-top: 14px; padding: 10px 14px; border-radius: var(--r-panel); background: #FFF4E0; font-size: 13px; line-height: 1.7; color: #6b3a00; }
+.te-eb b { color: #6b3a00; }
+@media (prefers-reduced-motion: reduce) { .te-bar-row .fill { transition: none; } }
+
+.te-be { display: block; width: 100%; max-width: 640px; height: auto; margin: 0 auto; }
+.te-be .lb { font-size: 11px; fill: var(--rc-sub); paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
+.te-be .lb.strong { font-size: 12px; font-weight: 800; fill: var(--ism-color-foreground); }
+.te-bar.pyro { fill: #2E3B5C; }
+.te-bar.hydro { fill: #5B7CFA; }
+.te-bar.direct { fill: #39C6B6; }
+.te-plant { stroke: #E0715A; stroke-width: 2; stroke-dasharray: 5 4; }
+.te-be .te-plant-t { font-weight: 800; fill: #B4432C; }
+
+.te-studies { overflow-x: auto; }
+.te-studies .rc-table th[scope="row"] { min-width: 150px; }
+.te-studies .rc-table td b { display: block; color: var(--ism-color-foreground); }
+.te-studies .rc-table td .n { display: block; margin-top: 4px; font-size: 12px; color: var(--rc-sub); line-height: 1.6; }
+.te-studies .rc-cite a { min-width: 24px; }
+
+@media (max-width: 960px) {
+  .lc-btns.five { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .te-bar-row { grid-template-columns: 100px minmax(0, 1fr); }
+  .te-bar-row .v { grid-column: 2; }
+}
+@media (max-width: 720px) {
+  .lc-btns.five { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .te-be .lb, .te-be .lb.strong { font-size: 15px; }
+  /* 표를 카드처럼 쌓기 */
+  .te-studies .rc-table, .te-studies .rc-table tbody, .te-studies .rc-table tr, .te-studies .rc-table th, .te-studies .rc-table td { display: block; width: 100%; }
+  .te-studies .rc-table thead { display: none; }
+  .te-studies .rc-table tr { padding: 12px 0; border-bottom: 1px solid var(--rc-line); }
+  .te-studies .rc-table th[scope="row"], .te-studies .rc-table td { padding: 2px 0; border: 0; }
+  .te-studies .rc-table td::before { content: attr(data-k); display: block; margin-top: 6px; font-size: 11px; font-weight: 800; color: var(--rc-sub); }
+}
+
 /* ───────── 사이트 소개 ───────── */
 .ab { padding-top: 56px; }
 .ab-hero { margin-top: 0; margin-bottom: 40px; }
