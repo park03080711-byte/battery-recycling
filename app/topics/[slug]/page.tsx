@@ -21,6 +21,7 @@ import TraceabilityPage from "@/components/tr/TraceabilityPage";
 import CertificationPage from "@/components/ce/CertificationPage";
 import LcaPage from "@/components/lc/LcaPage";
 import TeaPage from "@/components/te/TeaPage";
+import SupplyPage from "@/components/sc/SupplyPage";
 import RecyclingPage from "@/components/rc/RecyclingPage";
 
 type Params = { slug: string };
@@ -116,6 +117,7 @@ export default async function TopicPage({ params }: { params: Promise<Params> })
   if (slug === "certification") return <CertificationPage />;
   if (slug === "lca") return <LcaPage />;
   if (slug === "techno-economic") return <TeaPage />;
+  if (slug === "supply-chain") return <SupplyPage />;
 
   const layer = layerById(t.layer);
   const idx = topics.findIndex((x) => x.slug === t.slug);

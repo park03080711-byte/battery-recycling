@@ -1157,6 +1157,62 @@ a.rm-tier-row:hover { background: var(--ism-color-background); }
   .te-studies .rc-table td::before { content: attr(data-k); display: block; margin-top: 6px; font-size: 11px; font-weight: 800; color: var(--rc-sub); }
 }
 
+/* ───────── 13 공급망 · 자원안보 ───────── */
+.sc-chain-fig, .sc-tg-fig { margin-top: 12px; }
+.sc-links { list-style: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; counter-reset: none; }
+.sc-links .it { position: relative; }
+.sc-links .it + .it::before { content: ""; position: absolute; left: -7px; top: 50%; width: 6px; height: 2px; background: var(--rc-ctl); }
+.sc-links button { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: 100%; min-height: 44px; padding: 12px 12px 10px; border: 1px solid var(--rc-ctl); border-radius: var(--r-btn); background: var(--rc-panel); color: var(--ism-color-foreground); font: inherit; text-align: left; cursor: pointer; transition: background-color var(--ism-motion), border-color var(--ism-motion); }
+.sc-links button:hover { border-color: var(--rc-link); }
+.sc-links button[aria-pressed="true"] { border-color: var(--rc-link); background: var(--rc-tint); box-shadow: inset 0 0 0 1px var(--rc-link); }
+.sc-links .n { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--ism-color-foreground); color: #fff; font-size: 11px; font-weight: 800; }
+.sc-links b { font-size: var(--fs-sm); font-weight: 800; }
+.sc-links .s { font-size: 12px; color: var(--rc-sub); }
+.sc-links .kr { margin-top: 4px; padding: 1px 8px; border-radius: var(--r-badge); font-size: 11px; font-weight: 800; line-height: 1.6; }
+.sc-links .kr-strong .kr { background: #E3F7F4; color: #0F766E; }
+.sc-links .kr-weak .kr { background: #FDECEC; color: #b42318; }
+.sc-links .kr-mid .kr { background: #FFF4E0; color: #8a4b00; }
+.sc-chain .lc-sum .d { color: var(--rc-text); }
+
+.sc-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.sc-range-fig { margin: 0; }
+.sc-range { display: block; width: 100%; height: auto; margin-top: 6px; }
+.sc-range .lb { font-size: 12px; fill: var(--rc-sub); paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
+.sc-range .lb.strong { font-size: 13px; font-weight: 800; fill: var(--ism-color-foreground); }
+.sc-track { fill: var(--ism-color-background); }
+.sc-bar.kr { fill: #39C6B6; }
+.sc-bar.world { fill: #5B7CFA; }
+.sc-rec { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.sc-rec li { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: var(--r-panel); background: var(--rc-panel); box-shadow: var(--rc-sh-1); border-top: 3px solid var(--c, #CDD5E3); font-size: 13px; color: var(--rc-sub); }
+.sc-rec li b { font-size: var(--fs-lg); color: var(--ism-color-foreground); font-variant-numeric: tabular-nums; }
+.sc-rec li span { font-weight: 800; color: var(--rc-text); }
+.sc-rec .m-ni { --c: #2BB594; }
+.sc-rec .m-li { --c: #9AA4B5; }
+.sc-rec .m-co { --c: #C23D69; }
+.sc-rec .m-mn { --c: #F2BFCB; }
+
+.lc-btns.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sc-rows { display: grid; gap: 0; margin-top: 14px; border-top: 1px solid var(--rc-line); }
+.sc-rows > div { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--rc-line); }
+.sc-rows dt { font-size: 13px; font-weight: 800; color: var(--rc-sub); }
+.sc-rows dd { margin: 0; font-size: var(--fs-sm); }
+.sc-rows dd b { color: var(--ism-color-foreground); font-variant-numeric: tabular-nums; }
+.sc-rows dd span { margin-left: 8px; font-size: 12px; color: var(--rc-sub); }
+.sc-tg-d { margin-top: 12px; font-size: var(--fs-sm); line-height: 1.75; }
+
+@media (max-width: 960px) {
+  .sc-links { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sc-links .it + .it::before { display: none; }
+  .sc-two { grid-template-columns: minmax(0, 1fr); }
+  .sc-rec { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .sc-links { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sc-range .lb, .sc-range .lb.strong { font-size: 15px; }
+  .sc-rows > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .sc-rows dd span { display: block; margin: 2px 0 0; }
+}
+
 /* ───────── 사이트 소개 ───────── */
 .ab { padding-top: 56px; }
 .ab-hero { margin-top: 0; margin-bottom: 40px; }

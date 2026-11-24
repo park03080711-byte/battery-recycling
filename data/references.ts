@@ -118,6 +118,11 @@ export const references: Reference[] = [
   { id: 93, group: "international", title: "Baseline techno-economic and life cycle assessment of black mass production", authors: "Yingnakorn, Kansomket, Longbutsri, Scott, Patcharawit, Yang, Abbott, Khumkoa", venue: "iScience 29(10): 117729 (2026)", affiliation: "수라나리공대 (태국) / 레스터대 (영국)", doi: "10.1016/j.isci.2026.117729" },
   { id: 94, group: "international", title: "Modeling, Simulation, and Techno-Economic Assessment of a Spent Li-Ion Battery Recycling Plant", authors: "Imre-Lucaci Á., Imre-Lucaci F., Fogarasi", venue: "Materials 18(15): 3715 (2025)", affiliation: "바베슈-보여이대 (루마니아)", doi: "10.3390/ma18153715", extra: "공정 시뮬레이션 연구" },
   { id: 95, group: "domestic", title: "국내 중대형 이차전지 재활용 사업의 경제성 분석 및 발전방안 연구", authors: "모정윤", venue: "한국산학기술학회논문지 19(9): 326–332 (2018)", affiliation: "산업연구원", doi: "10.5762/KAIS.2018.19.9.326", extra: "KCI ART002385746" },
+  { id: 96, group: "international", title: "Future material demand for automotive lithium-based batteries", authors: "Xu, Dai, Gaines, Hu, Tukker, Steubing", venue: "Communications Materials 1: 99 (2020)", affiliation: "레이던대 환경과학연구소 / 아르곤 국립연구소 ReCell 센터", doi: "10.1038/s43246-020-00095-x" },
+  { id: 97, group: "international", title: "Circular economy strategies for electric vehicle batteries reduce reliance on raw materials", authors: "Baars, Domenech, Bleischwitz, Melin, Heidrich", venue: "Nature Sustainability 4: 71–79 (2021)", affiliation: "뉴캐슬대 / 유니버시티 칼리지 런던", doi: "10.1038/s41893-020-00607-0" },
+  { id: 98, group: "domestic", title: "한국의 전기차 사용 후 배터리 재활용 및 재사용 효과 분석 연구", authors: "김유정", venue: "자원환경지질 57(1): 83–91 (2024)", affiliation: "한국지질자원연구원", doi: "10.9719/EEG.2024.57.1.83", extra: "KCI ART003055681" },
+  { id: 99, group: "domestic", title: "국내 배터리원료광종 공급망 업스트림 리스크와 광물자원탐사부문에서의 대응방안", authors: "오일환 · 허철호 · 김성용", venue: "자원환경지질 55(4): 399–406 (2022)", affiliation: "한국지질자원연구원", doi: "10.9719/EEG.2022.55.4.399", extra: "KCI ART002868795" },
+  { id: 100, group: "domestic", title: "물류 리스크에 따른 국내 핵심 광물자원의 공급망 영향분석: 리튬 광물자원을 중심으로", authors: "김대현 · 정수현", venue: "e-비즈니스연구 25(6): 179–193 (2024)", affiliation: "한국해양수산개발원 / 평택대학교", extra: "KCI ART003151148" },
 ];
 
 export const refById = (id: number) => references.find((r) => r.id === id)!;

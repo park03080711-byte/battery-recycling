@@ -4,7 +4,7 @@
  *  - 문자 출처: 문헌 목록 밖의 정책 · 기업 · 바탕 보고서 자료 (아래 extraSources)
  */
 export type Level = "paper" | "policy" | "company" | "judgement";
-export type Extra = "P1" | "P2" | "P3" | "P4" | "P5" | "P6" | "P7" | "P8" | "P9" | "P10" | "P11" | "P12" | "P13" | "C1" | "C2" | "R";
+export type Extra = "P1" | "P2" | "P3" | "P4" | "P5" | "P6" | "P7" | "P8" | "P9" | "P10" | "P11" | "P12" | "P13" | "P14" | "P15" | "P16" | "P17" | "C1" | "C2" | "R";
 export type Src = number | Extra;
 
 export const levelLabel: Record<Level, string> = {
@@ -35,6 +35,10 @@ export const extraSources: Record<Extra, { title: string; note: string; label: s
   P11: { title: "ISO 14040:2006 · ISO 14044:2006 — 전과정평가의 원칙 · 틀과 요구사항 · 지침 (국제표준화기구)", note: "국제 표준 · 방법의 틀", label: "ISO" },
   P12: { title: "EU 집행위원회 'Have your say' — 「전기차 배터리 탄소발자국 계산 · 검증법」 위임규정 추진 페이지(13877; 초안 의견수렴 2024.4.30~5.28, 2026년 11월 확인 시 '채택 예정' 단계)", note: "EU 추진 현황 · 확정 전", label: "EU 초안" },
   P13: { title: "Battery Pass 컨소시엄 「Comparison of end-of-life allocation approaches」(2023) — thebatterypass.eu", note: "업계 · 연구기관 컨소시엄 권고 · 규정 아님", label: "컨소시엄" },
+  P14: { title: "IEA 「Global Critical Minerals Outlook 2026」 요약(정제 1위국 점유율 · 2025년 수출 통제 · 재활용 설비 집중) · 「Global Critical Minerals Outlook 2025」 요약 · 핵심 광물 전망(채굴 집중 전망 · 재활용이 줄이는 신규 채굴) — 국제에너지기구, CC BY 4.0", note: "국제기구 보고서 · 시나리오 전망", label: "IEA" },
+  P15: { title: "EU 핵심원자재법 원문 (Regulation (EU) 2024/1252) 제5조(2030 역내 채굴 10% · 가공 40% · 재활용 25% 기준)와 전문 (12)(한 제3국 의존 65% 이하) — EUR-Lex, 2024.5.23 발효", note: "규정 원문 · 기준(벤치마크)이며 의무 할당은 아님", label: "EU 원자재법" },
+  P16: { title: "산업통상자원부 「핵심광물 확보전략」(2023.2.27; 33종 선정 · 10대 전략 핵심광물, 2030 특정국 의존도 80%대 → 50%대 · 재자원화 2%대 → 20%대 · 비축 54일 → 100일 — 에너지신문 보도) · 「핵심광물 재자원화 활성화 추진방향」(2025.3.25, 정책브리핑)", note: "정부 계획 · 목표치", label: "산업부" },
+  P17: { title: "경향신문 「전기차 등 '사용 후 배터리' 국가 자원 관리…기업 투자 잰걸음」(2026.5.24) — 환경부 등 집계: 국내 사용후 배터리 배출 2023년 2,355개 → 2025년 8,321개, 2030년 10만 7,500개 전망", note: "언론 보도 · 정부 집계 인용", label: "보도" },
   C1: { title: "국내 리사이클링 기업 공개 자료 — 공정 설명, 회수율 · CO₂ 절감 수치", note: "기업 자체 발표 기준", label: "기업" },
   C2: { title: "THOTH(토트) DisMantleBot — CES 2025 혁신상(Innovation Awards) 수상작 소개 페이지 (CES 주관사 CTA)", note: "기업 자체 발표 · 외부 검증 전", label: "기업" },
   R: { title: "폐배터리 리사이클링 기술 분석 보고서 (2026.9) — 본 사이트의 바탕 보고서", note: "조사자 정리 · 판단", label: "보고서" },
