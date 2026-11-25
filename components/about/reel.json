@@ -1,0 +1,63 @@
+{
+ "w": 1280,
+ "h": 790,
+ "dur": 27.62,
+ "chapters": [
+  {
+   "slug": "remanufacturing",
+   "s": 0.0
+  },
+  {
+   "slug": "reuse",
+   "s": 1.67
+  },
+  {
+   "slug": "recycling",
+   "s": 3.71
+  },
+  {
+   "slug": "upcycling",
+   "s": 6.38
+  },
+  {
+   "slug": "soh-diagnosis",
+   "s": 8.42
+  },
+  {
+   "slug": "safety",
+   "s": 10.58
+  },
+  {
+   "slug": "automated-disassembly",
+   "s": 12.29
+  },
+  {
+   "slug": "byproduct-recovery",
+   "s": 14.12
+  },
+  {
+   "slug": "traceability",
+   "s": 15.83
+  },
+  {
+   "slug": "certification",
+   "s": 17.79
+  },
+  {
+   "slug": "lca",
+   "s": 19.88
+  },
+  {
+   "slug": "techno-economic",
+   "s": 21.88
+  },
+  {
+   "slug": "supply-chain",
+   "s": 23.75
+  },
+  {
+   "slug": "design-for-disassembly",
+   "s": 25.62
+  }
+ ]
+}

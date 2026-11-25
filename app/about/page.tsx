@@ -10,6 +10,7 @@ import { DepthPillars } from "@/components/rc/Iso";
 import { depthLegend } from "@/components/rc/sources";
 import { HowIcon, IconBooks, IconGrid, IconLayers4, LayerStack } from "@/components/about/Art";
 import { fixes, howto, making, revamped, rules } from "@/components/about/data";
+import { Reel } from "@/components/about/Reel";
 
 export const metadata: Metadata = { title: "사이트 소개" };
 
@@ -184,11 +185,21 @@ export default function AboutPage() {
               <h2 id="h-make" className="rc-h2">
                 <span>4</span>만든 방법과 개편 현황
               </h2>
+              <Reel />
               <ul className="ab-make">
                 {making.map((m) => (
                   <li key={m.t} className="rc-panel">
                     <p className="t">{m.t}</p>
                     <p className="d">{m.d}</p>
+                    {m.links && (
+                      <p className="ab-make-links">
+                        {m.links.map((l) => (
+                          <Link key={l.href} href={l.href}>
+                            {l.label} <span aria-hidden="true">→</span>
+                          </Link>
+                        ))}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -214,17 +225,24 @@ export default function AboutPage() {
                   );
                 })}
               </ul>
-              <p className="ab-soon">
-                <b>다음 차례</b>
-                {topics
-                  .filter((t) => !revamped.some((r) => r.slug === t.slug))
-                  .map((t) => (
-                    <Link key={t.slug} href={`/topics/${t.slug}`}>
-                      <em>{t.no}</em>
-                      {t.title}
-                    </Link>
-                  ))}
-              </p>
+              {done < topics.length ? (
+                <p className="ab-soon">
+                  <b>다음 차례</b>
+                  {topics
+                    .filter((t) => !revamped.some((r) => r.slug === t.slug))
+                    .map((t) => (
+                      <Link key={t.slug} href={`/topics/${t.slug}`}>
+                        <em>{t.no}</em>
+                        {t.title}
+                      </Link>
+                    ))}
+                </p>
+              ) : (
+                <p className="ab-soon">
+                  <b>개편 완료</b>
+                  <span>14개 주제 모두 지도와 공정 재생을 갖췄습니다 (2026년 11월).</span>
+                </p>
+              )}
             </section>
 
             {/* ── 5 색 이야기 ── */}

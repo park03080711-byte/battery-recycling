@@ -62,8 +62,17 @@ export const fixes: { when: string; slug: string; no: string; t: string; d: stri
 ];
 
 /** 만든 방법 */
-export const making: { t: string; d: string }[] = [
+export const making: { t: string; d: string; links?: { href: string; label: string }[] }[] = [
   { t: "장면은 코드로 그렸습니다", d: "지도 속 설비는 Blender를 파이썬 코드로 움직여 직접 만든 등각 장면입니다. 외부 3D 모델과 AI 이미지는 쓰지 않았습니다." },
   { t: "움직임도 계산했습니다", d: "‘공정 재생’은 흐름선과 설비 동작 그림을 겹쳐 보여 줍니다. 07의 로봇 팔은 관절 각도를 매 장면 계산해 움직입니다." },
+  {
+    t: "영상도 직접 만들었습니다",
+    d: "첫 화면의 ‘배터리의 일생’ 15초 영상은 지도와 같은 방식(Blender + 파이썬)으로 렌더했고, 위 영상 1은 각 주제의 ‘공정 재생’을 사이트 화면 그대로 찍어 이은 것입니다. 실험실 LAB 01의 영상은 실제 장치를 찍었고, LAB 02는 그 실측으로 맞춘 가상 실험대입니다.",
+    links: [
+      { href: "/", label: "첫 화면 영상" },
+      { href: "/lab/ess-monitoring", label: "LAB 01 ESS 상태진단 실험" },
+      { href: "/lab/virtual-esp32", label: "LAB 02 가상 ESP32 실험대" },
+    ],
+  },
   { t: "누구나 볼 수 있게", d: "키보드로 모두 조작할 수 있고, 기기에서 ‘동작 줄이기’를 켜면 움직임 없이 결과만 보여 줍니다. 그림마다 화면 낭독용 설명을 달았습니다." },
 ];
