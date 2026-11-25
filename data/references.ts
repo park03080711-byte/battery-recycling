@@ -123,6 +123,11 @@ export const references: Reference[] = [
   { id: 98, group: "domestic", title: "한국의 전기차 사용 후 배터리 재활용 및 재사용 효과 분석 연구", authors: "김유정", venue: "자원환경지질 57(1): 83–91 (2024)", affiliation: "한국지질자원연구원", doi: "10.9719/EEG.2024.57.1.83", extra: "KCI ART003055681" },
   { id: 99, group: "domestic", title: "국내 배터리원료광종 공급망 업스트림 리스크와 광물자원탐사부문에서의 대응방안", authors: "오일환 · 허철호 · 김성용", venue: "자원환경지질 55(4): 399–406 (2022)", affiliation: "한국지질자원연구원", doi: "10.9719/EEG.2022.55.4.399", extra: "KCI ART002868795" },
   { id: 100, group: "domestic", title: "물류 리스크에 따른 국내 핵심 광물자원의 공급망 영향분석: 리튬 광물자원을 중심으로", authors: "김대현 · 정수현", venue: "e-비즈니스연구 25(6): 179–193 (2024)", affiliation: "한국해양수산개발원 / 평택대학교", extra: "KCI ART003151148" },
+  { id: 101, group: "international", title: "The importance of design in lithium ion battery recycling – a critical review", authors: "Thompson 외 9인", venue: "Green Chemistry 22(22): 7585–7603 (2020)", affiliation: "레스터대 / 패러데이 연구소 / 아르곤 국립연구소 ReCell 센터", doi: "10.1039/d0gc02745f" },
+  { id: 102, group: "international", title: "Breaking it down: A techno-economic assessment of the impact of battery pack design on disassembly costs", authors: "Lander 외 7인", venue: "Applied Energy 331: 120437 (2023)", doi: "10.1016/j.apenergy.2022.120437" },
+  { id: 103, group: "international", title: "Designing lithium-ion batteries for recycle: The role of adhesives", authors: "Scott 외 12인", venue: "Next Energy 1(2): 100023 (2023)", doi: "10.1016/j.nxener.2023.100023" },
+  { id: 104, group: "domestic", title: "Evaluating Remanufacturability of Electric Vehicle Batteries", authors: "서정민 · 곽민정", venue: "전과정평가학회지 25(2): 55–64 (2024)", doi: "10.62765/kjlca.2024.25.2.55" },
+  { id: 105, group: "domestic", title: "Current Trend of EV Waste Battery Diagnosis and Dismantling Technologies and a Suggestion for Future R&D Strategy with Environmental Friendliness", authors: "변채은 외 4인", venue: "자원리싸이클링 31(4): 3–11 (2022)", affiliation: "계명대학교 환경학부", doi: "10.7844/kirr.2022.31.4.3", extra: "KCI ART002870858" },
 ];
 
 export const refById = (id: number) => references.find((r) => r.id === id)!;
