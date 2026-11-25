@@ -1312,28 +1312,38 @@ a.rm-tier-row:hover { background: var(--ism-color-background); }
 .ab-soon a { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 10px; border-radius: 999px; border: 1px dashed var(--rc-ctl); color: var(--rc-text); text-decoration: none; font-weight: 700; }
 .ab-soon em { font-style: normal; font-size: 11px; color: var(--rc-link); }
 .ab-reel { margin: 24px 0 0; padding: 16px; }
+.ab-reel-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.ab-reel-chips button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 10px; border: 1px solid var(--rc-ctl); border-radius: 999px; background: var(--rc-panel); color: var(--rc-text); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: background-color var(--ism-motion), border-color var(--ism-motion); }
+.ab-reel-chips button b { font-size: 11px; color: var(--rc-link); }
+.ab-reel-chips button:hover { border-color: var(--rc-link); }
+.ab-reel-chips button[aria-pressed="true"] { border-color: var(--rc-link); background: var(--rc-tint); box-shadow: inset 0 0 0 1px var(--rc-link); color: var(--ism-color-foreground); }
 .ab-reel-frame { position: relative; overflow: hidden; border-radius: 12px; background: #F3F6FD; }
 .ab-reel video { display: block; width: 100%; height: auto; aspect-ratio: 1280 / 790; }
 .ab-reel-now { position: absolute; left: 14px; top: 14px; display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: #fff; box-shadow: var(--rc-sh-1); font-size: 14px; font-weight: 800; color: var(--ism-color-foreground); }
 .ab-reel-now em { font-style: normal; font-size: 12px; color: var(--rc-link); }
-.ab-reel-btn { position: absolute; right: 14px; bottom: 14px; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: rgba(23, 32, 51, 0.82); cursor: pointer; }
-.ab-reel-btn svg { width: 16px; height: 16px; fill: #fff; }
-.ab-reel-btn:focus-visible { outline: 2px solid var(--rc-link); outline-offset: 3px; }
-.ab-reel-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-top: 12px; }
-.ab-reel-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 520px; }
-.ab-reel-chips button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 10px; border: 1px solid var(--rc-ctl); border-radius: 999px; background: var(--rc-panel); color: var(--rc-text); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: background-color var(--ism-motion), border-color var(--ism-motion); }
-.ab-reel-chips button b { font-size: 11px; color: var(--rc-link); }
-.ab-reel-chips button:hover { border-color: var(--rc-link); }
-.ab-reel-chips button[aria-current="true"] { border-color: var(--rc-link); background: var(--rc-tint); box-shadow: inset 0 0 0 1px var(--rc-link); color: var(--ism-color-foreground); }
-.ab-reel-go { flex: none; font-size: 13px; font-weight: 800; color: var(--rc-link); text-decoration: none; }
+.ab-reel-big { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 22px 0 18px; border: 0; border-radius: 999px; background: rgba(23, 32, 51, 0.86); color: #fff; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 8px 24px rgba(23, 32, 51, 0.25); }
+.ab-reel-big svg { width: 18px; height: 18px; fill: #fff; }
+.ab-reel-big:hover { background: rgba(23, 32, 51, 0.95); }
+.ab-reel-frame[data-st="pause"] .ab-reel-big, .ab-reel-frame[data-st="done"] .ab-reel-big { background: rgba(23, 32, 51, 0.7); }
+.ab-reel-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 12px; }
+.ab-reel-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px 0 12px; border: 0; border-radius: var(--r-btn); background: var(--ism-color-foreground); color: #fff; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.ab-reel-btn svg { width: 14px; height: 14px; fill: #fff; }
+.ab-reel-btn:focus-visible, .ab-reel-next:focus-visible { outline: 2px solid var(--rc-link); outline-offset: 3px; }
+.ab-reel-len { font-size: 12px; font-weight: 700; color: var(--rc-sub); font-variant-numeric: tabular-nums; }
+.ab-reel-sp { flex: 1 1 auto; }
+.ab-reel-next { min-height: 40px; padding: 0 12px; border: 1px solid var(--rc-ctl); border-radius: var(--r-btn); background: var(--rc-panel); color: var(--rc-text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.ab-reel-next:hover { border-color: var(--rc-link); }
+.ab-reel-go { font-size: 13px; font-weight: 800; color: var(--rc-link); text-decoration: none; }
 .ab-reel-go:hover { text-decoration: underline; }
 .ab-reel figcaption { margin-top: 12px; }
 @media (max-width: 720px) {
   .ab-reel { padding: 10px; }
   .ab-reel-now { left: 8px; top: 8px; padding: 4px 10px; font-size: 12px; }
-  .ab-reel-btn { right: 8px; bottom: 8px; }
+  .ab-reel-big { min-height: 44px; padding: 0 16px 0 14px; font-size: 14px; }
   .ab-reel-chips button { min-width: 40px; min-height: 36px; justify-content: center; }
   .ab-reel-chips button span { display: none; }
+  .ab-reel-sp { display: none; }
+  .ab-reel-next { flex: 1 1 100%; text-align: left; }
 }
 .ab-swatch { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
 .ab-swatch li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-panel); background: var(--rc-panel); box-shadow: var(--rc-sh-1); }

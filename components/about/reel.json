@@ -1,63 +1,63 @@
 {
  "w": 1280,
  "h": 790,
- "dur": 27.62,
- "chapters": [
+ "speed": 1.5,
+ "clips": [
   {
    "slug": "remanufacturing",
-   "s": 0.0
+   "dur": 8.67
   },
   {
    "slug": "reuse",
-   "s": 1.67
+   "dur": 12.58
   },
   {
    "slug": "recycling",
-   "s": 3.71
+   "dur": 14.75
   },
   {
    "slug": "upcycling",
-   "s": 6.38
+   "dur": 13.12
   },
   {
    "slug": "soh-diagnosis",
-   "s": 8.42
+   "dur": 13.5
   },
   {
    "slug": "safety",
-   "s": 10.58
+   "dur": 9.17
   },
   {
    "slug": "automated-disassembly",
-   "s": 12.29
+   "dur": 10.12
   },
   {
    "slug": "byproduct-recovery",
-   "s": 14.12
+   "dur": 9.38
   },
   {
    "slug": "traceability",
-   "s": 15.83
+   "dur": 12.54
   },
   {
    "slug": "certification",
-   "s": 17.79
+   "dur": 13.08
   },
   {
    "slug": "lca",
-   "s": 19.88
+   "dur": 11.92
   },
   {
    "slug": "techno-economic",
-   "s": 21.88
+   "dur": 11.12
   },
   {
    "slug": "supply-chain",
-   "s": 23.75
+   "dur": 11.0
   },
   {
    "slug": "design-for-disassembly",
-   "s": 25.62
+   "dur": 12.21
   }
  ]
 }
