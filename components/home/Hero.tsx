@@ -52,7 +52,6 @@ export default function Hero({ refTotal, life }: { refTotal: number; life: LifeS
     const lbls = qa(".hx-lbl");
     lift(q(".hx-brand"), 60, ".55em", 600);
     settle(q(".hx-nav"), 150, 700, 0.99, ".5em");
-    settle(q(".hx-cta"), 200, 700, 0.985, ".5em");
     settle(q(".hx-burger"), 150, 700, 0.9, ".4em");
     lift(q(".hx-eyebrow"), 300, ".8em", 520);
     rise(h[0], 380, 980);
@@ -163,12 +162,6 @@ export default function Hero({ refTotal, life }: { refTotal: number; life: LifeS
                   참고문헌
                 </Link>
               </nav>
-              <Link className="hx-cta hx-l hx-t hx-r" style={at(58, 30)} href="/topics">
-                <span className="hx-cta-label">14개 주제 보기</span>
-                <span className="hx-knob">
-                  <Chevron />
-                </span>
-              </Link>
             </div>
           </div>
 
