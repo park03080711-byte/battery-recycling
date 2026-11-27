@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import Header from "@/components/Header";
 import { refTotal } from "@/data/references";
+/* Pretendard 가변 글꼴(v1.3.9, SIL OFL 1.1)을 사이트에서 직접 제공한다. 글자 범위별로 나뉜 파일이라 페이지에 쓰인 글자 묶음만 받는다. */
+import "./fonts/pretendard/pretendardvariable-dynamic-subset.css";
 import "./globals.css";
 import "./hero.css";
 import "./anatomy.css";
@@ -27,11 +29,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ko" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
-        />
         {/* 메인 첫 화면 등장 애니메이션의 준비 상태를 첫 페인트 전에 건다.
             JS·WAAPI가 없거나 움직임 줄이기 설정이면 붙지 않아 완성 상태로 바로 보인다. */}
         <script
