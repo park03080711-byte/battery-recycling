@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Box, EDGE, makeIso, ramp, type Ramp } from "../rc/Iso";
+import { Box, makeIso, ramp } from "../rc/Iso";
 import { Cite } from "../rc/Cite";
 import { depths, socBefore } from "./data";
 
