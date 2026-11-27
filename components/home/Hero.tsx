@@ -24,6 +24,30 @@ export default function Hero({ refTotal, life }: { refTotal: number; life: LifeS
   const menuRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLElement>(null);
 
+  /* ── 화면 밖이거나 탭이 숨겨지면 배경 움직임을 멈춘다 ── */
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    let seen = true;
+    const sync = () => {
+      if (seen && !document.hidden) root.removeAttribute("data-off");
+      else root.setAttribute("data-off", "");
+    };
+    const io = new IntersectionObserver(
+      ([en]) => {
+        seen = en.intersectionRatio > 0.01; // 가장자리만 맞닿은 경우(다음 섹션으로 넘어간 직후)는 화면 밖으로 본다
+        sync();
+      },
+      { threshold: [0, 0.02] },
+    );
+    io.observe(root);
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      io.disconnect();
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, []);
+
   /* ── 등장 타임라인: 한 번 실행 후 스스로 지워진다 ── */
   useEffect(() => {
     const d = document.documentElement;

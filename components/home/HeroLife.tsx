@@ -20,6 +20,21 @@ const FS =
   "float a=texture2D(t,vec2(v.x,e+v.y*(.5-2.*e))).g;a=clamp((a-.04)/.92,0.,1.);" +
   "gl_FragColor=vec4(min(c,vec3(a)),a);}";
 
+/* GPU 없이 소프트웨어로 WebGL을 돌리는 환경(일부 저사양 기기 · 원격 데스크톱 · 측정 도구)에서는
+   영상 한 장마다 CPU가 그림을 그려 화면이 버벅인다. 그때는 자동 재생 대신 첫 장면 그림을 두고, 재생은 버튼으로만 한다. */
+function softwareGl(): boolean {
+  try {
+    const gl = document.createElement("canvas").getContext("webgl");
+    if (!gl) return true;
+    const ext = gl.getExtension("WEBGL_debug_renderer_info");
+    const name = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
+    return /swiftshader|llvmpipe|softpipe|software|basic render/i.test(name);
+  } catch {
+    return false;
+  }
+}
+
 export default function HeroLife({ steps }: { steps: LifeStep[] }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -135,7 +150,8 @@ export default function HeroLife({ steps }: { steps: LifeStep[] }) {
     };
     const auto =
       !window.matchMedia("(prefers-reduced-motion: reduce)").matches &&
-      !nav.connection?.saveData;
+      !nav.connection?.saveData &&
+      !softwareGl();
 
     type VFC = HTMLVideoElement & {
       requestVideoFrameCallback?: (cb: () => void) => number;
@@ -160,11 +176,27 @@ export default function HeroLife({ steps }: { steps: LifeStep[] }) {
     v.addEventListener("playing", onPlaying);
     v.addEventListener("pause", onPause);
 
+    /* 자동 재생은 페이지가 다 뜨고 한숨 돌린 뒤에 시작한다. 그전까지는 첫 장면 그림이 보이므로
+       화면은 같고, 첫 입력에 대한 반응만 빨라진다. (직접 누른 재생은 바로 시작) */
+    let ready = false;
+    let idle = 0;
+    const start = () => {
+      ready = true;
+      if (s.visible && auto && !s.userPaused) play();
+    };
+    const whenIdle = () => {
+      const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+      if (w.requestIdleCallback) idle = w.requestIdleCallback(start, { timeout: 2500 });
+      else idle = window.setTimeout(start, 1200);
+    };
+    if (document.readyState === "complete") whenIdle();
+    else window.addEventListener("load", whenIdle, { once: true });
+
     const io = new IntersectionObserver(
       ([en]) => {
         s.visible = en.isIntersecting;
         if (en.isIntersecting) {
-          if (auto && !s.userPaused) play();
+          if (ready && auto && !s.userPaused) play();
         } else if (!v.paused) v.pause();
       },
       { threshold: 0.2 },
@@ -172,6 +204,10 @@ export default function HeroLife({ steps }: { steps: LifeStep[] }) {
     io.observe(box);
     return () => {
       alive = false;
+      window.removeEventListener("load", whenIdle);
+      const w = window as Window & { cancelIdleCallback?: (id: number) => void };
+      if (w.cancelIdleCallback) w.cancelIdleCallback(idle);
+      clearTimeout(idle);
       io.disconnect();
       cancelAnimationFrame(s.raf);
       v.removeEventListener("playing", onPlaying);
