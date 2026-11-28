@@ -182,6 +182,7 @@
 .lab-limits li.lab-limit-next { box-shadow: var(--rc-sh-1), inset 4px 0 0 var(--ism-color-accent); }
 .lab-limit-next .go { margin-top: auto; padding-top: 4px; font-size: 13px; font-weight: 800; color: var(--rc-link); text-decoration: none; }
 .lab-limit-next .go:hover { text-decoration: underline; }
+.lab-limit-next .go + .go { margin-top: 0; padding-top: 0; }
 
 /* 그래프 공통 */
 .lab-chart { position: relative; }

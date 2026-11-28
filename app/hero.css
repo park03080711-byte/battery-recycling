@@ -36,6 +36,8 @@
   z-index: 0;
 }
 .hx-bg svg { width: 100%; height: 100%; display: block; }
+.hx-push { position: absolute; inset: 0; transform-origin: 52% 46%; }
+.hx-push > svg, .hx-push > .hx-caustic, .hx-caustic > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 /* 고리 앞쪽 반 — 셀 위, 글자 아래 */
 .hx-fg { position: absolute; left: -2px; top: -2px; width: calc(100% + 4px); height: calc(100% + 4px); z-index: 1; pointer-events: none; }
 .hx-fg svg { width: 100%; height: 100%; display: block; }
@@ -152,9 +154,11 @@
 @keyframes hxFloat { from { transform: translate(0, 0); } to { transform: translate(-10px, -34px); } }
 @keyframes hxCaustic { from { transform: translateX(-60px); } to { transform: translateX(60px); } }
 @keyframes hxShine { to { stroke-dashoffset: -2260; } }
-.hx-bg-push { transform-origin: 1000px 500px; animation: hxPush 20s ease-in-out infinite alternate; }
+.hx-push { animation: hxPush 20s ease-in-out infinite alternate; will-change: transform; }
 .hx-float { transform-box: fill-box; animation: hxFloat 10s ease-in-out infinite alternate; }
-.hx-caustic { animation: hxCaustic 11s ease-in-out infinite alternate; }
+.hx-caustic { animation: hxCaustic 11s ease-in-out infinite alternate; will-change: transform; }
+/* 화면 밖이거나 탭이 숨겨지면 멈춘다 */
+.hx[data-off] .hx-push, .hx[data-off] .hx-float, .hx[data-off] .hx-caustic, .hx[data-off] .hx-ring-shine { animation-play-state: paused; }
 .hx-ring-shine { animation: hxShine 9s linear infinite; }
 
 /* ── 절대 위치 도우미: 넓은 화면에서는 래퍼가 사라지고 자식이 카드 기준으로 배치 ── */
@@ -359,7 +363,7 @@
   .hx-meet:hover, .hx-panel:hover { transform: translateY(calc(-2 * var(--u))); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hx-bg-push, .hx-float, .hx-caustic, .hx-ring-shine { animation: none; }
+  .hx-push, .hx-float, .hx-caustic, .hx-ring-shine { animation: none; }
 }
 
 /* 등장 전 상태 — html.pre는 첫 페인트 전에 붙고 타임라인이 끝나면 지워진다 */

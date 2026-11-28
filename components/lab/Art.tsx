@@ -3,8 +3,6 @@
 import type { ReactNode } from "react";
 import { stage2 } from "@/data/lab/essData";
 
-const INK = "#172033";
-
 /* 부품 번호 — 그림 1(3D)의 표식과 아래 목록이 같은 번호를 쓴다 */
 export const rigParts = [
   { n: 1, name: "ESP32", is: "BMS 제어기", pin: "판단 · 차단 · 전송" },

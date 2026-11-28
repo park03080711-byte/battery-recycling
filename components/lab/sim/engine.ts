@@ -80,6 +80,8 @@ export type Sample = {
   level: number;
   heat: boolean;
   fault: boolean;
+  /** 위험 단계로 히터를 끊은 뒤 'x' 전까지 */
+  trip: boolean;
 };
 export type Led = { color: "g" | "y" | "r" | "b" | "off"; blink: "none" | "fast" | "slow" };
 export type SimEvent = { t: number; kind: "level" | "cut" | "fault" | "heater" | "boot" | "cmd"; text: string; level?: number; bogus?: boolean };
@@ -800,6 +802,7 @@ export class Sim {
       level: this.level,
       heat: this.power,
       fault: this.fault || this.suspect,
+      trip: this.tripped,
     };
     this.samples.push(s);
     // 5초마다 측정값 한 줄 (펌웨어의 CSV 기록을 줄여서)

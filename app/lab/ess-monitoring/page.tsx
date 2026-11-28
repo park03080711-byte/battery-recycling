@@ -600,13 +600,16 @@ export default function EssMonitoringPage() {
                   <span>발열 3회, 판정 2회, 통신 1회입니다. 경향을 보기에는 충분하지만 통계적으로 단정하기에는 적습니다. 과전류(전류 기준) 경로는 아직 실제로 시험하지 않았습니다.</span>
                 </li>
                 <li className="lab-limit-next">
-                  <b>다음 — 모의실험</b>
+                  <b>다음 — 모의실험 · 관제실</b>
                   <span>
-                    여기서 잰 값(최종 상승 약 6 °C, 시간상수 87초, 판정 기준)을 그대로 넣은 가상 ESP32를 만들어, 센서 접촉이나 열 조건을 바꿔 가며 직접 판정을 돌려 볼 수 있게 할
-                    예정입니다.
+                    여기서 잰 값(최종 상승 약 6 °C, 시간상수 87초, 판정 기준)을 넣은 가상 ESP32에서 센서 접촉이나 열 조건을 바꿔 판정을 직접 돌려 볼 수 있어요. 통신 실험 기록은 관제실에서 받은 순서 그대로 다시
+                    볼 수 있어요.
                   </span>
-                  <Link href="/lab" className="go">
-                    실험실 목록 · LAB 02 준비 중 →
+                  <Link href="/lab/virtual-esp32" className="go">
+                    LAB 02 가상 ESP32 실험대 →
+                  </Link>
+                  <Link href="/lab/control-room" className="go">
+                    LAB 03 관제실 →
                   </Link>
                 </li>
               </ul>

@@ -2,7 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Footer from "@/components/Footer";
 import { CARDS, ENVS, PARTS } from "@/components/lab/sim/catalog";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { buildRun, parseCsv, reach } from "@/components/lab/control/engine";
 import "./lab.css";
+
+const run = buildRun(parseCsv(readFileSync(path.join(process.cwd(), "public/lab/comm_run1.csv"), "utf8")));
+const tripStep = reach(run).find((r) => r.lv === 3);
+const trip = tripStep ? Math.round(tripStep.ev.es - tripStep.from.es) : 0;
+const gap = run.gap ? Math.round(run.gap.to - run.gap.from) : 0;
 
 export const metadata: Metadata = {
   title: "실험실",
@@ -106,6 +114,34 @@ export default function LabHub() {
                 </dl>
                 <span className="go" aria-hidden="true">
                   실험대 열기 →
+                </span>
+              </Link>
+            </li>
+            <li>
+              <Link href="/lab/control-room" className="lab-hub-card">
+                <span className="lab-hub-no">LAB 03</span>
+                <span className="lab-tag">
+                  <i aria-hidden="true" />
+                  실측 기록 재생
+                </span>
+                <b>관제실</b>
+                <span>LAB 01 통신 실험 기록을 PC가 받은 순서 그대로 다시 틀어요. 장치가 판정 · 차단하는 모습과 Wi-Fi가 끊겼다 밀린 기록이 한꺼번에 들어오는 장면을 관제 화면으로 봐요.</span>
+                <dl className="lab-hub-nums">
+                  <div>
+                    <dt>받은 기록</dt>
+                    <dd>{run.total}개</dd>
+                  </div>
+                  <div>
+                    <dt>위험 · 차단</dt>
+                    <dd>+{trip}초</dd>
+                  </div>
+                  <div>
+                    <dt>Wi-Fi 끊김</dt>
+                    <dd>{gap}초</dd>
+                  </div>
+                </dl>
+                <span className="go" aria-hidden="true">
+                  관제실 열기 →
                 </span>
               </Link>
             </li>

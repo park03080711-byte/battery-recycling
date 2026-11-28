@@ -1398,3 +1398,10 @@ a.rm-tier-row:hover { background: var(--ism-color-background); }
   .rc-hot.run span::before { animation: none; opacity: 0; }
   .rc-clip, .rc-flow, .rc-flow-dot { transition: none; }
 }
+
+/* 404: 갈 곳 네 개 */
+.nf-links { list-style: none; margin: var(--sp-3) 0 var(--sp-8); padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--sp-2); }
+.nf-links a { display: flex; flex-direction: column; gap: 6px; height: 100%; padding: var(--sp-3); border: 1px solid var(--line); border-radius: var(--radius); background: #fff; transition: border-color .15s, box-shadow .15s; }
+.nf-links a:hover, .nf-links a:focus-visible { border-color: var(--blue); box-shadow: 0 6px 20px rgba(11, 63, 140, .08); }
+.nf-links b { font-size: 1.05rem; color: var(--blue); }
+.nf-links span { font-size: .9rem; color: var(--muted); }
