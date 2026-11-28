@@ -31,6 +31,7 @@
 .sim-stage-foot > * { pointer-events: auto; }
 .sim-picked { margin-right: auto; padding: 6px 12px; border-radius: 999px; background: rgba(23, 32, 51, 0.88); color: #fff; font-size: 13px; font-weight: 700; }
 .lab-btn.sm { min-height: 34px; padding: 0 12px; font-size: 13px; }
+a.lab-btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 .lab-btn[disabled] { opacity: 0.45; cursor: default; }
 .lab-btn kbd, .sim-fixed kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-right: 4px; padding: 0 4px; border-radius: 4px; background: var(--rc-tint); font: 700 12px/1 ui-monospace, Menlo, Consolas, monospace; color: var(--ism-color-foreground); }
 

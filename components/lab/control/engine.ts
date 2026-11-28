@@ -24,8 +24,9 @@ export const RULE = {
   ring: 600, // ESP32 버퍼 (1초 × 600 = 10분)
 } as const;
 
-/* 직렬화용 묶음: [pc s, es s, seq, mV, mA, dT, slope, eta, risk, lv, heater, tripped, tx, rtt, dup] */
-export type Row = [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number];
+/* 직렬화용 묶음: [pc s, es s, seq, mV, mA, dT, slope, eta, risk, lv, heater, tripped, tx, rtt, dup, (fault)]
+   값이 없으면(부품을 뺀 모의 실험 등) NaN */
+export type Row = [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number?];
 
 export interface Pkt {
   i: number; // 도착 순번
@@ -44,7 +45,18 @@ export interface Pkt {
   tx: number; // 몇 번째 전송에서 도착했나
   rtt: number;
   dup: boolean;
+  fault: boolean; // 온도 센서 고장 (값 없음)
 }
+
+/* 기록의 출처 — 화면 이름표 · 범례 · 문구가 이것을 따른다 */
+export interface Source {
+  kind: "real" | "sim";
+  src: string; // 상단 막대의 짧은 이름
+  title: string; // 재생 대기 카드의 설명
+  note?: string; // 설정 요약 (모의)
+  ring: number; // ESP32 버퍼 크기 (0 = 버퍼 없음)
+}
+export const REAL_SOURCE: Source = { kind: "real", src: "comm_run1 · 2026-11-14", title: "2026-11-14 통신 실험", ring: RULE.ring };
 
 /* CSV → Row[] (도착 순서). 서버(빌드)에서 한 번만 실행 */
 export function parseCsv(text: string): Row[] {
@@ -73,9 +85,11 @@ export function parseCsv(text: string): Row[] {
 const toPkt = (r: Row, i: number): Pkt => ({
   i, pc: r[0], es: r[1], seq: r[2], mV: r[3], mA: r[4], dT: r[5], slope: r[6], eta: r[7], risk: r[8],
   lv: Math.max(0, Math.min(3, r[9])) as Lv, heat: !!r[10], trip: !!r[11], tx: r[12], rtt: r[13], dup: !!r[14],
+  fault: !!r[15] || Number.isNaN(r[5]),
 });
+export const fin = (v: number) => Number.isFinite(v);
 
-export type EvKind = "heat-on" | "heat-off" | "up" | "down" | "trip" | "boot" | "cut" | "back";
+export type EvKind = "heat-on" | "heat-off" | "up" | "down" | "trip" | "fault" | "boot" | "cut" | "back";
 export interface Ev {
   kind: EvKind;
   es: number; // 장치 시각
@@ -83,6 +97,7 @@ export interface Ev {
   lv?: Lv;
   title: string;
   detail: string;
+  gapBefore?: number; // 바로 앞 순번이 몇 개 빠졌나 (> 0이면 실제로는 이보다 먼저 일어났을 수 있음)
 }
 
 export interface Late {
@@ -103,7 +118,10 @@ export interface Run {
   gap: { from: number; to: number } | null; // 가장 긴 수신 공백 (PC 시각)
   boot: { n: number; until: number } | null; // 수신 프로그램을 켜기 전에 쌓인 기록
   events: Ev[]; // 장치 · 통신 사건 (pc 순)
-  marks: { heatOn?: Ev; trip?: Ev; cut?: Ev };
+  marks: { heatOn?: Ev; trip?: Ev; cut?: Ev; fault?: Ev };
+  lost: number; // 끝내 오지 않은 순번 수
+  dtRange: [number, number]; // 그래프 세로축 (°C)
+  source: Source;
 }
 
 const median = (a: number[]) => {
@@ -115,7 +133,7 @@ export const mmss = (s: number) => {
   return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
 };
 export const mmssd = (s: number) => `${mmss(s)}.${Math.floor((Math.max(0, s) % 1) * 10)}`;
-const f2 = (v: number) => v.toFixed(2);
+const f2 = (v: number) => (Number.isFinite(v) ? v.toFixed(2) : "—");
 
 /* 펌웨어 levelFromTemp: 올라갈 때는 기준 그대로, 내려갈 때는 0.3 °C 더 내려가야 */
 export function levelFromTemp(dT: number, cur: Lv): Lv {
@@ -127,9 +145,11 @@ export function levelFromTemp(dT: number, cur: Lv): Lv {
 }
 
 /* 이 기록에서 성립하는 펌웨어 판정 규칙 (단계가 높은 것부터) */
-export function rulesAt(run: Run, p: Pkt): { lv: Lv; text: string }[] {
+export function rulesAt(run: Run, p: Pkt, prev: Lv = p.lv): { lv: Lv; text: string }[] {
   const out: { lv: Lv; text: string }[] = [];
-  const lt = levelFromTemp(p.dT, p.lv);
+  if (p.fault) out.push({ lv: 2, text: "온도 센서 고장 · 히터 차단" });
+  // prev: 판정 직전 단계 (올라가는 순간에는 내림 여유를 쓰지 않음)
+  const lt = levelFromTemp(p.dT, prev);
   const near = (l: Lv) => (p.dT < RULE.dt[l - 1] ? " · 내림 여유 0.3 °C 안" : "");
   if (lt === 3) out.push({ lv: 3, text: `온도차 위험 기준 ${RULE.dt[2].toFixed(1)} °C${near(3)}` });
   if (p.mA >= RULE.mA[2]) out.push({ lv: 3, text: "과전류 위험" });
@@ -150,13 +170,16 @@ export function rulesAt(run: Run, p: Pkt): { lv: Lv; text: string }[] {
 }
 
 /* 지금 단계를 사람이 읽을 문장으로 */
-export function explain(run: Run, p: Pkt): { title: string; detail: string } {
+export function explain(run: Run, p: Pkt, prev: Lv = p.lv): { title: string; detail: string } {
   const tail = p.trip ? "히터 차단 유지 · 해제는 사람이 x 명령으로" : "";
+  if (p.fault && p.lv >= 2) return { title: "온도 센서 고장", detail: ["ΔT를 믿을 수 없음 · 펌웨어가 경고로 올리고 히터를 끊음", tail].filter(Boolean).join(" · ") };
   if (p.lv === 0) {
     const d = `ΔT ${f2(p.dT)} °C · 주의 기준 2.0 °C 아래`;
     return { title: "이상 없음", detail: tail ? `${d} · ${tail}` : d };
   }
-  const hit = rulesAt(run, p).find((r) => r.lv === p.lv);
+  const rules = rulesAt(run, p, prev);
+  // 올라가는 순간: 1초 기록 사이에 기준을 넘었다 내려왔을 수 있어, 그 단계 규칙이 없으면 가장 높은 규칙
+  const hit = rules.find((r) => r.lv === p.lv) ?? (prev < p.lv ? rules[0] : undefined);
   const cooling = p.slope < -0.005 ? " · 식는 중" : "";
   if (hit) return { title: hit.text, detail: [`ΔT ${f2(p.dT)} °C${cooling}`, tail].filter(Boolean).join(" · ") };
   return {
@@ -167,7 +190,7 @@ export function explain(run: Run, p: Pkt): { title: string; detail: string } {
 
 /* 위험지수 기여 (펌웨어 riskIndex 식으로 기록값에서 다시 계산) */
 export function riskParts(p: Pick<Pkt, "dT" | "slope" | "mA" | "mV">) {
-  const c = (x: number) => Math.max(0, Math.min(1, x));
+  const c = (x: number) => (Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : 0);
   const w = RULE.weights;
   return [
     { k: "온도차", v: 100 * w.T * c(p.dT / RULE.dt[2]), max: 100 * w.T },
@@ -177,14 +200,17 @@ export function riskParts(p: Pick<Pkt, "dT" | "slope" | "mA" | "mV">) {
   ];
 }
 
-export function buildRun(rows: Row[]): Run {
+export function buildRun(rows: Row[], source: Source = REAL_SOURCE): Run {
   const pkts = rows.map(toPkt);
   const first = new Map<number, Pkt>();
   for (const p of pkts) if (!first.has(p.seq)) first.set(p.seq, p);
   const bySeq = [...first.values()].sort((a, b) => a.seq - b.seq);
-  const span = pkts[pkts.length - 1].pc;
-  const esMax = Math.max(...bySeq.map((p) => p.es));
-  const offset = median(bySeq.map((p) => p.es - p.pc));
+  const span = pkts.length ? pkts[pkts.length - 1].pc : 0;
+  const esMax = bySeq.length ? Math.max(...bySeq.map((p) => p.es)) : 0;
+  const offset = bySeq.length ? median(bySeq.map((p) => p.es - p.pc)) : 0;
+  const lost = bySeq.length ? bySeq[bySeq.length - 1].seq - bySeq[0].seq + 1 - bySeq.length : 0;
+  const dts = bySeq.map((p) => p.dT).filter(fin);
+  const dtRange: [number, number] = [Math.min(-1.5, Math.floor(Math.min(0, ...dts) * 2) / 2 - 0.5), Math.max(5, Math.ceil(Math.max(0, ...dts) * 2) / 2 + 0.5)];
 
   // 늦게 도착한 구간: 제때 왔다면 받았을 시각보다 3초 넘게 늦은 연속 순번
   const late: Late[] = [];
@@ -205,31 +231,40 @@ export function buildRun(rows: Row[]): Run {
   const bootL = late.find((l) => l.kind === "boot");
   const boot = bootL ? { n: bootL.n, until: Math.max(...bySeq.filter((p) => p.es <= bootL.to).map((p) => p.pc)) } : null;
 
-  const run: Run = { pkts, bySeq, span, esMax, total: bySeq.length, offset, late, gap, boot, events: [], marks: {} };
+  const run: Run = { pkts, bySeq, span, esMax, total: bySeq.length, offset, late, gap, boot, events: [], marks: {}, lost, dtRange, source };
 
   const ev: Ev[] = [];
   if (boot)
     ev.push({ kind: "boot", es: offset, pc: boot.until, title: `밀린 기록 ${boot.n}개 도착`, detail: "수신 프로그램을 켜기 전 ESP32 버퍼에 쌓인 것" });
   for (let k = 1; k < bySeq.length; k++) {
     const p = bySeq[k], q = bySeq[k - 1];
+    const gapBefore = p.seq - q.seq - 1;
+    const n0 = ev.length;
     if (p.heat && !q.heat) ev.push({ kind: "heat-on", es: p.es, pc: p.pc, title: "히터 켜짐", detail: "충전 · 발열 상황 모사 (h 명령)" });
     const tripNow = p.trip && !q.trip;
     if (p.lv !== q.lv) {
       const up = p.lv > q.lv;
-      const why = up ? explain(run, p).title : `ΔT ${f2(p.dT)} °C${p.slope < -0.005 ? " · 식는 중" : ""}`;
+      const why = up ? explain(run, p, q.lv).title : `ΔT ${f2(p.dT)} °C${p.slope < -0.005 ? " · 식는 중" : ""}`;
       const title = `${LV[p.lv]}${JOSA[p.lv]} ${up ? "올라감" : "내려감"}${tripNow && p.lv === 3 ? " · 히터 차단" : ""}`;
       ev.push({ kind: tripNow && p.lv === 3 ? "trip" : up ? "up" : "down", es: p.es, pc: p.pc, lv: p.lv, title, detail: why });
     } else if (tripNow) ev.push({ kind: "trip", es: p.es, pc: p.pc, lv: 3, title: "히터 자동 차단", detail: "릴레이 GPIO 22 끊음 · 장치가 스스로" });
-    if (!p.heat && q.heat && !tripNow) ev.push({ kind: "heat-off", es: p.es, pc: p.pc, title: "히터 꺼짐", detail: "" });
+    if (p.fault && !q.fault) ev.push({ kind: "fault", es: p.es, pc: p.pc, lv: 2, title: "온도 센서 고장", detail: "ΔT 값이 끊김 · 펌웨어가 히터를 끊음" });
+    if (!p.heat && q.heat && !tripNow) ev.push({ kind: "heat-off", es: p.es, pc: p.pc, title: "히터 꺼짐", detail: p.fault ? "센서 고장이라 장치가 끊음" : "" });
+    if (gapBefore > 0) for (let j = n0; j < ev.length; j++) ev[j].gapBefore = gapBefore;
   }
   if (gap) {
     const n = pkts.filter((p) => p.pc >= gap.to && p.pc - (p.es - offset) > 3 && !p.dup).length;
-    ev.push({ kind: "cut", es: gap.from + offset, pc: gap.from + 3, title: "Wi-Fi 끊김", detail: "장치는 판정 · 차단을 계속, 기록은 버퍼에" });
-    ev.push({ kind: "back", es: gap.to + offset, pc: gap.to, title: `다시 연결 · 밀린 기록 ${n}개`, detail: `끊긴 ${Math.round(gap.to - gap.from)}초 동안 쌓인 것을 한꺼번에` });
+    const sec = Math.round(gap.to - gap.from);
+    ev.push({ kind: "cut", es: gap.from + offset, pc: gap.from + 3, title: "Wi-Fi 끊김", detail: source.ring ? "장치는 판정 · 차단을 계속, 기록은 버퍼에" : "장치는 판정 · 차단을 계속, 버퍼가 없어 기록은 버려짐" });
+    ev.push({
+      kind: "back", es: gap.to + offset, pc: gap.to,
+      title: n ? `다시 연결 · 밀린 기록 ${n}개` : "다시 연결 · 밀린 기록 없음",
+      detail: lost ? (n ? `버퍼가 작아 오래된 기록 ${lost}개는 사라짐` : `끊긴 ${sec}초 동안 기록 ${lost}개 사라짐`) : `끊긴 ${sec}초 동안 쌓인 것을 한꺼번에`,
+    });
   }
   ev.sort((a, b) => a.pc - b.pc || a.es - b.es);
   run.events = ev;
-  run.marks = { heatOn: ev.find((e) => e.kind === "heat-on"), trip: ev.find((e) => e.kind === "trip"), cut: ev.find((e) => e.kind === "cut") };
+  run.marks = { heatOn: ev.find((e) => e.kind === "heat-on"), trip: ev.find((e) => e.kind === "trip"), cut: ev.find((e) => e.kind === "cut"), fault: ev.find((e) => e.kind === "fault") };
   return run;
 }
 
@@ -247,6 +282,7 @@ export interface View {
   pending: number; // ESP32 버퍼에 쌓였을 기록 수 (추정)
   resent: number; // 재전송으로 도착한 수
   dups: number; // 중복으로 버린 수
+  missing: number; // 지금까지 받은 마지막 순번 앞에서 빠진 순번 수 (밀린 기록이 다 오면 = 사라진 기록)
   arrivals: Pkt[]; // 최근 도착 (터미널용)
   events: Ev[]; // 이미 알게 된 사건
 }
@@ -273,15 +309,16 @@ export function viewAt(run: Run, T: number, tailN = 7): View {
   const cut = n > 0 && gap > 3;
   const burst = got.filter((p) => p.pc > T - 1).length;
   const esNow = T + run.offset;
-  const pending = cut && last ? Math.min(RULE.ring, Math.max(0, Math.round(esNow - last.es))) : 0;
+  const pending = cut && last ? Math.min(run.source.ring, Math.max(0, Math.round(esNow - last.es))) : 0;
   const events = run.events.filter((e) => e.pc <= T);
   if (cut && !events.some((e) => e.kind === "cut" && e.pc <= T)) {
-    events.push({ kind: "cut", es: lastPc + run.offset + 3, pc: lastPc + 3, title: "Wi-Fi 끊김", detail: "장치는 판정 · 차단을 계속, 기록은 버퍼에" });
+    events.push({ kind: "cut", es: lastPc + run.offset + 3, pc: lastPc + 3, title: "Wi-Fi 끊김", detail: "장치는 판정 · 차단을 계속" });
   }
   return {
     T, n, seen, last, lastPc, gap, cut, esNow, burst, pending,
     resent: got.reduce((a, p) => a + (p.tx > 1 ? 1 : 0), 0),
     dups: got.reduce((a, p) => a + (p.dup ? 1 : 0), 0),
+    missing: last && seen.length ? last.seq - seen[0].seq + 1 - seen.length : 0,
     arrivals: got.slice(-tailN),
     events,
   };
