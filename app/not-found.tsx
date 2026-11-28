@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 const links = [
   { href: "/", label: "홈", sub: "첫 화면에서 다시 시작" },
   { href: "/topics", label: "주제 한눈에", sub: "14개 주제를 네 갈래로" },
-  { href: "/lab", label: "실험실", sub: "LAB 01 실측 · LAB 02 모의실험" },
+  { href: "/lab", label: "실험실", sub: "LAB 01 실측 · LAB 02 모의실험 · LAB 03 관제실" },
   { href: "/references", label: "참고문헌", sub: "검증한 문헌 목록" },
 ];
 
