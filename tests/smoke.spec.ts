@@ -13,6 +13,7 @@ const pages = [
   "/lab",
   "/lab/ess-monitoring",
   "/lab/virtual-esp32",
+  "/lab/control-room",
 ];
 
 for (const path of pages) {
@@ -65,4 +66,17 @@ test("LAB 02 공유 이미지 설명의 숫자가 부품 목록과 같다", () =
   expect(alt).toContain(`센서 키트 ${kit}종`);
   expect(alt).toContain(`실측 부품 ${core}종`);
   expect(alt).toContain(`환경 ${ENVS.length}가지`);
+});
+
+test("관제실: 첫 진입은 재생 버튼, 끊김으로 이동하면 끊김 경보", async ({ page }) => {
+  await page.goto("/lab/control-room");
+  const go = page.getByRole("button", { name: /재생 시작/ });
+  await expect(go).toBeVisible();
+  await expect(page.locator(".cr-body")).toHaveAttribute("inert", "");
+  await page.getByRole("button", { name: "Wi-Fi 끊김" }).click();
+  await expect(go).toBeHidden();
+  await expect(page.locator(".cr-pill")).toContainText("통신 끊김", { timeout: 4000 });
+  await expect(page.locator(".cr-alert")).toBeVisible();
+  await page.getByRole("button", { name: "일시정지" }).click();
+  await expect(page.getByRole("button", { name: "재생", exact: true })).toBeVisible();
 });
