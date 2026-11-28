@@ -46,6 +46,7 @@ export interface Pkt {
   rtt: number;
   dup: boolean;
   fault: boolean; // 온도 센서 고장 (값 없음)
+  site?: SiteVals;
 }
 
 /* 기록의 출처 — 화면 이름표 · 범례 · 문구가 이것을 따른다 */
@@ -55,8 +56,28 @@ export interface Source {
   title: string; // 재생 대기 카드의 설명
   note?: string; // 설정 요약 (모의)
   ring: number; // ESP32 버퍼 크기 (0 = 버퍼 없음)
+  sensors: string[]; // 꽂혀 있는 키트 센서 (모의 실험) — 계통도 · 현장 센서 칸에 보임
 }
-export const REAL_SOURCE: Source = { kind: "real", src: "comm_run1 · 2026-11-14", title: "2026-11-14 통신 실험", ring: RULE.ring };
+
+/* 현장 센서 값 (모의 실험 · 부품이 없으면 null) */
+export interface SiteVals {
+  airT: number | null; // DHT11 공기 온도 °C
+  rh: number | null; // DHT11 습도 %
+  dew: number | null; // 펌웨어가 계산한 이슬점 °C
+  floor: number | null; // 초음파로 잰 바닥 물 mm
+  tilt: number | null; // 가속도 기울기 °
+  shock: number | null; // 충격 g
+  door: boolean | null; // 리드 스위치 (열림)
+  person: boolean | null; // 인체감지
+}
+/* 기록 밖에서 함께 넘기는 것 (모의 실험만) */
+export interface Ext {
+  site?: Record<number, SiteVals>; // 순번 → 현장 센서
+  reason?: Record<number, { lv: Lv; text: string }>; // 순번 → 가상 장치가 단계를 올린 사유
+  cutNote?: Record<number, string>; // 순번 → 히터를 끊은 사유
+  scene?: { es: number; label: string }; // 모의 실험의 사건 (가상 장치만 아는 '정답' 시각)
+}
+export const REAL_SOURCE: Source = { kind: "real", src: "comm_run1 · 2026-11-14", title: "2026-11-14 통신 실험", ring: RULE.ring, sensors: [] };
 
 /* CSV → Row[] (도착 순서). 서버(빌드)에서 한 번만 실행 */
 export function parseCsv(text: string): Row[] {
@@ -122,6 +143,7 @@ export interface Run {
   lost: number; // 끝내 오지 않은 순번 수
   dtRange: [number, number]; // 그래프 세로축 (°C)
   source: Source;
+  ext: Ext;
 }
 
 const median = (a: number[]) => {
@@ -177,6 +199,9 @@ export function explain(run: Run, p: Pkt, prev: Lv = p.lv): { title: string; det
     const d = `ΔT ${f2(p.dT)} °C · 주의 기준 2.0 °C 아래`;
     return { title: "이상 없음", detail: tail ? `${d} · ${tail}` : d };
   }
+  // 모의 실험: 가상 장치가 기록한 사유가 있으면 그것을 (키트 센서 규칙까지 포함)
+  const simWhy = reasonFor(run, p);
+  if (simWhy) return { title: simWhy, detail: [fin(p.dT) && !p.fault ? `ΔT ${f2(p.dT)} °C` : "", tail].filter(Boolean).join(" · ") };
   const rules = rulesAt(run, p, prev);
   // 올라가는 순간: 1초 기록 사이에 기준을 넘었다 내려왔을 수 있어, 그 단계 규칙이 없으면 가장 높은 규칙
   const hit = rules.find((r) => r.lv === p.lv) ?? (prev < p.lv ? rules[0] : undefined);
@@ -186,6 +211,18 @@ export function explain(run: Run, p: Pkt, prev: Lv = p.lv): { title: string; det
     title: "기준 아래 · 내릴지 확인 중",
     detail: [`5초 연속 기준 아래여야 한 단계 내림 · ΔT ${f2(p.dT)} °C`, tail].filter(Boolean).join(" · "),
   };
+}
+
+/* 가상 장치가 이 단계로 올린 사유 (이 순번까지 가운데 가장 최근, 같은 단계) */
+export function reasonFor(run: Run, p: Pkt): string | null {
+  const r = run.ext.reason;
+  if (!r || p.lv === 0) return null;
+  let best: { seq: number; text: string } | null = null;
+  for (const k in r) {
+    const seq = Number(k);
+    if (seq <= p.seq && r[seq].lv === p.lv && (!best || seq > best.seq)) best = { seq, text: r[seq].text };
+  }
+  return best?.text ?? null;
 }
 
 /* 위험지수 기여 (펌웨어 riskIndex 식으로 기록값에서 다시 계산) */
@@ -200,8 +237,9 @@ export function riskParts(p: Pick<Pkt, "dT" | "slope" | "mA" | "mV">) {
   ];
 }
 
-export function buildRun(rows: Row[], source: Source = REAL_SOURCE): Run {
+export function buildRun(rows: Row[], source: Source = REAL_SOURCE, ext: Ext = {}): Run {
   const pkts = rows.map(toPkt);
+  if (ext.site) for (const p of pkts) p.site = ext.site[p.seq];
   const first = new Map<number, Pkt>();
   for (const p of pkts) if (!first.has(p.seq)) first.set(p.seq, p);
   const bySeq = [...first.values()].sort((a, b) => a.seq - b.seq);
@@ -231,7 +269,7 @@ export function buildRun(rows: Row[], source: Source = REAL_SOURCE): Run {
   const bootL = late.find((l) => l.kind === "boot");
   const boot = bootL ? { n: bootL.n, until: Math.max(...bySeq.filter((p) => p.es <= bootL.to).map((p) => p.pc)) } : null;
 
-  const run: Run = { pkts, bySeq, span, esMax, total: bySeq.length, offset, late, gap, boot, events: [], marks: {}, lost, dtRange, source };
+  const run: Run = { pkts, bySeq, span, esMax, total: bySeq.length, offset, late, gap, boot, events: [], marks: {}, lost, dtRange, source, ext };
 
   const ev: Ev[] = [];
   if (boot)
@@ -249,7 +287,7 @@ export function buildRun(rows: Row[], source: Source = REAL_SOURCE): Run {
       ev.push({ kind: tripNow && p.lv === 3 ? "trip" : up ? "up" : "down", es: p.es, pc: p.pc, lv: p.lv, title, detail: why });
     } else if (tripNow) ev.push({ kind: "trip", es: p.es, pc: p.pc, lv: 3, title: "히터 자동 차단", detail: "릴레이 GPIO 22 끊음 · 장치가 스스로" });
     if (p.fault && !q.fault) ev.push({ kind: "fault", es: p.es, pc: p.pc, lv: 2, title: "온도 센서 고장", detail: "ΔT 값이 끊김 · 펌웨어가 히터를 끊음" });
-    if (!p.heat && q.heat && !tripNow) ev.push({ kind: "heat-off", es: p.es, pc: p.pc, title: "히터 꺼짐", detail: p.fault ? "센서 고장이라 장치가 끊음" : "" });
+    if (!p.heat && q.heat && !tripNow) ev.push({ kind: "heat-off", es: p.es, pc: p.pc, title: "히터 꺼짐", detail: ext.cutNote?.[p.seq] ?? (p.fault ? "센서 고장이라 장치가 끊음" : "") });
     if (gapBefore > 0) for (let j = n0; j < ev.length; j++) ev[j].gapBefore = gapBefore;
   }
   if (gap) {

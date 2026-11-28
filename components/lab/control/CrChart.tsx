@@ -177,13 +177,74 @@ export function CrChart({ run, view }: { run: Run; view: View }) {
     );
   }
 
+  // 단계 띠 (그래프 위쪽): 같은 단계가 이어지는 구간마다 한 칸
+  const band: React.ReactNode[] = [];
+  for (let k = 0; k < seen.length; ) {
+    let j = k;
+    while (j + 1 < seen.length && seen[j + 1].lv === seen[k].lv && seen[j + 1].seq - seen[j].seq <= 1) j++;
+    const x1 = x(seen[k].es - 0.5), x2 = x(seen[j].es + 0.5);
+    band.push(<rect key={`b${seen[k].seq}`} x={x1} y={Tp} width={Math.max(1, x2 - x1)} height={6} className={`cr-band l${seen[k].lv}`} />);
+    k = j + 1;
+  }
+
+  // 모의 실험의 사건 (가상 장치만 아는 실제 시각)
+  const scene = run.ext.scene && run.ext.scene.es <= esNow ? (
+    <g className="cr-scene">
+      <path d={`M${x(run.ext.scene.es)} ${Tp + 8}V${H - B}`} />
+      <text x={x(run.ext.scene.es) - 5} y={Tp + 20} textAnchor="end">
+        사건 · {run.ext.scene.label}
+      </text>
+    </g>
+  ) : null;
+
+  // 아래 작은 그래프: 전류 (같은 가로축, 세로축은 따로)
+  const cur = seen.filter((p) => fin(p.mA));
+  const hasCur = run.bySeq.some((p) => fin(p.mA) && p.mA > 0);
+  const CH = 78, C0 = H + 14; // 전류 판 위치
+  const cMax = Math.max(35, Math.ceil(Math.max(0, ...run.bySeq.filter((p) => fin(p.mA)).map((p) => p.mA)) / 5) * 5 + 5);
+  const cy = (v: number) => C0 + CH - (Math.max(0, Math.min(cMax, v)) / cMax) * CH;
+  let cd = "";
+  for (let k = 0; k < cur.length; k++) {
+    const p = cur[k], q = cur[k - 1];
+    const brk = k === 0 || p.seq - q.seq > 1;
+    cd += `${brk ? "M" : "L"}${x(p.es).toFixed(1)} ${cy(p.mA).toFixed(1)}`;
+  }
+  const curPanel = hasCur ? (
+    <g className="cr-curp">
+      <rect x={L} y={C0} width={W - L - R} height={CH} className="cr-curp-bg" />
+      {[0, 10, 20, 30].filter((v) => v <= cMax).map((v) => (
+        <g key={v}>
+          <path d={`M${L} ${cy(v)}H${W - R}`} className={v === 0 ? "cr-g1" : "cr-g2"} />
+          <text x={L - 7} y={cy(v) + 4} textAnchor="end" className="cr-ax">
+            {v}
+          </text>
+        </g>
+      ))}
+      {RULE.mA.map((v, i) => (
+        <g key={v} className={`cr-thr l${i + 1}`}>
+          <path d={`M${L} ${cy(v)}H${W - R}`} />
+        </g>
+      ))}
+      {!narrow && (
+        <text x={W - R + 8} y={cy(RULE.mA[1]) + 4} className="cr-ax">
+          기준 23·27·32
+        </text>
+      )}
+      <path d={cd} className="cr-line cur" />
+      <text x={L} y={C0 - 3} className="cr-ax strong">
+        전류 mA
+      </text>
+    </g>
+  ) : null;
+  const HT = hasCur ? H + CH + 22 : H;
+
   const label = last
     ? `온도차 그래프. 받은 기록 ${seen.length}개, 마지막 장치 시각 ${mmss(last.es)}, 온도차 ${last.dT.toFixed(2)} 도, ${LV[last.lv]} 단계${cut ? ", 지금 수신 대기 중" : ""}.`
     : "온도차 그래프. 아직 받은 기록이 없습니다.";
 
   return (
     <div ref={ref} className="cr-chart-box">
-      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
+      <svg width={W} height={HT} viewBox={`0 0 ${W} ${HT}`} role="img" aria-label={label}>
         <defs>
           <pattern id="cr-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
             <line x1="0" y1="0" x2="0" y2="7" className="cr-hatch-line" />
@@ -194,6 +255,8 @@ export function CrChart({ run, view }: { run: Run; view: View }) {
         </defs>
         {grid}
         {lateBands}
+        {band}
+        {scene}
         {xt}
         {yt}
         {thr}
@@ -202,6 +265,7 @@ export function CrChart({ run, view }: { run: Run; view: View }) {
         <path d={d} className="cr-line" />
         {dipNote}
         {lostBands}
+        {curPanel}
         {last && fin(last.dT) && !last.fault && <circle cx={x(last.es)} cy={y(last.dT)} r={4.5} className={`cr-now l${last.lv}`} />}
         {dims}
         <text x={L} y={Tp - 8} className="cr-ax">

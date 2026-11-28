@@ -99,3 +99,16 @@ test("LAB 02 → 관제실: 설정을 주소로 넘김", async ({ page }) => {
   await expect(page.locator(".cr-src")).toContainText("LAB 02 모의");
   await expect(page.getByRole("button", { name: /재생 시작/ })).toBeVisible();
 });
+
+test("관제실: 현장 센서 시나리오 · 경보 확인", async ({ page }) => {
+  await page.goto("/lab/control-room");
+  await page.getByRole("button", { name: /모의 실험/ }).click();
+  await page.getByLabel("시나리오").selectOption("leak");
+  await expect(page.getByText("바닥 물 높이")).toBeVisible();
+  await page.getByRole("button", { name: "일시정지" }).click();
+  await page.locator(".cr-track input").fill("120");
+  await expect(page.locator(".cr-unack b")).toHaveText("1");
+  await page.getByRole("button", { name: /모두 확인/ }).click();
+  await expect(page.locator(".cr-unack b")).toHaveText("0");
+  await expect(page.locator(".cr-lvl .cr-reason")).toContainText("바닥 누수");
+});

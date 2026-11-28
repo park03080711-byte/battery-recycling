@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { CrChart } from "./CrChart";
+import { CrPlant, alarms } from "./CrPlant";
 import Link from "next/link";
-import { buildRun, explain, fin, LV, mmss, mmssd, reach, riskParts, RULE, viewAt, type Lv, type Row, type Source } from "./engine";
+import { buildRun, explain, fin, LV, mmss, mmssd, reach, riskParts, RULE, viewAt, type Ext, type Lv, type Row, type Source } from "./engine";
 import { PRESETS } from "./presets";
 
 const SPEEDS = [1, 10, 30] as const;
@@ -42,6 +43,75 @@ function LvIcon({ lv }: { lv: Lv }) {
 
 const TERM_LV = ["NORM", "CAUT", "WARN", "DANG"];
 
+/* 최근 60초 흐름 (작은 선 그래프) — 기준선은 점선 */
+function Spark({ pts, lines = [], min }: { pts: [number, number][]; lines?: number[]; min?: number }) {
+  const W = 200, H = 34;
+  const ok = pts.filter(([, v]) => fin(v));
+  if (ok.length < 2) return <svg className="cr-spark" viewBox={`0 0 ${W} ${H}`} aria-hidden="true" />;
+  const t0 = pts[pts.length - 1][0] - 60;
+  const vs = ok.map(([, v]) => v);
+  let lo = Math.min(...vs), hi = Math.max(...vs);
+  if (min !== undefined) lo = Math.min(lo, min);
+  const span0 = Math.max(hi - lo, 0.5);
+  const near = lines.filter((l) => l > lo - span0 * 0.3 && l < hi + span0 * 0.3);
+  lo = Math.min(lo, ...near);
+  hi = Math.max(hi, ...near);
+  if (hi - lo < 1e-6) hi = lo + 1;
+  const x = (t: number) => ((t - t0) / 60) * W;
+  const y = (v: number) => H - 3 - ((v - lo) / (hi - lo)) * (H - 6);
+  let d = "";
+  pts.forEach(([t, v], i) => {
+    if (!fin(v)) return;
+    const brk = i === 0 || !fin(pts[i - 1][1]);
+    d += `${brk ? "M" : "L"}${x(t).toFixed(1)} ${y(v).toFixed(1)}`;
+  });
+  return (
+    <svg className="cr-spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+      {near.map((l) => (
+        <path key={l} d={`M0 ${y(l)}H${W}`} className="cr-spark-thr" vectorEffect="non-scaling-stroke" />
+      ))}
+      <path d={d} className="cr-spark-line" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
+/* 위험지수 반원 게이지 */
+function Gauge({ v, lv, empty }: { v: number; lv: Lv; empty: boolean }) {
+  const a = Math.PI * (1 - Math.max(0, Math.min(100, v)) / 100);
+  const R = 46, cx = 56, cy = 54;
+  const px = cx + R * Math.cos(a), py = cy - R * Math.sin(a);
+  return (
+    <svg className={`cr-gauge l${lv}`} viewBox="0 0 112 66" role="img" aria-label={empty ? "위험지수 없음" : `위험지수 ${v} / 100`}>
+      <path d={`M${cx - R} ${cy}A${R} ${R} 0 0 1 ${cx + R} ${cy}`} className="cr-gauge-bg" />
+      {!empty && v > 0 && <path d={`M${cx - R} ${cy}A${R} ${R} 0 0 1 ${px.toFixed(1)} ${py.toFixed(1)}`} className="cr-gauge-fg" />}
+      {[0, 25, 50, 75, 100].map((t) => {
+        const b = Math.PI * (1 - t / 100);
+        return <path key={t} d={`M${cx + (R - 9) * Math.cos(b)} ${cy - (R - 9) * Math.sin(b)}L${cx + (R - 5) * Math.cos(b)} ${cy - (R - 5) * Math.sin(b)}`} className="cr-gauge-tick" />;
+      })}
+      <text x={cx} y={cy - 6} textAnchor="middle" className="cr-gauge-v">
+        {empty ? "—" : v}
+      </text>
+      <text x={cx} y={cy + 9} textAnchor="middle" className="cr-gauge-k">
+        위험지수
+      </text>
+    </svg>
+  );
+}
+
+/* 예측 시간 막대: 0 ~ 60 s, 30 s 아래가 경고 구간 */
+function EtaBar({ eta }: { eta: number | null }) {
+  const p = eta === null ? null : Math.max(0, Math.min(1, eta / 60));
+  return (
+    <div className="cr-etabar" aria-hidden="true">
+      <span className="zone" />
+      {p !== null && <i style={{ left: `${p * 100}%` }} />}
+      <em>0</em>
+      <em style={{ left: "50%" }}>30 s</em>
+      <em style={{ left: "100%" }}>60+</em>
+    </div>
+  );
+}
+
 /* 브라우저 알림 권한 (허용 · 거부가 바뀌면 다시 읽음) */
 const readPerm = (): Perm => (typeof window !== "undefined" && "Notification" in window ? (Notification.permission as Perm) : "na");
 function subscribePerm(cb: () => void) {
@@ -56,14 +126,14 @@ function subscribePerm(cb: () => void) {
   return () => st?.removeEventListener("change", cb);
 }
 
-type SimData = { rows: Row[]; source: Source; preset: string | null; hash: string };
+type SimData = { rows: Row[]; source: Source; ext: Ext; preset: string | null; hash: string };
 
 export function ControlRoom({ rows }: { rows: Row[] }) {
   const realRun = useMemo(() => buildRun(rows), [rows]);
   const [mode, setMode] = useState<"real" | "sim">("real");
   const [sim, setSim] = useState<SimData | null>(null);
   const [busy, setBusy] = useState(false);
-  const simRun = useMemo(() => (sim ? buildRun(sim.rows, sim.source) : null), [sim]);
+  const simRun = useMemo(() => (sim ? buildRun(sim.rows, sim.source, sim.ext) : null), [sim]);
   const run = mode === "sim" && simRun ? simRun : realRun;
   const isSim = run.source.kind === "sim";
   const span = run.span;
@@ -73,6 +143,7 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
   const [speed, setSpeed] = useState<Speed>(10);
   const [notifOn, setNotifOn] = useState(false);
   const [say, setSay] = useState("");
+  const [acked, setAcked] = useState<Set<string>>(() => new Set());
   const tRef = useRef(0);
   const speedRef = useRef<Speed>(10);
 
@@ -129,9 +200,9 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
       const m = await import("./fromSim");
       const cfg = "preset" in pick ? m.presetCfg(pick.preset) : m.cfgFromHash(pick.hash);
       if (!cfg) return;
-      const { rows: simRowsOut, source } = m.simRows(cfg);
+      const { rows: simRowsOut, source, ext } = m.simRows(cfg);
       const hash = m.hashOf(cfg);
-      setSim({ rows: simRowsOut, source, preset: m.presetOf(cfg), hash });
+      setSim({ rows: simRowsOut, source, ext, preset: m.presetOf(cfg), hash });
       setMode("sim");
       setHash(hash);
       tRef.current = 0;
@@ -208,8 +279,118 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
   const REACH_MAX = Math.max(130, Math.ceil((Math.max(0, ...reached.filter((x) => x.lv > 0).map((x) => x.ev.es - x.from.es)) + 8) / 10) * 10);
   const ring = run.source.ring;
   const log = [...view.events].sort((a, b) => a.es - b.es).slice(-5).reverse();
+  const al = alarms(run, r);
+  // 최근 60초 흐름: 받은 기록 중 장치 시각 기준
+  const trend = (f: (p: (typeof view.seen)[number]) => number): [number, number][] => {
+    if (!r) return [];
+    const from = r.es - 60;
+    const out: [number, number][] = [];
+    for (let k = view.seen.length - 1; k >= 0 && view.seen[k].es >= from; k--) out.push([view.seen[k].es, f(view.seen[k])]);
+    return out.reverse();
+  };
+  const site = r?.site;
+  const sens = run.source.sensors;
+  const siteN = (sens.includes("dht") ? 1 : 0) + (sens.includes("sonar") ? 1 : 0) + (sens.includes("accel") ? 1 : 0) + (sens.includes("reed") || sens.includes("pir") ? 1 : 0);
+  const v1 = (v: number | null | undefined, d = 1) => (v === null || v === undefined || !fin(v) ? "—" : v.toFixed(d));
+  const siteTiles = sens.length ? (
+    <>
+      {sens.includes("dht") && (
+        <div className={`cr-tile cr-m${al.dht ? ` al l${al.dht}` : ""}`}>
+          <p className="cr-k">
+            함체 습도 · 이슬점<span>DHT11</span>
+          </p>
+          <p className="cr-v">
+            {v1(site?.rh, 0)}
+            <small>%</small>
+          </p>
+          <Spark pts={trend((p) => p.site?.rh ?? NaN)} />
+          <p className="cr-s">
+            공기 {v1(site?.airT, 0)} °C · 이슬점 {v1(site?.dew)} °C
+          </p>
+        </div>
+      )}
+      {sens.includes("sonar") && (
+        <div className={`cr-tile cr-m${al.sonar ? ` al l${al.sonar}` : ""}`}>
+          <p className="cr-k">
+            바닥 물 높이<span>초음파 HC-SR04</span>
+          </p>
+          <p className="cr-v">
+            {v1(site?.floor)}
+            <small>mm</small>
+          </p>
+          <Spark pts={trend((p) => p.site?.floor ?? NaN)} lines={[5]} min={0} />
+          <p className="cr-s">기준 5 mm · 물받이 바닥에서</p>
+        </div>
+      )}
+      {sens.includes("accel") && (
+        <div className={`cr-tile cr-m${al.accel ? ` al l${al.accel}` : ""}`}>
+          <p className="cr-k">
+            기울기 · 충격<span>ADXL335</span>
+          </p>
+          <p className="cr-v">
+            {v1(site?.tilt, 0)}
+            <small>°</small>
+          </p>
+          <Spark pts={trend((p) => p.site?.tilt ?? NaN)} min={0} />
+          <p className="cr-s">충격 {v1(site?.shock, 1)} g</p>
+        </div>
+      )}
+      {(sens.includes("reed") || sens.includes("pir")) && (
+        <div className={`cr-tile cr-m${al.reed || al.pir ? ` al l${Math.max(al.reed ?? 0, al.pir ?? 0)}` : ""}`}>
+          <p className="cr-k">
+            문 · 사람<span>리드 · 인체감지</span>
+          </p>
+          <p className="cr-v">{sens.includes("reed") ? (site?.door ? "열림" : "닫힘") : "—"}</p>
+          <p className="cr-s">{sens.includes("pir") ? (site?.person ? "사람 있음" : "사람 없음") : ""}</p>
+          <p className="cr-s dim">문이 열리면 ‘정비 중’ · 충전 정지</p>
+        </div>
+      )}
+    </>
+  ) : null;
+
+  /* 경보 확인: 새 경보는 깜빡이고, 확인하면 멈춘다 */
+  const alarmKinds = ["up", "trip", "fault", "cut"];
+  const evKey = (e: { kind: string; es: number }) => `${run.source.src}|${e.kind}|${e.es.toFixed(1)}`;
+  const unacked = view.events.filter((e) => alarmKinds.includes(e.kind) && !acked.has(evKey(e)));
+  const ack = (keys: string[]) => setAcked((a) => new Set([...a, ...keys]));
   const etaOk = !!r && r.eta > 0 && !r.fault; // 센서 고장이면 예측도 멈춘 값
   const etaWarn = etaOk && r!.eta < RULE.etaS;
+
+  /* 좁은 화면에서 계통도 아래에 붙는 세로 신호 경로 */
+  const pathEl = (
+    <div className="cr-path">
+      <p className="cr-path-h">SIGNAL PATH · 1 s 주기</p>
+      <ol>
+        <li className="cr-node">
+          <b>ESP32</b>
+          <span>측정 · 판정 · 차단</span>
+          <code>{r ? `seq #${r.seq} · ${mmssd(r.es)}` : "—"}</code>
+        </li>
+        <li className={`cr-link${cut ? " bad" : burst ? " burst" : ""}`}>
+          <span>{cut ? `Wi-Fi 끊김 · ${gapS} s` : burst ? `밀린 기록 한꺼번에 · 초당 ${view.burst}개` : "UDP 패킷 → ← ACK"}</span>
+          <code>{ring ? `버퍼 ${cut ? `약 ${view.pending}` : 0} / ${ring} · 재전송 ${view.resent}` : `버퍼 없음 · 재전송 ${view.resent}`}</code>
+        </li>
+        <li className="cr-node">
+          <b>PC 수신</b>
+          <span>pc_receiver.py</span>
+          <code className={!cut && !burst && view.missing ? "bad" : undefined}>
+            {cut ? `마지막 수신 ${gapS} s 전` : !burst && view.missing ? `빠진 순번 ${view.missing}개 · 왕복 ${rtt} ms` : rtt !== null && view.n ? `왕복 ${rtt} ms · 중복 ${view.dups}` : "대기"}
+          </code>
+        </li>
+        <li className="cr-link short">
+          <span>화면 갱신</span>
+          <code>0.1 s</code>
+        </li>
+        <li className="cr-node is-here">
+          <b>관제실</b>
+          <span>이 화면</span>
+          <code>
+            받은 기록 {view.seen.length} / {run.total}
+          </code>
+        </li>
+      </ol>
+    </div>
+  );
 
   return (
     <section className="cr" aria-label="관제 화면">
@@ -280,6 +461,9 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
               {perm === "denied" ? "알림 막힘" : perm === "granted" ? (notifOn ? "알림 켜짐" : "알림 꺼짐") : "알림 받기"}
             </button>
           )}
+          <a href="#cr-log" className={`cr-unack${unacked.length ? " on" : ""}`}>
+            미확인 경보 <b>{unacked.length}</b>
+          </a>
           <span className={`cr-pill${cut ? " bad" : ""}`}>
             <i aria-hidden="true" />
             {!view.n ? "연결 대기" : cut ? `통신 끊김 ${gapS} s` : burst ? "밀린 기록 수신 중" : rtt ? `연결됨 · ${rtt} ms` : "연결됨"}
@@ -292,41 +476,14 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
           </div>
         )}
 
-        {/* 신호 경로 */}
-        <div className="cr-path">
-          <p className="cr-path-h">SIGNAL PATH · 1 s 주기</p>
-          <ol>
-            <li className="cr-node">
-              <b>ESP32</b>
-              <span>측정 · 판정 · 차단</span>
-              <code>{r ? `seq #${r.seq} · ${mmssd(r.es)}` : "—"}</code>
-            </li>
-            <li className={`cr-link${cut ? " bad" : burst ? " burst" : ""}`}>
-              <span>{cut ? `Wi-Fi 끊김 · ${gapS} s` : burst ? `밀린 기록 한꺼번에 · 초당 ${view.burst}개` : "UDP 패킷 → ← ACK"}</span>
-              <code>{ring ? `버퍼 ${cut ? `약 ${view.pending}` : 0} / ${ring} · 재전송 ${view.resent}` : `버퍼 없음 · 재전송 ${view.resent}`}</code>
-            </li>
-            <li className="cr-node">
-              <b>PC 수신</b>
-              <span>pc_receiver.py</span>
-              <code className={!cut && !burst && view.missing ? "bad" : undefined}>
-                {cut ? `마지막 수신 ${gapS} s 전` : !burst && view.missing ? `빠진 순번 ${view.missing}개 · 왕복 ${rtt} ms` : rtt !== null && view.n ? `왕복 ${rtt} ms · 중복 ${view.dups}` : "대기"}
-              </code>
-            </li>
-            <li className="cr-link short">
-              <span>화면 갱신</span>
-              <code>0.1 s</code>
-            </li>
-            <li className="cr-node is-here">
-              <b>관제실</b>
-              <span>이 화면</span>
-              <code>
-                받은 기록 {view.seen.length} / {run.total}
-              </code>
-            </li>
-          </ol>
-        </div>
-
         <div className="cr-grid">
+          <div className="cr-tile cr-plant">
+            <p className="cr-k">
+              설비 계통도<span>함체 · ESP32 · 관제 통신</span>
+            </p>
+            <CrPlant run={run} view={view} extra={pathEl} />
+          </div>
+
           <div className={`cr-tile cr-lvl l${lv}`}>
             <p className="cr-k">
               현재 단계{cut ? " · 마지막 수신" : ""}
@@ -347,9 +504,29 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
                 </li>
               ))}
             </ol>
+            <div className="cr-riskbox">
+              <Gauge v={r ? r.risk : 0} lv={lv} empty={!r} />
+              <div>
+                <p className="cr-k sm">
+                  위험지수 기여<span>{isSim ? "재계산" : "기록값으로 재계산"}</span>
+                </p>
+                <ul className="cr-contrib" aria-label="위험지수 항목별 기여">
+                  {(parts.length ? parts : riskParts({ dT: 0, slope: 0, mA: 0, mV: RULE.mV.nominal })).map((p) => (
+                    <li key={p.k}>
+                      <span>{p.k}</span>
+                      <b>
+                        <i style={{ width: `${(p.v / p.max) * 100}%` }} />
+                      </b>
+                      <em>{Math.round(p.v)}</em>
+                    </li>
+                  ))}
+                </ul>
+                {r?.fault && <p className="cr-s bad">센서 고장 · 멈춘 온도값 기준</p>}
+              </div>
+            </div>
           </div>
 
-          <div className="cr-tile">
+          <div className={`cr-tile cr-m${al.cell ? ` al l${al.cell}` : ""}`}>
             <p className="cr-k">
               셀 − 주변 ΔT<span>DS18B20 − NTC</span>
             </p>
@@ -357,10 +534,11 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
               {r && fin(r.dT) && !r.fault ? r.dT.toFixed(2) : "—"}
               <small>°C</small>
             </p>
-            <p className={`cr-s${r?.fault ? " bad" : ""}`}>{!r ? " " : r.fault ? (fin(r.dT) ? `센서 고장 · ${r.dT.toFixed(2)}에서 멈춤` : "센서 고장 · 값 없음") : `${r.slope >= 0 ? "▲" : "▼"} ${Math.abs(r.slope).toFixed(4)} °C/s`}</p>
+            <Spark pts={trend((p) => (p.fault ? NaN : p.dT))} lines={[...RULE.dt]} />
+            <p className={`cr-s${r?.fault ? " bad" : ""}`}>{!r ? "\u00a0" : r.fault ? (fin(r.dT) ? `센서 고장 · ${r.dT.toFixed(2)}에서 멈춤` : "센서 고장 · 값 없음") : `${r.slope >= 0 ? "▲" : "▼"} ${Math.abs(r.slope).toFixed(4)} °C/s`}</p>
           </div>
 
-          <div className={`cr-tile${etaWarn && r && r.dT >= RULE.dt[0] ? " hot" : ""}`}>
+          <div className={`cr-tile cr-m${etaWarn && r && r.dT >= RULE.dt[0] ? " hot" : ""}`}>
             <p className="cr-k">
               4 °C 도달 예측<span>(4 − ΔT) ÷ 기울기</span>
             </p>
@@ -368,45 +546,39 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
               {etaOk ? r!.eta : "—"}
               <small>{etaOk ? "s" : ""}</small>
             </p>
+            <EtaBar eta={etaOk ? r!.eta : null} />
             <p className="cr-s">
-              {!r ? " " : r.fault ? "센서 고장 · 예측 멈춤" : r.eta > 0 ? (etaWarn ? (r.dT >= RULE.dt[0] ? "30 s 미만 · 경고 조건" : "ΔT 2 °C 미만이라 예측 경고 쉼") : "경고 기준 30 s 미만") : r.trip ? "차단 뒤 식는 중" : "오르지 않음"}
+              {!r ? "\u00a0" : r.fault ? "센서 고장 · 예측 멈춤" : r.eta > 0 ? (etaWarn ? (r.dT >= RULE.dt[0] ? "30 s 미만 · 경고 조건" : "ΔT 2 °C 미만이라 예측 경고 쉼") : "경고 기준 30 s 미만") : r.trip ? "차단 뒤 식는 중" : "오르지 않음"}
             </p>
           </div>
 
-          <div className="cr-tile">
+          <div className={`cr-tile cr-m${al.shunt ? ` al l${al.shunt}` : ""}`}>
             <p className="cr-k">
-              히터 · 릴레이<span>GPIO 22</span>
-            </p>
-            <p className={`cr-heat${r?.heat ? "" : " off"}${!r?.heat && (r?.trip || r?.fault) ? " trip" : ""}`}>
-              <i aria-hidden="true" />
-              {!r ? "—" : r.heat ? "켜짐" : r.trip || r.fault ? "차단" : "꺼짐"}
-            </p>
-            <p className="cr-s">{r ? `${fin(r.mA) ? r.mA.toFixed(1) : "—"} mA · ${fin(r.mV) ? (r.mV / 1000).toFixed(2) : "—"} V` : " "}</p>
-          </div>
-
-          <div className="cr-tile cr-risk">
-            <p className="cr-k">
-              위험지수<span>AHP 0 ~ 100</span>
+              전류 · 히터<span>션트 22 Ω</span>
             </p>
             <p className="cr-v">
-              {r ? r.risk : "—"}
-              <small>/ 100</small>
+              {r && fin(r.mA) ? r.mA.toFixed(1) : "—"}
+              <small>mA</small>
             </p>
-            {r?.fault && <p className="cr-s bad">센서 고장 · 멈춘 온도값 기준</p>}
-            <ul className="cr-contrib" aria-label="항목별 기여 (기록값으로 다시 계산)">
-              {(parts.length ? parts : riskParts({ dT: 0, slope: 0, mA: 0, mV: RULE.mV.nominal })).map((p) => (
-                <li key={p.k}>
-                  <span>{p.k}</span>
-                  <b>
-                    <i style={{ width: `${(p.v / p.max) * 100}%` }} />
-                  </b>
-                  <em>{Math.round(p.v)}</em>
-                </li>
-              ))}
-            </ul>
+            <Spark pts={trend((p) => p.mA)} lines={[...RULE.mA]} min={0} />
+            <p className={`cr-s${!r?.heat && (r?.trip || r?.fault) ? " bad" : ""}`}>{!r ? "\u00a0" : r.heat ? "히터 켜짐 · 정상 약 19.5 mA" : r.trip ? "히터 차단 (위험)" : r.fault ? "히터 정지 (센서 고장)" : "히터 꺼짐"}</p>
           </div>
 
-          <div className="cr-tile cr-reach">
+          <div className={`cr-tile cr-m${al.bus ? ` al l${al.bus}` : ""}`}>
+            <p className="cr-k">
+              5 V 버스 전압<span>분압 10k + 10k</span>
+            </p>
+            <p className="cr-v">
+              {r && fin(r.mV) ? (r.mV / 1000).toFixed(2) : "—"}
+              <small>V</small>
+            </p>
+            <Spark pts={trend((p) => p.mV / 1000)} lines={[RULE.mV.caution / 1000]} />
+            <p className="cr-s">주의 4.30 V 아래 · 경고 4.00 V 아래</p>
+          </div>
+
+          {siteTiles}
+
+          <div className={`cr-tile cr-reach${siteN === 1 ? " w9" : siteN === 2 ? " w6" : ""}`}>
             <p className="cr-k">
               히터 켠 뒤 단계 도달<span>장치 시각 차이</span>
             </p>
@@ -452,15 +624,22 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
 
           <div className="cr-tile cr-chart">
             <p className="cr-k">
-              온도차 ΔT · 장치 시각<span>격자 20 s · 0.5 °C</span>
+              온도차 ΔT · 전류<span>가로축 = ESP32가 잰 시각</span>
             </p>
             <CrChart run={run} view={view} />
           </div>
 
           <div className="cr-side">
-            <div className="cr-tile">
+            <div className="cr-tile" id="cr-log">
               <p className="cr-k">
-                경보 기록<span>최근 5건</span>
+                경보 기록
+                {unacked.length ? (
+                  <button type="button" className="cr-ackall" onClick={() => ack(unacked.map(evKey))}>
+                    모두 확인 ({unacked.length})
+                  </button>
+                ) : (
+                  <span>최근 5건</span>
+                )}
               </p>
               {log.length ? (
                 <ul className="cr-log">
@@ -469,7 +648,7 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
                     const tag = e.kind === "cut" || e.kind === "back" || e.kind === "boot" ? "통신" : e.kind.startsWith("heat") ? "히터" : e.kind === "fault" ? "고장" : LV[e.lv ?? 0];
                     const cls = e.kind === "cut" || e.kind === "back" || e.kind === "boot" || e.kind.startsWith("heat") ? "tc" : `t${e.lv}`;
                     return (
-                      <li key={`${e.kind}${e.es}`}>
+                      <li key={`${e.kind}${e.es}`} className={alarmKinds.includes(e.kind) && !acked.has(evKey(e)) ? `new l${e.kind === "cut" ? 1 : e.lv ?? 1}` : undefined}>
                         <time>{mmss(e.es)}</time>
                         <span className={`cr-t ${cls}`}>{tag}</span>
                         <p>
@@ -478,6 +657,11 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
                           {!!e.gapBefore && <em className="cr-late-tag bad">앞 기록 {e.gapBefore}개 빠짐</em>}
                           {e.detail && <small>{e.detail}</small>}
                         </p>
+                        {alarmKinds.includes(e.kind) && !acked.has(evKey(e)) && (
+                          <button type="button" className="cr-ack" onClick={() => ack([evKey(e)])} aria-label={`${e.title} 확인`}>
+                            확인
+                          </button>
+                        )}
                       </li>
                     );
                   })}
