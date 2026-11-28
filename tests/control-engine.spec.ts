@@ -57,8 +57,8 @@ import { PRESETS } from "../components/lab/control/presets";
 test.describe("모의 실험 입력", () => {
   test.skip(({ browserName, isMobile }) => browserName !== "chromium" || !!isMobile, "한 번만");
   const sim = (id: string) => {
-    const { rows, source } = simRows(presetCfg(id));
-    return buildRun(rows, source);
+    const { rows, source, ext } = simRows(presetCfg(id));
+    return buildRun(rows, source, ext);
   };
 
   test("모든 시나리오가 기록을 만든다", () => {
@@ -103,5 +103,17 @@ test.describe("모의 실험 입력", () => {
       expect(presetOf(cfgFromHash(hashOf(cfg))!)).toBe(p.id);
     }
     expect(hashOf(presetCfg("heat"))).toBe("#sim");
+  });
+
+  test("현장 센서 시나리오: 센서 값과 가상 장치의 사유가 넘어온다", () => {
+    const leak = sim("leak");
+    expect(leak.source.sensors).toEqual(["sonar"]);
+    expect(Math.max(...leak.bySeq.map((p) => p.site?.floor ?? 0))).toBeGreaterThan(3);
+    const up = leak.events.find((e) => e.kind === "up" || e.kind === "trip");
+    expect(up?.detail ?? "").not.toBe("");
+    const door = sim("door");
+    expect(door.bySeq.some((p) => p.site?.door)).toBe(true);
+    expect(sim("condense").bySeq.some((p) => (p.site?.rh ?? 0) > 60)).toBe(true);
+    expect(Math.max(...sim("shock").bySeq.map((p) => p.site?.tilt ?? 0))).toBeGreaterThan(20);
   });
 });
