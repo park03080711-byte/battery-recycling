@@ -8,7 +8,8 @@ import { AnatomyPreview } from "@/components/anatomy/Anatomy";
 import { parts } from "@/data/anatomy";
 import TopicGrid from "@/components/home/TopicGrid";
 import Footer from "@/components/Footer";
-import { PanelArt, ReportBg, WhyArt } from "@/components/Art";
+import { ReportBg, WhyArt } from "@/components/Art";
+import LayerArt from "@/components/home/LayerArt";
 import { ReportIcon } from "@/components/Icons";
 
 const sections = [
@@ -73,9 +74,9 @@ export default function Home() {
       <section className="fp-section" id="s-layers" data-dark="true" aria-label="네 가지 층위">
         <div className="panels">
           {layers.map((l) => (
-            <article className="panel" key={l.id}>
+            <article className="panel" key={l.id} data-layer={l.id}>
               <div className="panel-bg">
-                <PanelArt layer={l.id} />
+                <LayerArt layer={l.id} />
               </div>
               <div className="panel-body">
                 <div className="panel-range">{l.range}</div>
