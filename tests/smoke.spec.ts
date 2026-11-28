@@ -80,3 +80,22 @@ test("관제실: 첫 진입은 재생 버튼, 끊김으로 이동하면 끊김 �
   await page.getByRole("button", { name: "일시정지" }).click();
   await expect(page.getByRole("button", { name: "재생", exact: true })).toBeVisible();
 });
+
+test("관제실: 모의 실험으로 바꾸고 시나리오 고르기", async ({ page }) => {
+  await page.goto("/lab/control-room");
+  await page.getByRole("button", { name: /모의 실험/ }).click();
+  await expect(page.locator(".cr-src")).toContainText("LAB 02 모의");
+  await page.getByLabel("시나리오").selectOption("wifi-small");
+  await expect(page.locator(".cr-src")).toContainText("Wi-Fi 끊김");
+  await expect(page).toHaveURL(/#c=/);
+  await page.locator(".cr-track input").fill("199");
+  await expect(page.locator(".cr-lost").first()).toBeVisible();
+});
+
+test("LAB 02 → 관제실: 설정을 주소로 넘김", async ({ page }) => {
+  await page.goto("/lab/virtual-esp32");
+  await page.getByRole("link", { name: "관제실에서 보기 →" }).click();
+  await expect(page).toHaveURL(/control-room#sim/);
+  await expect(page.locator(".cr-src")).toContainText("LAB 02 모의");
+  await expect(page.getByRole("button", { name: /재생 시작/ })).toBeVisible();
+});

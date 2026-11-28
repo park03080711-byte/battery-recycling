@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { CrChart } from "./CrChart";
-import { buildRun, explain, LV, mmss, mmssd, reach, riskParts, RULE, viewAt, type Lv, type Row } from "./engine";
+import Link from "next/link";
+import { buildRun, explain, fin, LV, mmss, mmssd, reach, riskParts, RULE, viewAt, type Lv, type Row, type Source } from "./engine";
+import { PRESETS } from "./presets";
 
 const SPEEDS = [1, 10, 30] as const;
 type Speed = (typeof SPEEDS)[number];
@@ -54,8 +56,16 @@ function subscribePerm(cb: () => void) {
   return () => st?.removeEventListener("change", cb);
 }
 
+type SimData = { rows: Row[]; source: Source; preset: string | null; hash: string };
+
 export function ControlRoom({ rows }: { rows: Row[] }) {
-  const run = useMemo(() => buildRun(rows), [rows]);
+  const realRun = useMemo(() => buildRun(rows), [rows]);
+  const [mode, setMode] = useState<"real" | "sim">("real");
+  const [sim, setSim] = useState<SimData | null>(null);
+  const [busy, setBusy] = useState(false);
+  const simRun = useMemo(() => (sim ? buildRun(sim.rows, sim.source) : null), [sim]);
+  const run = mode === "sim" && simRun ? simRun : realRun;
+  const isSim = run.source.kind === "sim";
   const span = run.span;
   const [T, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -100,6 +110,49 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
     setPlaying((p) => !p);
   };
 
+  /* 기록 출처 바꾸기: 모의 실험은 고를 때 가상 장치를 불러와 끝까지 돌린다 */
+  const setHash = (h: string) => {
+    try {
+      window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search + h);
+    } catch {
+      /* 주소를 못 바꿔도 화면은 그대로 */
+    }
+  };
+  const restart = (play: boolean) => {
+    tRef.current = 0;
+    setT(0);
+    setStarted(play);
+    setPlaying(play);
+  };
+  const loadSim = useCallback(async (pick: { preset: string } | { hash: string }, play: boolean) => {
+    try {
+      const m = await import("./fromSim");
+      const cfg = "preset" in pick ? m.presetCfg(pick.preset) : m.cfgFromHash(pick.hash);
+      if (!cfg) return;
+      const { rows: simRowsOut, source } = m.simRows(cfg);
+      const hash = m.hashOf(cfg);
+      setSim({ rows: simRowsOut, source, preset: m.presetOf(cfg), hash });
+      setMode("sim");
+      setHash(hash);
+      tRef.current = 0;
+      setT(0);
+      setStarted(play);
+      setPlaying(play);
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+  const useReal = () => {
+    setMode("real");
+    setHash("");
+    restart(true);
+  };
+  // LAB 02에서 넘어온 주소(#c=… · #sim)면 그 설정으로 — 재생은 버튼을 눌러야 시작
+  useEffect(() => {
+    const h = window.location.hash;
+    if (h === "#sim" || h.startsWith("#c=")) void loadSim({ hash: h }, false);
+  }, [loadSim]);
+
   /* 알림: 허용한 사람만, 이 탭을 보고 있지 않을 때, 위험 단계 · 통신 끊김만 */
   const perm = useSyncExternalStore(subscribePerm, readPerm, () => "na" as Perm);
   const askNotify = async () => {
@@ -138,10 +191,11 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
   }, [lv, cut, playing, last, notifOn, run]);
 
   const jumps = [
-    run.marks.heatOn && { k: "heat", t: "히터 켜짐", at: run.marks.heatOn.pc - 4, tick: run.marks.heatOn.pc },
-    run.marks.trip && { k: "trip", t: "차단", at: run.marks.trip.pc - 8, tick: run.marks.trip.pc },
-    run.gap && { k: "cut", t: "끊김", at: run.gap.from - 2, tick: run.gap.from },
-  ].filter(Boolean) as { k: string; t: string; at: number; tick: number }[];
+    run.marks.heatOn && { k: "heat", t: "히터 켜짐", long: "히터 켜는 순간", at: run.marks.heatOn.pc - 4, tick: run.marks.heatOn.pc },
+    run.marks.trip && { k: "trip", t: "차단", long: "위험 · 차단", at: run.marks.trip.pc - 8, tick: run.marks.trip.pc },
+    run.marks.fault && { k: "fault", t: "센서 고장", long: "센서 고장", at: run.marks.fault.pc - 4, tick: run.marks.fault.pc },
+    run.gap && { k: "cut", t: "끊김", long: "Wi-Fi 끊김", at: run.gap.from - 2, tick: run.gap.from },
+  ].filter(Boolean) as { k: string; t: string; long: string; at: number; tick: number }[];
 
   // ── 값 ──
   const r = last;
@@ -151,17 +205,61 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
   const gapS = Math.round(view.gap);
   const burst = view.burst > 3;
   const reached = reach(run);
-  const REACH_MAX = 130;
+  const REACH_MAX = Math.max(130, Math.ceil((Math.max(0, ...reached.filter((x) => x.lv > 0).map((x) => x.ev.es - x.from.es)) + 8) / 10) * 10);
+  const ring = run.source.ring;
   const log = [...view.events].sort((a, b) => a.es - b.es).slice(-5).reverse();
-  const etaWarn = r && r.eta > 0 && r.eta < RULE.etaS;
+  const etaOk = !!r && r.eta > 0 && !r.fault; // 센서 고장이면 예측도 멈춘 값
+  const etaWarn = etaOk && r!.eta < RULE.etaS;
 
   return (
     <section className="cr" aria-label="관제 화면">
+      <div className="cr-srcbar">
+        <div className="cr-srctabs" role="group" aria-label="기록 출처">
+          <button type="button" aria-pressed={mode === "real"} onClick={useReal}>
+            실측 기록<small>LAB 01 통신 실험</small>
+          </button>
+          <button type="button" aria-pressed={mode === "sim"} onClick={() => {
+              setBusy(true);
+              void loadSim({ preset: sim?.preset ?? "heat" }, true);
+            }}>
+            모의 실험<small>LAB 02 가상 장치</small>
+          </button>
+        </div>
+        {mode === "sim" && sim && (
+          <>
+            <label className="cr-preset">
+              <span>시나리오</span>
+              <select value={sim.preset ?? "custom"} onChange={(e) => {
+                  if (e.target.value === "custom") return;
+                  setBusy(true);
+                  void loadSim({ preset: e.target.value }, true);
+                }} disabled={busy}>
+                {PRESETS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+                {!sim.preset && <option value="custom">LAB 02에서 가져온 설정</option>}
+              </select>
+            </label>
+            <Link className="cr-tolab" href={`/lab/virtual-esp32${sim.hash === "#sim" ? "" : sim.hash}`}>
+              LAB 02에서 이 설정 바꾸기 →
+            </Link>
+          </>
+        )}
+        {busy && <span className="cr-busy">가상 장치 돌리는 중…</span>}
+      </div>
+      {mode === "sim" && sim && (
+        <p className="cr-srcnote">
+          <b>{sim.preset ? PRESETS.find((p) => p.id === sim.preset)?.note : "LAB 02에서 바꾼 설정"}</b>
+          <span>{sim.source.note}</span>
+        </p>
+      )}
       <div className={`cr-console${started ? "" : " is-idle"}`} data-lv={lv} data-cut={cut || undefined}>
         <div className="cr-body" inert={!started}>
         <div className="cr-bar">
           <span className="cr-name">관제 화면</span>
-          <span className="cr-src">comm_run1 · 2026-11-14</span>
+          <span className={`cr-src${isSim ? " sim" : ""}`}>{run.source.src}</span>
           <span className="cr-clock">
             PC 수신 <b>{mmss(T)}</b>
             <i aria-hidden="true">·</i>
@@ -205,14 +303,14 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
             </li>
             <li className={`cr-link${cut ? " bad" : burst ? " burst" : ""}`}>
               <span>{cut ? `Wi-Fi 끊김 · ${gapS} s` : burst ? `밀린 기록 한꺼번에 · 초당 ${view.burst}개` : "UDP 패킷 → ← ACK"}</span>
-              <code>
-                버퍼 {cut ? `약 ${view.pending}` : 0} / {RULE.ring} · 재전송 {view.resent}
-              </code>
+              <code>{ring ? `버퍼 ${cut ? `약 ${view.pending}` : 0} / ${ring} · 재전송 ${view.resent}` : `버퍼 없음 · 재전송 ${view.resent}`}</code>
             </li>
             <li className="cr-node">
               <b>PC 수신</b>
               <span>pc_receiver.py</span>
-              <code>{cut ? `마지막 수신 ${gapS} s 전` : rtt !== null && view.n ? `왕복 ${rtt} ms · 중복 ${view.dups}` : "대기"}</code>
+              <code className={!cut && !burst && view.missing ? "bad" : undefined}>
+                {cut ? `마지막 수신 ${gapS} s 전` : !burst && view.missing ? `빠진 순번 ${view.missing}개 · 왕복 ${rtt} ms` : rtt !== null && view.n ? `왕복 ${rtt} ms · 중복 ${view.dups}` : "대기"}
+              </code>
             </li>
             <li className="cr-link short">
               <span>화면 갱신</span>
@@ -256,10 +354,10 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
               셀 − 주변 ΔT<span>DS18B20 − NTC</span>
             </p>
             <p className="cr-v">
-              {r ? r.dT.toFixed(2) : "—"}
+              {r && fin(r.dT) && !r.fault ? r.dT.toFixed(2) : "—"}
               <small>°C</small>
             </p>
-            <p className="cr-s">{r ? `${r.slope >= 0 ? "▲" : "▼"} ${Math.abs(r.slope).toFixed(4)} °C/s` : " "}</p>
+            <p className={`cr-s${r?.fault ? " bad" : ""}`}>{!r ? " " : r.fault ? (fin(r.dT) ? `센서 고장 · ${r.dT.toFixed(2)}에서 멈춤` : "센서 고장 · 값 없음") : `${r.slope >= 0 ? "▲" : "▼"} ${Math.abs(r.slope).toFixed(4)} °C/s`}</p>
           </div>
 
           <div className={`cr-tile${etaWarn && r && r.dT >= RULE.dt[0] ? " hot" : ""}`}>
@@ -267,11 +365,11 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
               4 °C 도달 예측<span>(4 − ΔT) ÷ 기울기</span>
             </p>
             <p className="cr-v">
-              {r && r.eta > 0 ? r.eta : "—"}
-              <small>{r && r.eta > 0 ? "s" : ""}</small>
+              {etaOk ? r!.eta : "—"}
+              <small>{etaOk ? "s" : ""}</small>
             </p>
             <p className="cr-s">
-              {!r ? " " : r.eta > 0 ? (etaWarn ? (r.dT >= RULE.dt[0] ? "30 s 미만 · 경고 조건" : "ΔT 2 °C 미만이라 예측 경고 쉼") : "경고 기준 30 s 미만") : r.trip ? "차단 뒤 식는 중" : "오르지 않음"}
+              {!r ? " " : r.fault ? "센서 고장 · 예측 멈춤" : r.eta > 0 ? (etaWarn ? (r.dT >= RULE.dt[0] ? "30 s 미만 · 경고 조건" : "ΔT 2 °C 미만이라 예측 경고 쉼") : "경고 기준 30 s 미만") : r.trip ? "차단 뒤 식는 중" : "오르지 않음"}
             </p>
           </div>
 
@@ -279,11 +377,11 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
             <p className="cr-k">
               히터 · 릴레이<span>GPIO 22</span>
             </p>
-            <p className={`cr-heat${r?.heat ? "" : " off"}${r?.trip ? " trip" : ""}`}>
+            <p className={`cr-heat${r?.heat ? "" : " off"}${!r?.heat && (r?.trip || r?.fault) ? " trip" : ""}`}>
               <i aria-hidden="true" />
-              {!r ? "—" : r.heat ? "켜짐" : r.trip ? "차단" : "꺼짐"}
+              {!r ? "—" : r.heat ? "켜짐" : r.trip || r.fault ? "차단" : "꺼짐"}
             </p>
-            <p className="cr-s">{r ? `${r.mA.toFixed(1)} mA · ${(r.mV / 1000).toFixed(2)} V` : " "}</p>
+            <p className="cr-s">{r ? `${fin(r.mA) ? r.mA.toFixed(1) : "—"} mA · ${fin(r.mV) ? (r.mV / 1000).toFixed(2) : "—"} V` : " "}</p>
           </div>
 
           <div className="cr-tile cr-risk">
@@ -294,6 +392,7 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
               {r ? r.risk : "—"}
               <small>/ 100</small>
             </p>
+            {r?.fault && <p className="cr-s bad">센서 고장 · 멈춘 온도값 기준</p>}
             <ul className="cr-contrib" aria-label="항목별 기여 (기록값으로 다시 계산)">
               {(parts.length ? parts : riskParts({ dT: 0, slope: 0, mA: 0, mV: RULE.mV.nominal })).map((p) => (
                 <li key={p.k}>
@@ -318,12 +417,15 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
                   <span className="cr-reach-0">ON</span>
                   {reached
                     .filter((x) => x.lv > 0)
-                    .map((x) => {
+                    .map((x, i, arr) => {
                       const s = x.ev.es - x.from.es;
                       const on = x.ev.pc <= T;
+                      // 앞 표시와 가까우면 글자를 레일 아래로
+                      const low = i > 0 && (s - (arr[i - 1].ev.es - arr[i - 1].from.es)) / REACH_MAX < 0.16 && !(i > 1 && (arr[i - 1].ev.es - arr[i - 2].ev.es) / REACH_MAX < 0.16);
                       return (
-                        <span key={x.k} className={`cr-reach-mk l${x.lv}${on ? " on" : ""}`} style={{ left: `${(s / REACH_MAX) * 100}%` }}>
-                          <em>{on ? `+${s.toFixed(1)} s` : ""}</em>
+                        <span key={x.k} className={`cr-reach-mk l${x.lv}${on ? " on" : ""}${low ? " low" : ""}`} style={{ left: `${(s / REACH_MAX) * 100}%` }}>
+                          <i />
+                          <em>{on ? `${x.ev.gapBefore ? "≤ " : ""}+${s.toFixed(1)} s` : ""}</em>
                         </span>
                       );
                     })}
@@ -335,7 +437,9 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
                     return (
                       <div key={x.k} className={on ? `on l${x.lv}` : ""}>
                         <dt>{x.k}</dt>
-                        <dd>{on ? `${x.lv === 0 ? "차단 뒤 " : ""}+${(x.ev.es - x.from.es).toFixed(1)} s` : "—"}</dd>
+                        <dd title={x.ev.gapBefore ? `바로 앞 기록 ${x.ev.gapBefore}개가 사라져 실제로는 이보다 먼저 일어났어요` : undefined}>
+                          {on ? `${x.lv === 0 ? "차단 뒤 " : ""}${x.ev.gapBefore ? "≤ " : ""}+${(x.ev.es - x.from.es).toFixed(1)} s` : "—"}
+                        </dd>
                       </div>
                     );
                   })}
@@ -362,7 +466,7 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
                 <ul className="cr-log">
                   {log.map((e) => {
                     const lateE = e.pc - (e.es - run.offset) > 3 && e.kind !== "boot" && e.kind !== "back" && e.kind !== "cut";
-                    const tag = e.kind === "cut" || e.kind === "back" || e.kind === "boot" ? "통신" : e.kind.startsWith("heat") ? "히터" : LV[e.lv ?? 0];
+                    const tag = e.kind === "cut" || e.kind === "back" || e.kind === "boot" ? "통신" : e.kind.startsWith("heat") ? "히터" : e.kind === "fault" ? "고장" : LV[e.lv ?? 0];
                     const cls = e.kind === "cut" || e.kind === "back" || e.kind === "boot" || e.kind.startsWith("heat") ? "tc" : `t${e.lv}`;
                     return (
                       <li key={`${e.kind}${e.es}`}>
@@ -371,6 +475,7 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
                         <p>
                           {e.title}
                           {lateE && <em className="cr-late-tag">늦게 받음</em>}
+                          {!!e.gapBefore && <em className="cr-late-tag bad">앞 기록 {e.gapBefore}개 빠짐</em>}
                           {e.detail && <small>{e.detail}</small>}
                         </p>
                       </li>
@@ -391,7 +496,7 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
               {view.arrivals.map((p) => (
                 <div key={p.i} className="cr-row">
                   <span className="d">{mmssd(p.es)}</span> #{String(p.seq).padStart(3, "0")} <span className="w">ΔT</span>{" "}
-                  <span className={`l${p.lv}`}>{p.dT.toFixed(2).padStart(5, " ")}</span> <span className={p.lv ? `l${p.lv}` : "ok"}>{TERM_LV[p.lv]}</span>{" "}
+                  <span className={`l${p.lv}`}>{(fin(p.dT) && !p.fault ? p.dT.toFixed(2) : " ---").padStart(5, " ")}</span> <span className={p.lv ? `l${p.lv}` : "ok"}>{TERM_LV[p.lv]}</span>{" "}
                   <span className="d">
                     {p.dup ? "dup" : `${p.rtt}ms`}
                     {p.tx > 1 ? ` tx${p.tx}` : ""}
@@ -459,7 +564,7 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
             <div className="cr-start-card">
               <p className="cr-start-k">기록 재생 대기</p>
               <p className="cr-start-t">
-                2026-11-14 통신 실험 · 받은 시간 {Math.floor(span / 60)}분 {Math.round(span % 60)}초 · 기록 {run.total}개
+                {run.source.title} · 받은 시간 {Math.floor(span / 60) ? `${Math.floor(span / 60)}분 ` : ""}{Math.round(span % 60)}초 · 기록 {run.total}개
               </p>
               <button type="button" className="cr-start-go" onClick={() => seek(0, true)}>
                 <svg viewBox="0 0 16 16" aria-hidden="true">
@@ -472,7 +577,7 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
                 <span>바로 보기</span>
                 {jumps.map((j) => (
                   <button key={j.k} type="button" onClick={() => seek(j.at, true)}>
-                    {j.k === "heat" ? "히터 켜는 순간" : j.k === "trip" ? "위험 · 차단" : "Wi-Fi 끊김"}
+                    {j.long}
                   </button>
                 ))}
               </div>
@@ -480,6 +585,33 @@ export function ControlRoom({ rows }: { rows: Row[] }) {
           </div>
         )}
       </div>
+      <ul className="cr-legend" aria-label="값의 출처">
+        {isSim ? (
+          <>
+            <li>
+              <span className="cr-ev ev-s">모의</span>모든 값은 LAB 02 가상 장치가 계산 (LAB 01 실측으로 맞춘 모형)
+            </li>
+            <li>
+              <span className="cr-ev ev-r">재계산</span>위험지수는 가상 장치가 기록하지 않아 펌웨어 식으로 계산
+            </li>
+          </>
+        ) : (
+          <>
+            <li>
+              <span className="cr-ev ev-m">실측</span>단계 · ΔT · 예측 · 위험지수 · 지연은 comm_run1.csv 그대로
+            </li>
+            <li>
+              <span className="cr-ev ev-r">재계산</span>위험지수 막대 · 버퍼 개수 · 판정 사유 문장은 펌웨어 식으로 다시 계산
+            </li>
+          </>
+        )}
+        <li>
+          <span className="cr-ev ev-c">두 시계</span>그래프 가로축은 ESP32가 잰 시각, 재생은 PC가 받은 시각
+        </li>
+        <li>
+          <span className="cr-ev ev-n">알림</span>허용하면 이 탭을 보고 있지 않을 때 위험 단계 · 통신 끊김만 알려요
+        </li>
+      </ul>
       <p className="sr-only" aria-live="polite">
         {say}
       </p>

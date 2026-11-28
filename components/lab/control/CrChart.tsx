@@ -1,11 +1,17 @@
 "use client";
 
 import { useWidth } from "../useWidth";
-import { LV, RULE, mmss, type Run, type View } from "./engine";
+import { LV, RULE, fin, mmss, type Run, type View } from "./engine";
 
-const X_MAX = 620;
-const Y_MIN = -1.5;
-const Y_MAX = 5;
+/* 가로축 눈금: 기록 길이에 맞춰 (작은 칸 · 큰 칸 · 글자) */
+function xScale(esMax: number, narrow: boolean) {
+  if (esMax <= 260) {
+    const max = Math.max(60, Math.ceil(esMax / 20) * 20);
+    return { max, minor: 10, major: 50, label: narrow ? 100 : 50 };
+  }
+  const max = Math.ceil(esMax / 20) * 20;
+  return { max, minor: 20, major: 100, label: narrow ? 200 : 100 };
+}
 
 /* 온도차 그래프 — 가로축은 ESP32가 잰 시각, 받은 기록만 그린다.
    도면처럼: 20 s · 0.5 °C 격자, 기준선, 치수선, 늦게 받은 구간 표시 */
@@ -14,28 +20,37 @@ export function CrChart({ run, view }: { run: Run; view: View }) {
   const narrow = w < 560;
   const W = w, H = narrow ? 300 : w > 700 ? 410 : 340;
   const L = 34, R = narrow ? 14 : 80, Tp = 24, B = 26;
+  const xs = xScale(run.esMax, narrow);
+  const X_MAX = xs.max;
+  const [Y_MIN, Y_MAX] = run.dtRange;
   const x = (s: number) => L + (Math.min(X_MAX, Math.max(0, s)) / X_MAX) * (W - L - R);
-  const y = (v: number) => Tp + ((Y_MAX - v) / (Y_MAX - Y_MIN)) * (H - Tp - B);
+  const y = (v: number) => Tp + ((Y_MAX - Math.min(Y_MAX, Math.max(Y_MIN, v))) / (Y_MAX - Y_MIN)) * (H - Tp - B);
   const { seen, last, cut, esNow } = view;
 
   let d = "";
   for (let k = 0; k < seen.length; k++) {
     const p = seen[k];
-    // 순번이 비었거나(아직 안 온 구간) 시각이 1.6초 넘게 벌어지면 선을 끊는다
-    const brk = k === 0 || p.seq - seen[k - 1].seq > 1 || p.es - seen[k - 1].es > 1.6;
+    if (!fin(p.dT) || p.fault) continue; // 센서 고장: 펌웨어는 마지막 값을 그대로 보내므로 선을 끊는다
+    // 순번이 비었거나(아직 안 온 구간 · 사라진 기록 · 센서 고장) 시각이 1.6초 넘게 벌어지면 선을 끊는다
+    const q = seen[k - 1];
+    const brk = k === 0 || !fin(q.dT) || q.fault || p.seq - q.seq > 1 || p.es - q.es > 1.6;
     d += `${brk ? "M" : "L"}${x(p.es).toFixed(1)} ${y(p.dT).toFixed(1)}`;
   }
 
   const grid: React.ReactNode[] = [];
-  for (let s = 0; s <= X_MAX; s += 20) grid.push(<path key={`x${s}`} d={`M${x(s)} ${Tp}V${H - B}`} className={s % 100 === 0 ? "cr-g1" : "cr-g2"} />);
+  for (let s = 0; s <= X_MAX; s += xs.minor) grid.push(<path key={`x${s}`} d={`M${x(s)} ${Tp}V${H - B}`} className={s % xs.major === 0 ? "cr-g1" : "cr-g2"} />);
   for (let v = Y_MIN; v <= Y_MAX + 1e-9; v += 0.5) grid.push(<path key={`y${v}`} d={`M${L} ${y(v)}H${W - R}`} className={Number.isInteger(v) ? "cr-g1" : "cr-g2"} />);
 
-  const xt = (narrow ? [0, 200, 400, 600] : [0, 100, 200, 300, 400, 500, 600]).map((s) => (
+  const xtv: number[] = [];
+  for (let s = 0; s <= X_MAX; s += xs.label) xtv.push(s);
+  const xt = xtv.map((s) => (
     <text key={s} x={x(s)} y={H - 8} textAnchor="middle" className="cr-ax">
       {mmss(s)}
     </text>
   ));
-  const yt = [-1, 0, 1, 2, 3, 4, 5].map((v) => (
+  const ytv: number[] = [];
+  for (let v = Math.ceil(Y_MIN); v <= Y_MAX; v++) ytv.push(v);
+  const yt = ytv.map((v) => (
     <text key={v} x={L - 7} y={y(v) + 4} textAnchor="end" className="cr-ax">
       {v}
     </text>
@@ -76,20 +91,37 @@ export function CrChart({ run, view }: { run: Run; view: View }) {
     );
   });
 
+  // 끝내 오지 않은 기록 (밀린 기록이 다 들어온 뒤에만 '사라짐'으로 표시)
+  const lostBands: React.ReactNode[] = [];
+  if (!cut && view.burst <= 3)
+    for (let k = 1; k < seen.length; k++) {
+      const a = seen[k - 1], b = seen[k];
+      if (b.seq - a.seq <= 1) continue;
+      const x1 = x(a.es + 0.5), x2 = x(b.es - 0.5);
+      lostBands.push(
+        <g key={`lost${a.seq}`} className="cr-lost">
+          <rect x={x1} y={Tp} width={Math.max(1, x2 - x1)} height={H - Tp - B} fill="url(#cr-lost)" />
+          <text x={(x1 + x2) / 2} y={y(Y_MIN) - 8} textAnchor="middle">
+            {x2 - x1 > 60 ? `사라진 기록 ${b.seq - a.seq - 1}개` : `−${b.seq - a.seq - 1}`}
+          </text>
+        </g>
+      );
+    }
+
   // 지금 끊긴 구간: 마지막 기록 → 장치의 지금
   const hatch =
     cut && last ? (
       <g className="cr-wait">
         <rect x={x(last.es)} y={Tp} width={Math.max(1, x(esNow) - x(last.es))} height={H - Tp - B} fill="url(#cr-hatch)" />
-        <text x={(x(last.es) + x(esNow)) / 2} y={y(4.55)} textAnchor="middle">
+        <text x={(x(last.es) + x(esNow)) / 2} y={y(Math.min(Y_MAX - 0.4, 4.55))} textAnchor="middle">
           수신 대기
         </text>
       </g>
     ) : null;
 
   // 사건 세로선
-  const { heatOn, trip } = run.marks;
-  const evx = [heatOn && { ...heatOn, t: "히터 ON" }, trip && { ...trip, t: "차단" }]
+  const { heatOn, trip, fault } = run.marks;
+  const evx = [heatOn && { ...heatOn, t: "히터 ON" }, trip && { ...trip, t: "차단" }, fault && { ...fault, t: "센서 고장" }]
     .filter((e): e is NonNullable<typeof e> => !!e && e.pc <= view.T)
     .map((e) => (
       <g key={e.t} className="cr-evx">
@@ -101,7 +133,7 @@ export function CrChart({ run, view }: { run: Run; view: View }) {
     ));
 
   // 히터를 켜는 순간 NTC 값이 잠깐 흔들린 자리 (측정 잡음)
-  const dip = heatOn && heatOn.pc <= view.T && !narrow ? seen.filter((p) => p.es > heatOn.es - 4 && p.es < heatOn.es + 4).sort((a, b) => a.dT - b.dT)[0] : undefined;
+  const dip = heatOn && heatOn.pc <= view.T && !narrow && run.source.kind === "real" ? seen.filter((p) => p.es > heatOn.es - 4 && p.es < heatOn.es + 4).sort((a, b) => a.dT - b.dT)[0] : undefined;
   const dipNote = dip ? (
     <g className="cr-note">
       <path d={`M${x(dip.es) - 6} ${y(dip.dT)}H${x(dip.es) - 30}`} />
@@ -156,6 +188,9 @@ export function CrChart({ run, view }: { run: Run; view: View }) {
           <pattern id="cr-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
             <line x1="0" y1="0" x2="0" y2="7" className="cr-hatch-line" />
           </pattern>
+          <pattern id="cr-lost" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+            <line x1="0" y1="0" x2="0" y2="6" className="cr-lost-line" />
+          </pattern>
         </defs>
         {grid}
         {lateBands}
@@ -166,7 +201,8 @@ export function CrChart({ run, view }: { run: Run; view: View }) {
         {hatch}
         <path d={d} className="cr-line" />
         {dipNote}
-        {last && <circle cx={x(last.es)} cy={y(last.dT)} r={4.5} className={`cr-now l${last.lv}`} />}
+        {lostBands}
+        {last && fin(last.dT) && !last.fault && <circle cx={x(last.es)} cy={y(last.dT)} r={4.5} className={`cr-now l${last.lv}`} />}
         {dims}
         <text x={L} y={Tp - 8} className="cr-ax">
           °C

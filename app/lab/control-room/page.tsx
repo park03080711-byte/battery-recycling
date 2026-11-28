@@ -5,12 +5,13 @@ import path from "node:path";
 import Footer from "@/components/Footer";
 import { ControlRoom } from "@/components/lab/control/ControlRoom";
 import { buildRun, parseCsv, reach, RULE } from "@/components/lab/control/engine";
+import { PRESETS } from "@/components/lab/control/presets";
 import "../lab.css";
 import "./control.css";
 
 export const metadata: Metadata = {
   title: "관제실",
-  description: "LAB 01 통신 실험 기록을 PC가 받은 순서 그대로 다시 틀어, ESP32가 보낸 판정 · 차단과 Wi-Fi 끊김을 관제 화면에서 지켜봅니다.",
+  description: "LAB 01 통신 실험 기록이나 LAB 02 가상 실험 결과를 PC가 받은 순서 그대로 틀어, ESP32의 판정 · 차단과 Wi-Fi 끊김을 관제 화면에서 지켜봅니다.",
   openGraph: {
     type: "website",
     locale: "ko_KR",
@@ -59,7 +60,7 @@ export default function ControlRoomPage() {
                     <b>LAB 03</b> 실측 기록 재생
                   </span>
                   <span className="rc-meta-sub">
-                    기록 {run.total}개 · 받은 시간 {Math.floor(run.span / 60)}분 {Math.round(run.span % 60)}초 · 끊김 {gapS}초
+                    실측 기록 {run.total}개 · 끊김 {gapS}초 · 모의 시나리오 {PRESETS.length}가지
                   </span>
                 </p>
                 <h1>관제실</h1>
@@ -68,7 +69,7 @@ export default function ControlRoomPage() {
               <div className="rc-hero-side">
               <p className="rc-lead">
                 <Link href="/lab/ess-monitoring">LAB 01</Link> 통신 실험 기록을 PC가 받은 순서 그대로 다시 틉니다. 히터가 켜지고 주의 → 경고 → 위험 · 차단으로 가는 과정과, Wi-Fi가 끊겼다가 밀린 기록이 한꺼번에 들어오는 장면을
-                볼 수 있어요.
+                볼 수 있어요. <Link href="/lab/virtual-esp32">LAB 02</Link> 가상 실험 결과도 같은 화면에서 틀어 실측으로 못 해 본 경우를 확인할 수 있어요.
               </p>
               </div>
             </div>
@@ -77,20 +78,6 @@ export default function ControlRoomPage() {
 
         <div className="rc-wrap cr-wrap">
           <ControlRoom rows={rows} />
-          <ul className="cr-legend" aria-label="값의 출처">
-            <li>
-              <span className="cr-ev ev-m">실측</span>단계 · ΔT · 예측 · 위험지수 · 지연은 comm_run1.csv 그대로
-            </li>
-            <li>
-              <span className="cr-ev ev-r">재계산</span>위험지수 막대 · 버퍼 개수 · 판정 사유 문장은 펌웨어 식으로 다시 계산
-            </li>
-            <li>
-              <span className="cr-ev ev-c">두 시계</span>그래프 가로축은 ESP32가 잰 시각, 재생은 PC가 받은 시각
-            </li>
-            <li>
-              <span className="cr-ev ev-n">알림</span>허용하면 이 탭을 보고 있지 않을 때 위험 단계 · 통신 끊김만 알려요
-            </li>
-          </ul>
         </div>
 
         <div className="rc-wrap cr-below">
@@ -185,11 +172,15 @@ export default function ControlRoomPage() {
             <ul className="lab-limits">
               <li>
                 <b>실시간이 아니라 재생</b>
-                <span>지금 장치와 연결된 화면이 아니에요. 2026년 11월 14일에 PC가 받은 기록을 받은 순서와 간격 그대로 다시 트는 것이에요.</span>
+                <span>지금 장치와 연결된 화면이 아니에요. 실측은 2026년 11월 14일에 PC가 받은 기록을, 모의는 가상 장치가 계산한 결과를 받은 순서와 간격 그대로 트는 것이에요.</span>
+              </li>
+              <li>
+                <b>모의 실험은 모형</b>
+                <span>LAB 01 실측으로 맞춘 가상 장치라 비슷하게 움직이지만 실제 기록은 아니에요. 화면 위 이름표가 ‘LAB 02 모의’로 바뀌고, 범례도 ‘모의’로 표시돼요.</span>
               </li>
               <li>
                 <b>통신 실험은 1회</b>
-                <span>끊김도 한 번(약 {gapS}초)뿐이에요. 더 길게 끊기면 버퍼 600개(10분)를 넘는 오래된 기록부터 버려지는데, 그 경우는 시험하지 않았어요.</span>
+                <span>끊김도 한 번(약 {gapS}초)뿐이에요. 버퍼를 넘쳐 오래된 기록이 버려지는 경우는 실측하지 않았고, 모의 실험의 ‘버퍼 10개’ 시나리오로만 보여 줘요.</span>
               </li>
               <li>
                 <b>버퍼 개수는 추정</b>

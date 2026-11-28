@@ -49,3 +49,59 @@ test.describe("관제실 엔진", () => {
     expect(viewAt(run, run.span).seen.length).toBe(616);
   });
 });
+
+/* LAB 02 가상 실험 → 관제실 */
+import { cfgFromHash, hashOf, presetCfg, presetOf, simRows } from "../components/lab/control/fromSim";
+import { PRESETS } from "../components/lab/control/presets";
+
+test.describe("모의 실험 입력", () => {
+  test.skip(({ browserName, isMobile }) => browserName !== "chromium" || !!isMobile, "한 번만");
+  const sim = (id: string) => {
+    const { rows, source } = simRows(presetCfg(id));
+    return buildRun(rows, source);
+  };
+
+  test("모든 시나리오가 기록을 만든다", () => {
+    for (const p of PRESETS) {
+      const r = sim(p.id);
+      expect(r.total, p.id).toBeGreaterThan(100);
+      expect(r.source.kind).toBe("sim");
+    }
+  });
+
+  test("기본 발열: 주의 · 경고 · 위험 · 차단 (실측 11 · 27 · 65초에 가까움)", () => {
+    const steps = reach(sim("heat")).map((x) => [x.k, x.ev.es - x.from.es] as const);
+    const at = Object.fromEntries(steps);
+    expect(at["주의"]).toBeGreaterThan(8);
+    expect(at["주의"]).toBeLessThan(20);
+    expect(at["위험 · 차단"]).toBeGreaterThan(55);
+    expect(at["위험 · 차단"]).toBeLessThan(75);
+  });
+
+  test("Wi-Fi 끊김: 버퍼 600개면 잃지 않고, 10개면 사라지고, 끄면 더 사라진다", () => {
+    const full = sim("wifi"), small = sim("wifi-small"), none = sim("wifi-nobuf");
+    expect(full.gap).not.toBeNull();
+    expect(full.lost).toBe(0);
+    expect(small.lost).toBeGreaterThan(0);
+    expect(none.lost).toBeGreaterThan(small.lost);
+    // 차단 기록이 사라진 경우: 앞 기록이 빠졌다고 표시
+    expect(small.marks.trip?.gapBefore ?? 0).toBeGreaterThan(0);
+    expect(viewAt(small, small.span).missing).toBe(small.lost);
+  });
+
+  test("센서 선 빠짐: 고장 사건 · 히터 끊음", () => {
+    const r = sim("cut");
+    expect(r.marks.fault).toBeDefined();
+    const p = r.bySeq.find((q) => q.fault)!;
+    expect(p.heat).toBe(false);
+    expect(explain(r, p).title).toContain("센서 고장");
+  });
+
+  test("주소 ↔ 설정이 왕복한다", () => {
+    for (const p of PRESETS) {
+      const cfg = presetCfg(p.id);
+      expect(presetOf(cfgFromHash(hashOf(cfg))!)).toBe(p.id);
+    }
+    expect(hashOf(presetCfg("heat"))).toBe("#sim");
+  });
+});
